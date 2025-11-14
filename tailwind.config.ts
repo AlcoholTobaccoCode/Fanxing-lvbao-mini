@@ -17,7 +17,8 @@ type primaryColor =
 	| "violet"
 	| "purple"
 	| "fuchsia"
-	| "pink";
+	| "pink"
+	| "fanxingzhihui";
 type surfaceColor = "slate" | "gray" | "zinc" | "neutral" | "stone" | "soho" | "viva" | "ocean";
 
 /**
@@ -263,6 +264,22 @@ export const PRIMARY_COLOR_PALETTES = [
 			900: "#831843",
 			950: "#500724"
 		}
+	},
+	{
+		name: "fanxingzhihui",
+		palette: {
+			50: "#3f92cd",
+			100: "#3183bc",
+			200: "#2d78ad",
+			300: "#2b72a5",
+			400: "#2a6fa0",
+			500: "#296d9d",
+			600: "#266490",
+			700: "#225981",
+			800: "#1d4c6e",
+			900: "#183f5b",
+			950: "#14344b"
+		}
 	}
 ];
 
@@ -447,7 +464,8 @@ export default {
 	theme: {
 		extend: {
 			colors: {
-				...getPrimary("teal"),
+				// ...getPrimary("teal"),
+				...getPrimary("fanxingzhihui"),
 				...getSurface("zinc")
 			},
 			fontSize: {
