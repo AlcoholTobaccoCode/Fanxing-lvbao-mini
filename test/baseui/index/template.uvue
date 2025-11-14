@@ -26,7 +26,7 @@
 </template>
 
 <script setup lang="ts">
-import CustomTabbar from "@/components/tabbar.uvue";
+import CustomTabbar from "@/components/common/tabbar.uvue";
 import { router } from "@/cool";
 import { t } from "@/locale";
 import { useUi } from "@/uni_modules/cool-ui";

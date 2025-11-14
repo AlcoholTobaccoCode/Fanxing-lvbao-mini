@@ -245,7 +245,7 @@
 import { router, userInfo, useStore } from "@/cool";
 import { t } from "@/locale";
 import { useUi } from "@/uni_modules/cool-ui";
-import CustomTabbar from "@/components/tabbar.uvue";
+import CustomTabbar from "@/components/common/tabbar.uvue";
 
 const { user } = useStore();
 const ui = useUi();
@@ -257,11 +257,11 @@ function toTest() {
 }
 
 function toSet() {
-    router.to("/test/baseui/set/index");
+	router.to("/test/baseui/set/index");
 }
 
 function toEdit() {
-    router.to("/test/baseui/user/edit");
+	router.to("/test/baseui/user/edit");
 }
 
 onReady(() => {

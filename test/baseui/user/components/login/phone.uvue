@@ -72,7 +72,7 @@
 import { t } from "@/locale";
 import { computed, inject, ref, type PropType } from "vue";
 import type { LoginForm } from "../../types";
-import SmsBtn from "@/components/sms-btn.uvue";
+import SmsBtn from "@/components/common/sms-btn.uvue";
 import { isDark, parseClass, request, useRefs, type Response } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 

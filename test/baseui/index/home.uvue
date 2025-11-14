@@ -93,9 +93,9 @@ import { computed } from "vue";
 
 import { useUi } from "@/uni_modules/cool-ui";
 import { config } from "@/config";
-import LocaleSet from "@/components/locale-set.uvue";
-import SizeSet from "@/components/size-set.uvue";
-import CustomTabbar from "@/components/tabbar.uvue";
+import LocaleSet from "@/components/common/locale-set.uvue";
+import SizeSet from "@/components/common/size-set.uvue";
+import CustomTabbar from "@/components/common/tabbar.uvue";
 
 const ui = useUi();
 const refs = useRefs();
