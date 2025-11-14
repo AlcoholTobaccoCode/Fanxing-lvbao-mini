@@ -1,5 +1,5 @@
 {
-	"name": "law-ai",
+	"name": "律宝",
 	"appid": "__UNI__DA3F1D0",
 	"description": "完全开源、永久免费、上手容易、效率极高的开发脚手架",
 	"versionName": "1.0.0",
@@ -46,7 +46,7 @@
 			"mode": "",
 			"base": "./"
 		},
-		"title": "law-ai",
+		"title": "律宝",
 		"optimization": {
 			"treeShaking": {
 				"enable": true

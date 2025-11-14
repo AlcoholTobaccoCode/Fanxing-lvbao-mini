@@ -1,9 +1,16 @@
 {
+	"entryPagePath": "pages/entry/index",
 	"pages": [
 		{
 			"path": "pages/entry/index",
 			"style": {
-				"navigationBarTitleText": "入口"
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/home/index",
+			"style": {
+				"navigationBarTitleText": "Home"
 			}
 		}
 	],
@@ -551,7 +558,7 @@
 		}
 	],
 	"globalStyle": {
-		"navigationBarTitleText": "law-ai",
+		"navigationBarTitleText": "律宝",
 		"navigationBarTextStyle": "@navTextStyle",
 		"backgroundColorContent": "@bgContentColor",
 		"backgroundColor": "@bgColor",

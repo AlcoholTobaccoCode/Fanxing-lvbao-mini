@@ -1,12 +1,12 @@
 import { isNull, forInObject, isEmpty, storage, router } from "@/cool";
 import { ref } from "vue";
-import zhcn from "./zh-cn.json";
-import zhtw from "./zh-tw.json";
-import en from "./en.json";
-import es from "./es.json";
-import ja from "./ja.json";
-import ko from "./ko.json";
-import fr from "./fr.json";
+import zhcn from "./zh-cn.json"; // 中文（简体）
+import zhtw from "./zh-tw.json"; // 中文（繁体）
+import en from "./en.json"; // 英文
+import es from "./es.json"; // 西班牙语
+import ja from "./ja.json"; // 日语
+import ko from "./ko.json"; // 韩语
+import fr from "./fr.json"; // 法语
 import { config } from "@/config";
 
 // 解析语言包
