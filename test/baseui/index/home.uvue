@@ -1,0 +1,526 @@
+<template>
+	<cl-page>
+		<cl-topbar fixed :show-back="false" safe-area-top :height="isMp() ? null : 100">
+			<view
+				class="flex flex-row items-center p-3 flex-1 w-full"
+				:class="{
+					'pt-0': isMp()
+				}"
+			>
+				<view class="bg-primary-500 rounded-lg p-[12rpx]">
+					<cl-image
+						src="/static/logo.png"
+						:width="32"
+						:height="32"
+						:show-loading="false"
+					></cl-image>
+				</view>
+
+				<cl-text
+					color="primary"
+					:pt="{
+						className: '!text-xl mr-auto ml-2 flex-1'
+					}"
+				>
+					{{ config.name }}
+				</cl-text>
+
+				<view
+					class="bg-surface-500 h-8 w-8 rounded-full flex flex-row items-center justify-center mr-3"
+					@tap="setSize"
+				>
+					<cl-icon name="font-size" color="white"></cl-icon>
+				</view>
+
+				<view
+					class="bg-primary-500 h-8 w-8 rounded-full flex flex-row items-center justify-center"
+					:class="{
+						'mr-24': isMp()
+					}"
+					@tap="setLocale"
+				>
+					<cl-icon name="translate" color="white"></cl-icon>
+				</view>
+			</view>
+		</cl-topbar>
+
+		<view class="p-3">
+			<view class="group" v-for="item in data" :key="item.label">
+				<cl-text :pt="{ className: '!text-sm !text-surface-400 mb-2 ml-2' }"
+					>{{ item.label }}（{{ item.children?.length ?? 0 }}）</cl-text
+				>
+
+				<view class="list">
+					<cl-row :gutter="10">
+						<template v-for="child in item.children" :key="child.label">
+							<cl-col :span="6" v-if="child.hidden != true">
+								<view
+									class="item dark:!bg-surface-800"
+									hover-class="opacity-80"
+									:hover-stay-time="250"
+									@tap="toPath(child)"
+								>
+									<cl-icon :name="child.icon" :size="36"></cl-icon>
+									<cl-text
+										:pt="{
+											className: 'mt-1 !text-xs text-center'
+										}"
+										>{{ child.label }}</cl-text
+									>
+								</view>
+							</cl-col>
+						</template>
+					</cl-row>
+				</view>
+			</view>
+		</view>
+
+		<!-- 自定义底部导航栏 -->
+		<custom-tabbar></custom-tabbar>
+
+		<!-- 主题设置 -->
+		<locale-set :ref="refs.set('localeSet')"></locale-set>
+
+		<!-- 字体大小设置 -->
+		<size-set :ref="refs.set('sizeSet')"></size-set>
+	</cl-page>
+</template>
+
+<script lang="ts" setup>
+import { isApp, isMp, router, useRefs } from "@/cool";
+import { t } from "@/locale";
+import { computed } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { config } from "@/config";
+import LocaleSet from "@/components/locale-set.uvue";
+import SizeSet from "@/components/size-set.uvue";
+import CustomTabbar from "@/components/tabbar.uvue";
+
+const ui = useUi();
+const refs = useRefs();
+
+type Item = {
+	label: string;
+	icon?: string;
+	path?: string;
+	disabled?: boolean;
+	hidden?: boolean;
+	children?: Item[];
+};
+
+const data = computed<Item[]>(() => {
+	return [
+		{
+			label: t("基础组件"),
+			children: [
+				{
+					label: t("文本"),
+					icon: "text",
+					path: "/test/baseui/demo/basic/text"
+				},
+				{
+					label: t("按钮"),
+					icon: "mouse-line",
+					path: "/test/baseui/demo/basic/button"
+				},
+				{
+					label: t("图片"),
+					icon: "image-line",
+					path: "/test/baseui/demo/basic/image"
+				},
+				{
+					label: t("图标"),
+					icon: "puzzle-2-line",
+					path: "/test/baseui/demo/basic/icon"
+				},
+				{
+					label: t("标签"),
+					icon: "price-tag-3-line",
+					path: "/test/baseui/demo/basic/tag"
+				}
+			]
+		},
+		{
+			label: t("表单组件"),
+			children: [
+				{
+					label: t("表单验证"),
+					icon: "draft-line",
+					path: "/test/baseui/demo/form/form"
+				},
+				{
+					label: t("输入框"),
+					icon: "input-field",
+					path: "/test/baseui/demo/form/input"
+				},
+				{
+					label: t("文本域"),
+					icon: "text-block",
+					path: "/test/baseui/demo/form/textarea"
+				},
+				{
+					label: t("计数器"),
+					icon: "increase-decrease-line",
+					path: "/test/baseui/demo/form/input-number"
+				},
+				{
+					label: t("口令输入"),
+					icon: "input-method-line",
+					path: "/test/baseui/demo/form/input-otp"
+				},
+				{
+					label: t("键盘"),
+					icon: "keyboard-box-line",
+					path: "/test/baseui/demo/form/keyboard"
+				},
+				{
+					label: t("单选框"),
+					icon: "radio-button-line",
+					path: "/test/baseui/demo/form/radio"
+				},
+				{
+					label: t("多选框"),
+					icon: "checkbox-line",
+					path: "/test/baseui/demo/form/checkbox"
+				},
+				{
+					label: t("开关"),
+					icon: "toggle-line",
+					path: "/test/baseui/demo/form/switch"
+				},
+				{
+					label: t("评分"),
+					icon: "star-line",
+					path: "/test/baseui/demo/form/rate"
+				},
+				{
+					label: t("滑块"),
+					icon: "equalizer-2-line",
+					path: "/test/baseui/demo/form/slider"
+				},
+				{
+					label: t("选择器"),
+					icon: "dropdown-list",
+					path: "/test/baseui/demo/form/select"
+				},
+				{
+					label: t("日期选择器"),
+					icon: "calendar-line",
+					path: "/test/baseui/demo/form/select-date"
+				},
+				{
+					label: t("时间选择器"),
+					icon: "time-line",
+					path: "/test/baseui/demo/form/select-time"
+				},
+				{
+					label: t("级联选择器"),
+					icon: "stacked-view",
+					path: "/test/baseui/demo/form/cascader"
+				},
+				{
+					label: t("文件上传"),
+					icon: "file-upload-line",
+					path: "/test/baseui/demo/form/upload"
+				},
+				{
+					label: t("日历"),
+					icon: "calendar-line",
+					path: "/test/baseui/demo/form/calendar"
+				}
+			]
+		},
+		{
+			label: t("布局组件"),
+			children: [
+				{
+					label: t("弹性布局"),
+					icon: "layout-2-line",
+					path: "/test/baseui/demo/layout/flex"
+				},
+				{
+					label: t("标签页"),
+					icon: "function-add-line",
+					path: "/test/baseui/demo/layout/tabs"
+				},
+				{
+					label: t("折叠面板"),
+					icon: "collapse-vertical-line",
+					path: "/test/baseui/demo/layout/collapse"
+				},
+				{
+					label: t("吸顶"),
+					icon: "align-top",
+					path: "/test/baseui/demo/layout/sticky"
+				},
+				{
+					label: t("导航栏"),
+					icon: "layout-top-line",
+					path: "/test/baseui/demo/layout/topbar"
+				},
+				{
+					label: t("底部视图"),
+					icon: "layout-bottom-line",
+					path: "/test/baseui/demo/layout/footer"
+				},
+				{
+					label: t("悬浮视图"),
+					icon: "picture-in-picture-line",
+					path: "/test/baseui/demo/layout/float-view"
+				}
+			]
+		},
+		{
+			label: t("数据展示"),
+			children: [
+				{
+					label: t("头像"),
+					icon: "account-circle-line",
+					path: "/test/baseui/demo/data/avatar"
+				},
+				{
+					label: t("查看更多"),
+					icon: "menu-add-line",
+					path: "/test/baseui/demo/data/read-more"
+				},
+				{
+					label: t("列表"),
+					icon: "list-check",
+					path: "/test/baseui/demo/data/list"
+				},
+				{
+					label: t("列表视图"),
+					icon: "list-view",
+					path: "/test/baseui/demo/data/list-view"
+				},
+				{
+					label: t("列表刷新"),
+					icon: "refresh-line",
+					path: "/test/baseui/demo/data/list-view-refresh",
+					disabled: false
+				},
+				{
+					label: t("瀑布流"),
+					icon: "layout-column-line",
+					path: "/test/baseui/demo/data/waterfall"
+				},
+				{
+					label: t("轮播图"),
+					icon: "carousel-view",
+					path: "/test/baseui/demo/data/banner"
+				},
+				{
+					label: t("跑马灯"),
+					icon: "film-line",
+					path: "/test/baseui/demo/data/marquee"
+				},
+				{
+					label: t("分页"),
+					icon: "page-separator",
+					path: "/test/baseui/demo/data/pagination"
+				},
+				{
+					label: t("时间轴"),
+					icon: "timeline-view",
+					path: "/test/baseui/demo/data/timeline"
+				},
+				{
+					label: t("拖拽"),
+					icon: "drag-move-line",
+					path: "/test/baseui/demo/data/draggable"
+				},
+				{
+					label: t("筛选栏"),
+					icon: "filter-line",
+					path: "/test/baseui/demo/data/filter-bar"
+				},
+				{
+					label: t("树形结构"),
+					icon: "node-tree",
+					path: "/test/baseui/demo/data/tree"
+				}
+			]
+		},
+		{
+			label: t("状态组件"),
+			children: [
+				{
+					label: t("角标"),
+					icon: "notification-badge-line",
+					path: "/test/baseui/demo/status/badge"
+				},
+				{
+					label: t("通知栏"),
+					icon: "error-warning-line",
+					path: "/test/baseui/demo/status/noticebar"
+				},
+				{
+					label: t("倒计时"),
+					icon: "timer-line",
+					path: "/test/baseui/demo/status/countdown"
+				},
+				{
+					label: t("数字滚动"),
+					icon: "arrow-up-box-line",
+					path: "/test/baseui/demo/status/rolling-number"
+				},
+				{
+					label: t("进度条"),
+					icon: "subtract-line",
+					path: "/test/baseui/demo/status/progress"
+				},
+				{
+					label: t("圆形进度条"),
+					icon: "circle-line",
+					path: "/test/baseui/demo/status/progress-circle"
+				},
+				{
+					label: t("骨架图"),
+					icon: "shadow-line",
+					path: "/test/baseui/demo/status/skeleton"
+				},
+				{
+					label: t("加载更多"),
+					icon: "loader-4-line",
+					path: "/test/baseui/demo/status/loadmore"
+				}
+			]
+		},
+		{
+			label: t("反馈组件"),
+			children: [
+				{
+					label: t("操作菜单"),
+					icon: "menu-line",
+					path: "/test/baseui/demo/feedback/action-sheet"
+				},
+				{
+					label: t("弹窗"),
+					icon: "chat-4-line",
+					path: "/test/baseui/demo/feedback/popup"
+				},
+				{
+					label: t("确认框"),
+					icon: "chat-check-line",
+					path: "/test/baseui/demo/feedback/confirm"
+				},
+				{
+					label: t("提示框"),
+					icon: "message-2-line",
+					path: "/test/baseui/demo/feedback/toast"
+				}
+			]
+		},
+		{
+			label: "其他",
+			children: [
+				{
+					label: "QRCode",
+					icon: "qr-code-line",
+					path: "/test/baseui/demo/other/qrcode"
+				},
+				{
+					label: t("签名"),
+					icon: "sketching",
+					path: "/test/baseui/demo/other/sign"
+				},
+				{
+					label: t("水印"),
+					icon: "copyright-line",
+					path: "/test/baseui/demo/other/watermark"
+				},
+				{
+					label: t("图片裁剪"),
+					icon: "crop-line",
+					path: "/test/baseui/demo/other/cropper"
+				},
+				{
+					label: t("Canvas"),
+					icon: "markup-line",
+					path: "/test/baseui/demo/other/canvas"
+				},
+				{
+					label: t("富文本"),
+					icon: "text-snippet",
+					path: "/test/baseui/demo/other/rict-text",
+					disabled: true
+				},
+				{
+					label: "DayUts",
+					icon: "timer-2-line",
+					path: "/test/baseui/demo/other/day-uts"
+				},
+				{
+					label: "Vibrate",
+					icon: "volume-vibrate-line",
+					path: "/test/baseui/demo/other/vibrate"
+				},
+				{
+					label: "SVG",
+					icon: "bubble-chart-line",
+					path: "/test/baseui/demo/other/svg"
+				},
+				{
+					label: "SlideVerify",
+					icon: "contract-right-fill",
+					path: "/test/baseui/demo/other/slide-verify"
+				},
+				{
+					label: "Animation",
+					icon: "instance-line",
+					path: "/test/baseui/demo/other/animation"
+				},
+				{
+					label: "Router",
+					icon: "compass-discover-line",
+					path: "/test/baseui/demo/other/router/index"
+				},
+				{
+					label: "Share",
+					icon: "share-line",
+					path: "/test/baseui/demo/other/share",
+					hidden: !isApp()
+				}
+			]
+		}
+	];
+});
+
+function toPath(item: Item) {
+	if (item.disabled == true) {
+		return ui.showToast({
+			message: t("该功能正在开发中")
+		});
+	}
+
+	const p = item.path!.startsWith("/pages/")
+		? item.path!.replace("/pages/", "/test/baseui/")
+		: item.path!;
+
+	router.to(p);
+}
+
+function setLocale() {
+	refs.open("localeSet");
+}
+
+function setSize() {
+	refs.open("sizeSet");
+}
+</script>
+
+<style lang="scss" scoped>
+.group {
+	@apply mb-10;
+
+	.list {
+		.item {
+			@apply flex flex-col items-center;
+			@apply rounded-xl bg-white px-2;
+			height: 140rpx;
+			margin-bottom: 10rpx;
+			padding-top: 36rpx;
+		}
+	}
+}
+</style>
