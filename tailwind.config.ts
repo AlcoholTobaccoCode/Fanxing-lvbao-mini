@@ -464,8 +464,8 @@ export default {
 	theme: {
 		extend: {
 			colors: {
-				// ...getPrimary("teal"),
-				...getPrimary("fanxingzhihui"),
+				...getPrimary("teal"),
+				// ...getPrimary("fanxingzhihui"),
 				...getSurface("zinc")
 			},
 			fontSize: {
