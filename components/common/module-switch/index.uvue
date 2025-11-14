@@ -1,0 +1,70 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import type { ClTabsItem } from "@/uni_modules/cool-ui";
+import SimpleCard from "@/components/common/card/simple-card.uvue";
+
+const props = defineProps({
+	modelValue: {
+		type: String,
+		default: "consult"
+	},
+	options: {
+		type: Array as () => ClTabsItem[],
+		default: () => [
+			{ label: "咨询", value: "consult" },
+			{ label: "检索", value: "search" },
+			{ label: "风控", value: "risk" },
+			{ label: "文书", value: "document" },
+			{ label: "审核", value: "review" }
+		]
+	}
+});
+
+const emit = defineEmits<{
+	(e: "update:modelValue", value: string): void;
+	(e: "change", value: string, item: ClTabsItem): void;
+}>();
+
+const internalOptions = computed(() => props.options || []);
+
+const tabsList = computed<ClTabsItem[]>(() => {
+	return internalOptions.value.map((item) => ({
+		label: item.label,
+		value: item.value
+	}));
+});
+
+// 内部使用的选中值，双向同步到外部 v-model
+const currentValue = computed({
+	get() {
+		return props.modelValue;
+	},
+	set(val: string) {
+		if (val === props.modelValue) return;
+
+		emit("update:modelValue", val);
+		const item = internalOptions.value.find((e) => e.value === val);
+		if (item) {
+			emit("change", val, item);
+		}
+	}
+});
+</script>
+
+<template>
+	<simple-card class="h-12 flex flex-row items-center px-4 py-2">
+		<view class="mr-3 flex-shrink-0">
+			<slot name="left"></slot>
+		</view>
+
+		<view class="flex-1 flex flex-row items-center overflow-x-auto">
+			<cl-tabs v-model="currentValue" :list="tabsList"></cl-tabs>
+		</view>
+
+		<view class="ml-3 flex-shrink-0">
+			<slot name="right"></slot>
+		</view>
+	</simple-card>
+</template>
+
+<style lang="scss" scoped></style>
