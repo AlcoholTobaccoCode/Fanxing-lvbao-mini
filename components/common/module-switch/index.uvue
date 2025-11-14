@@ -2,10 +2,11 @@
 import { computed } from "vue";
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
 import SimpleCard from "@/components/common/card/simple-card.uvue";
+import type { OptionsItemKey } from "@/components/common/module-switch/types";
 
 const props = defineProps({
 	modelValue: {
-		type: String,
+		type: String as () => OptionsItemKey,
 		default: "consult"
 	},
 	options: {
@@ -13,16 +14,15 @@ const props = defineProps({
 		default: () => [
 			{ label: "咨询", value: "consult" },
 			{ label: "检索", value: "search" },
-			{ label: "风控", value: "risk" },
 			{ label: "文书", value: "document" },
-			{ label: "审核", value: "review" }
+			{ label: "合同", value: "contract" }
 		]
 	}
 });
 
 const emit = defineEmits<{
-	(e: "update:modelValue", value: string): void;
-	(e: "change", value: string, item: ClTabsItem): void;
+	(e: "update:modelValue", value: OptionsItemKey): void;
+	(e: "change", value: OptionsItemKey, item: ClTabsItem): void;
 }>();
 
 const internalOptions = computed(() => props.options || []);
@@ -34,12 +34,11 @@ const tabsList = computed<ClTabsItem[]>(() => {
 	}));
 });
 
-// 内部使用的选中值，双向同步到外部 v-model
 const currentValue = computed({
 	get() {
 		return props.modelValue;
 	},
-	set(val: string) {
+	set(val: OptionsItemKey) {
 		if (val === props.modelValue) return;
 
 		emit("update:modelValue", val);

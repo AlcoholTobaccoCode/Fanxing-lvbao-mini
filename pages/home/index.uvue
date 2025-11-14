@@ -1,0 +1,81 @@
+<script lang="ts" setup>
+import { ref } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
+
+import type { ClTabsItem } from "@/uni_modules/cool-ui";
+import type { OptionsItemKey } from "@/components/common/module-switch/types";
+
+import ModuleSwitch from "@/components/common/module-switch/index.uvue";
+import Consult from "./components/consult.vue";
+import Document from "./components/document.vue";
+import Search from "./components/search.vue";
+import Contract from "./components/contract.vue";
+
+const log = new Logger("HomePage"); // 或 createLogger("Home")
+const ui = useUi();
+
+const activeModule = ref<OptionsItemKey>("consult");
+
+const componentsMap: Record<OptionsItemKey, any> = {
+	consult: Consult,
+	document: Document,
+	search: Search,
+	contract: Contract
+};
+
+onLoad(() => {
+	// TODO
+});
+
+//#region 交互区域
+
+// 对话主题切换
+const handleModuleChange = (value: OptionsItemKey, item: ClTabsItem) => {
+	log.group("handleModuleChange");
+	log.info("value ==> ", value);
+	log.info("item ==> ", item);
+	log.groupEnd();
+};
+
+// 打开对话历史、知识库、个人资料弹窗
+const handleOpenSetting = () => {
+	log.info("handleOpenSetting");
+	ui.showToast({
+		message: "打开设置"
+	});
+};
+
+// 打开新对话
+const handleOpenNewChat = () => {
+	log.info("handleOpenNewChat");
+	ui.showToast({
+		message: "打开新对话"
+	});
+};
+</script>
+
+<template>
+	<cl-page>
+		<view class="h-full flex flex-col">
+			<module-switch v-model="activeModule" @change="handleModuleChange">
+				<template #left>
+					<view @click="handleOpenSetting">
+						<cl-icon name="shijian" size="24" className="!leading-none"></cl-icon>
+					</view>
+				</template>
+				<template #right>
+					<view @click="handleOpenNewChat">
+						<cl-icon name="pinglun" size="24" className="!leading-none"></cl-icon>
+					</view>
+				</template>
+			</module-switch>
+
+			<view class="flex-1 p-4">
+				<component :is="componentsMap[activeModule]" />
+			</view>
+		</view>
+	</cl-page>
+</template>
+
+<style lang="scss" scoped></style>

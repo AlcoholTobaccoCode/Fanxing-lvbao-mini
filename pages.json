@@ -1,12 +1,6 @@
 {
-	"entryPagePath": "pages/entry/index",
+	"entryPagePath": "pages/home/index",
 	"pages": [
-		{
-			"path": "pages/entry/index",
-			"style": {
-				"navigationStyle": "custom"
-			}
-		},
 		{
 			"path": "pages/home/index",
 			"style": {
