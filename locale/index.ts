@@ -138,7 +138,6 @@ export const initLocale = () => {
 // 更新标题
 export function updateTitle() {
 	const style = router.route()?.style;
-
 	if (style != null) {
 		if (style.navigationBarTitleText != null) {
 			uni.setNavigationBarTitle({
