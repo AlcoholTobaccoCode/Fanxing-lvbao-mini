@@ -1,0 +1,234 @@
+<script setup lang="ts">
+import { ref, watch } from "vue";
+import { isDark } from "@/cool";
+import type { ToolItem, Tools, ActionItem, Actions, SendData } from "./types";
+
+import SimpleCard from "@/components/common/card/simple-card.uvue";
+
+const props = defineProps({
+	modelValue: {
+		type: String,
+		default: () => ""
+	},
+	placeholder: {
+		type: String,
+		default: () => "在这里输入你的问题"
+	},
+	loading: {
+		type: Boolean,
+		default: () => false
+	},
+	disabled: {
+		type: Boolean,
+		default: () => false
+	},
+	/**
+	 * inputMode
+	 * @default "text"
+	 * @description: text -> 文本输入 | voice -> 语音输入
+	 */
+	inputMode: {
+		type: String,
+		default: () => "text"
+	}
+});
+
+const emit = defineEmits<{
+	(e: "update:modelValue", value: string): void;
+	(e: "send", value: SendData): void;
+}>();
+
+// 文本输入
+const innerValue = ref(props.modelValue);
+
+// 输入模式
+const inputModeVal = ref(props.inputMode);
+
+// 外挂 tool
+const tools = ref<Tools>([
+	{
+		icon: "fxzh-hulianwang",
+		text: "联网搜索",
+		enable: true,
+		onClick: (item: ToolItem) => {
+			item.enable = item.enable ? false : true;
+			console.info("联网搜索", item.enable);
+		}
+	},
+	{
+		icon: "fxzh-zhishiku",
+		text: "知识库",
+		enable: true,
+		onClick: (item: ToolItem) => {
+			item.enable = item.enable ? false : true;
+			console.info("知识库", item.enable);
+		}
+	}
+]);
+
+// 交互按钮
+const actions = ref<Actions>([
+	{
+		icon: "add-circle-line",
+		text: "添加",
+		disabled: true,
+		onClick: (item: ActionItem) => {
+			console.info("添加", item.disabled);
+		}
+	},
+	{
+		icon: "arrow-up-circle-fill",
+		text: "发送",
+		disabled: true,
+		onClick: (item: ActionItem) => {
+			console.info("发送");
+			// handleSend();
+		}
+	}
+]);
+
+watch(
+	() => props.modelValue,
+	(val) => {
+		if (val !== innerValue.value) {
+			innerValue.value = val;
+		}
+	}
+);
+
+// 切换输入模式
+const handleRecording = () => {
+	inputModeVal.value = inputModeVal.value === "text" ? "voice" : "text";
+};
+
+// 输入框内容变化
+const handleInput = (val: string) => {
+	innerValue.value = val;
+	emit("update:modelValue", val);
+};
+
+// 发送
+const handleSend = () => {
+	if (props.disabled || props.loading) return;
+	const val = innerValue.value.trim();
+
+	const isVoice = inputModeVal.value === "voice";
+
+	const data = {
+		text: val
+	};
+
+	if (!val) return;
+	emit("send", data);
+};
+
+// 确认
+const handleConfirm = () => {
+	handleSend();
+};
+</script>
+
+<template>
+	<simple-card class="chat-input-wrapper" :class="{ 'is-dark': isDark }">
+		<view class="chat-input-top">
+			<view class="mr-2 flex justify-center items-center" hoverClass="block-hover-class">
+				<cl-button
+					text
+					:icon="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
+					size="large"
+					@click="handleRecording"
+					:pt="{
+						icon: {
+							size: '22px'
+						}
+					}"
+				></cl-button>
+			</view>
+			<!-- 输入框 -->
+			<view class="flex-1 flex flex-row items-center" v-if="inputModeVal === 'text'">
+				<cl-input
+					v-model="innerValue"
+					:placeholder="placeholder"
+					:disabled="disabled"
+					:pt="{
+						className: 'flex-1 !h-[36px] rounded-full px-3 !border-none'
+					}"
+					clearable
+					@update:model-value="handleInput"
+					@confirm="handleConfirm"
+				></cl-input>
+			</view>
+			<!-- 语音输入 -->
+			<view class="flex-1 flex flex-row items-center" v-else>
+				<cl-button size="large" type="primary" class="w-full">
+					<span>按住</span>
+					<span>说话</span>
+				</cl-button>
+			</view>
+		</view>
+
+		<view class="chat-input-bottom">
+			<view class="chat-input-bottom-item -ml-1">
+				<template v-for="(item, index) in tools" :key="index">
+					<cl-button
+						text
+						size="large"
+						:icon="item.icon"
+						:type="item.enable ? 'primary' : 'info'"
+						:pt="{
+							icon: {
+								size: '18px'
+							}
+						}"
+						@click="item.onClick(item)"
+					>
+						{{ item.text }}
+					</cl-button>
+				</template>
+			</view>
+
+			<view class="chat-input-bottom-item -ml-2">
+				<template v-for="(item, index) in actions" :key="index">
+					<cl-button
+						text
+						size="large"
+						:icon="item.icon"
+						:type="item.disabled ? 'primary' : 'info'"
+						:pt="{
+							icon: {
+								size: '22px'
+							}
+						}"
+						@click="item.onClick(item)"
+					>
+					</cl-button>
+				</template>
+			</view>
+		</view>
+	</simple-card>
+</template>
+
+<style scoped lang="scss">
+.chat-input-wrapper {
+	@apply rounded-none rounded-t-2xl shadow-md;
+	border-width: 1px;
+	border-style: solid;
+	border-color: rgba(228, 228, 231, 1);
+
+	&.is-dark {
+		border-color: rgba(82, 82, 91, 1);
+	}
+}
+
+.chat-input-top {
+	@apply flex flex-row items-center;
+}
+
+.chat-input-bottom {
+	@apply flex flex-row items-center justify-between flex-wrap;
+}
+
+.chat-input-bottom-item {
+	@apply flex flex-row items-center justify-between flex-wrap;
+}
+</style>
