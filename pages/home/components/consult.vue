@@ -4,5 +4,7 @@
 <script lang="ts" setup></script>
 
 <template>
-	<view>咨询</view>
+	<view>
+		<cl-text>咨询</cl-text>
+	</view>
 </template>

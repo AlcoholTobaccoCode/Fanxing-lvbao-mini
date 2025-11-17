@@ -5,5 +5,7 @@
 <script lang="ts" setup></script>
 
 <template>
-	<view>检索</view>
+	<view>
+		<cl-text>检索</cl-text>
+	</view>
 </template>

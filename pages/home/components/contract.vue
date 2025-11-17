@@ -4,5 +4,7 @@
 <script lang="ts" setup></script>
 
 <template>
-	<view>合同</view>
+	<view>
+		<cl-text>合同</cl-text>
+	</view>
 </template>

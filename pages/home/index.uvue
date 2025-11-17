@@ -5,8 +5,10 @@ import { Logger } from "@/cool/utils/log";
 
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
 import type { OptionsItemKey } from "@/components/common/module-switch/types";
+import type { SendData } from "@/components/common/chat-input/types";
 
 import ModuleSwitch from "@/components/common/module-switch/index.uvue";
+import ChatInput from "@/components/common/chat-input/index.uvue";
 import Consult from "./components/consult.vue";
 import Document from "./components/document.vue";
 import Search from "./components/search.vue";
@@ -16,6 +18,9 @@ const log = new Logger("HomePage"); // 或 createLogger("Home")
 const ui = useUi();
 
 const activeModule = ref<OptionsItemKey>("consult");
+
+// 对话输入内容
+const inputValue = ref("");
 
 const componentsMap: Record<OptionsItemKey, any> = {
 	consult: Consult,
@@ -53,27 +58,50 @@ const handleOpenNewChat = () => {
 		message: "打开新对话"
 	});
 };
+
+// 发送当前对话输入
+const handleSend = (data: SendData) => {
+	log.group("handleSend");
+	log.info("text ==> ", data);
+	log.groupEnd();
+
+	// TODO: 根据 activeModule 调用对应模块的对话接口
+	inputValue.value = "";
+};
 </script>
 
 <template>
-	<cl-page>
+	<cl-page :back-top="false">
 		<view class="h-full flex flex-col">
+			<!-- 顶部模块切换区域 -->
 			<module-switch v-model="activeModule" @change="handleModuleChange">
 				<template #left>
 					<view @click="handleOpenSetting">
-						<cl-icon name="shijian" size="24" className="!leading-none"></cl-icon>
-					</view>
-				</template>
-				<template #right>
-					<view @click="handleOpenNewChat">
-						<cl-icon name="pinglun" size="24" className="!leading-none"></cl-icon>
+						<cl-icon
+							name="shijian"
+							size="24"
+							:pt="{
+								className: '!leading-none'
+							}"
+						></cl-icon>
 					</view>
 				</template>
 			</module-switch>
 
+			<!-- 对话内容区域 -->
 			<view class="flex-1 p-4">
+				<!-- #ifndef MP-WEIXIN -->
 				<component :is="componentsMap[activeModule]" />
+				<!-- #endif -->
+				<!-- #ifdef MP-WEIXIN -->
+				<Consult v-if="activeModule === 'consult'"></Consult>
+				<Document v-if="activeModule === 'document'"></Document>
+				<Search v-if="activeModule === 'search'"></Search>
+				<Contract v-if="activeModule === 'contract'"></Contract>
+				<!-- #endif -->
 			</view>
+			<!-- 底部输入区域 -->
+			<chat-input v-model="inputValue" @send="handleSend"></chat-input>
 		</view>
 	</cl-page>
 </template>

@@ -4,5 +4,7 @@
 <script lang="ts" setup></script>
 
 <template>
-	<view>文书</view>
+	<view>
+		<cl-text>文书</cl-text>
+	</view>
 </template>
