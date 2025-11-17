@@ -29,7 +29,7 @@ type Config = {
 
 // 根据环境导出最终配置
 export const config = {
-	name: "律宝",
+	name: "律先锋",
 	version: "1.0.0",
 	locale: "zh",
 	website: "https://fanxingzhihui.com",
