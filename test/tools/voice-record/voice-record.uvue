@@ -326,9 +326,11 @@ function playRecord(src: string) {
 						}"
 					>
 						<canvas
-							class="recwave-WaveView"
+							class="w-full recwave-WaveView"
 							type="2d"
-							:style="{ height: waveViewConfig.height / 2 + 'px' }"
+							:style="{
+								height: `${waveViewConfig.height / 2}px`
+							}"
 						></canvas>
 					</view>
 				</view>
@@ -339,7 +341,7 @@ function playRecord(src: string) {
 		</view>
 		<view class="voice-record-page">
 			<!-- 调试信息 -->
-			<view class="flex-1 flex flex-col gap-2" v-if="false">
+			<view class="flex-1 flex flex-col gap-2">
 				<view class="voice-record-debug">
 					<text class="debug-title">调试信息（仅测试环境）</text>
 					<text class="debug-line">模式：{{ mode }}</text>
@@ -403,7 +405,7 @@ function playRecord(src: string) {
 }
 
 .voice-record-bubble {
-	@apply rounded-[24px] px-12 py-4 flex items-center justify-center shadow-lg mx-6;
+	@apply rounded-[24px] px-8 py-4 flex items-center justify-center shadow-lg mx-6;
 	background-color: #7ed321;
 }
 
