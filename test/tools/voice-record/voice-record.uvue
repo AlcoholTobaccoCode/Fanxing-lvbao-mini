@@ -32,6 +32,7 @@ const instance = getCurrentInstance();
 const vue3This = instance!.proxy as any;
 
 // 录音状态：send / cancel / translate
+const MAX_DURATION = 12_000; // 12s 录制最大时长
 type Mode = "send" | "cancel" | "translate";
 const mode = ref<Mode>("send");
 
@@ -67,6 +68,12 @@ const overlayText = computed(() => {
 	if (!isRecording.value) return "";
 	if (mode.value === "cancel") return "松开手指，取消发送";
 	if (mode.value === "translate") return "松开手指，转为文字";
+	// 进入最后 10 秒时，用 tip 提醒剩余录制时间
+	const remainMs = MAX_DURATION - durationMs.value;
+	if (remainMs > 0 && remainMs <= 10_000) {
+		const remainSec = Math.ceil(remainMs / 1000);
+		return `还可以录制 ${remainSec} 秒`;
+	}
 	return "正在录音... 上滑或左右滑动选择";
 });
 
@@ -150,6 +157,13 @@ function handleTouchStart(e: any) {
 						waveView.input(buffers[buffers.length - 1], powerLevel, sampleRate);
 					}
 					// #endif
+					// 简单的最长录音时长控制：超过 60 秒自动结束
+					if (duration >= MAX_DURATION && isRecording.value) {
+						pushDebug("达到最大录音时长，自动结束", { durationMs: duration });
+						isRecording.value = false;
+						showOverlay.value = false;
+						stopAndEmit(false);
+					}
 				}
 			};
 
@@ -343,9 +357,9 @@ function playRecord(src: string) {
 						></canvas>
 					</view>
 				</view>
-				<!-- <view class="voice-record-tip" :class="{ cancel: mode === 'cancel' }">
+				<view class="voice-record-tip" :class="{ cancel: mode === 'cancel' }">
 					<text>{{ overlayText }}</text>
-				</view> -->
+				</view>
 			</view>
 		</view>
 		<view class="voice-record-page">
