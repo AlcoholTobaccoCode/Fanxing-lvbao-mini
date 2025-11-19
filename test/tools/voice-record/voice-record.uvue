@@ -447,9 +447,10 @@ function playRecord(src: string) {
 }
 
 .voice-record-tip {
-	@apply mt-4 px-4 py-2 rounded-full bg-[rgba(0,0,0,0.6)];
+	@apply mt-4 px-4 py-2 rounded-full;
 	color: #fff;
 	font-size: 14px;
+	background-color: rgba(0, 0, 0, 0.6);
 }
 
 .voice-record-tip.cancel {
@@ -476,7 +477,7 @@ function playRecord(src: string) {
 }
 
 .voice-record-pill {
-	@apply w-[40%] h-[70px] rounded-full flex items-center justify-center;
+	@apply w-[200px] h-[70px] rounded-full flex items-center justify-center;
 	background-color: rgba(0, 0, 0, 0.35);
 	color: #fff;
 	font-size: 14px;
