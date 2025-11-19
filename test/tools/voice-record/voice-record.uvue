@@ -32,7 +32,7 @@ const instance = getCurrentInstance();
 const vue3This = instance!.proxy as any;
 
 // 录音状态：send / cancel / translate
-const MAX_DURATION = 12_000; // 12s 录制最大时长
+const MAX_DURATION = 12_000; // 录制最大时长（毫秒）
 type Mode = "send" | "cancel" | "translate";
 const mode = ref<Mode>("send");
 
@@ -66,6 +66,7 @@ const mainText = computed(() => {
 
 const overlayText = computed(() => {
 	if (!isRecording.value) return "";
+	if (mode.value === "send") return "松开手指，发送";
 	if (mode.value === "cancel") return "松开手指，取消发送";
 	if (mode.value === "translate") return "松开手指，转为文字";
 	// 进入最后 10 秒时，用 tip 提醒剩余录制时间
@@ -237,13 +238,8 @@ function updateModeByTouch(e: any) {
 
 function handleTouchMove(e: any) {
 	if (!isRecording.value) return;
+	// 仅根据左右位置判断：左 1/3 取消，中间发送，右 1/3 转文字
 	updateModeByTouch(e);
-	const currentY = e.touches[0].pageY;
-	const dy = startPageY.value - currentY;
-	// 上滑很多也视为取消
-	if (dy > 80) {
-		mode.value = "cancel";
-	}
 }
 
 function stopAndEmit(isCancel: boolean) {
