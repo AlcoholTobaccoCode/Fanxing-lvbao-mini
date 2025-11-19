@@ -10,10 +10,14 @@ import "@/uni_modules/Recorder-UniCore/app-uni-support.js";
 import "recorder-core/src/app-support/app-miniProgram-wx-support.js";
 // #endif
 
-// H5 / 小程序：引入 mp3 编码和波形扩展
+// 引入 mp3 编码器：H5 + 微信小程序 都需要编码器来生成 mp3
 // #ifdef H5 || MP-WEIXIN
 import "recorder-core/src/engine/mp3";
 import "recorder-core/src/engine/mp3-engine";
+// #endif
+
+// WaveView 只在 H5 使用，避免小程序 Recorder 全局变量相关问题
+// #ifdef H5
 import "recorder-core/src/extensions/waveview";
 // #endif
 
@@ -35,6 +39,9 @@ const vue3This = instance!.proxy as any;
 const MAX_DURATION = 12_000; // 录制最大时长（毫秒）
 type Mode = "send" | "cancel" | "translate";
 const mode = ref<Mode>("send");
+
+// 录制格式：统一使用 mp3（H5 + 小程序均加载了 mp3 编码器）
+const REC_TYPE: "mp3" = "mp3";
 
 const waveViewConfig = ref<any>({
 	width: 160,
@@ -139,7 +146,8 @@ function handleTouchStart(e: any) {
 	ensurePermission()
 		.then(() => {
 			const set = {
-				type: "mp3",
+				// 按平台选择好的录制格式
+				type: REC_TYPE,
 				// 16k 语音足够，体积也小
 				sampleRate: 16000,
 				// 比特率，越高音质越好，文件越大
@@ -151,8 +159,8 @@ function handleTouchStart(e: any) {
 					sampleRate: number
 				) => {
 					durationMs.value = duration;
-					// H5、微信用 waveview
-					// #ifdef H5 || MP-WEIXIN
+					// H5 用 waveview 绘制声纹（小程序暂不启用）
+					// #ifdef H5
 					const waveView = (vue3This as any).waveView;
 					if (waveView && buffers.length) {
 						waveView.input(buffers[buffers.length - 1], powerLevel, sampleRate);
@@ -175,32 +183,24 @@ function handleTouchStart(e: any) {
 					isRecording.value = true;
 					showOverlay.value = true;
 					pushDebug("开始录音");
-					// 初始化波形 canvas：等遮罩和气泡渲染完再查找 canvas
-					// #ifdef H5 || MP-WEIXIN
+					// 初始化波形 canvas：等遮罩和气泡渲染完再查找 canvas（仅 H5）
+					// #ifdef H5
 					nextTick(() => {
 						RecordApp.UniFindCanvas(
 							vue3This,
 							[".recwave-WaveView"],
 							`
-								this.waveView = Recorder.WaveView({
-									compatibleCanvas: canvas1,
-									width: ${waveViewConfig.value.width},
-									height: ${waveViewConfig.value.height},
-								});
+					this.waveView = Recorder.WaveView({
+						compatibleCanvas: canvas1,
+						width: ${waveViewConfig.value.width},
+						height: ${waveViewConfig.value.height},
+					});
 					`,
 							(canvas1: any) => {
 								(vue3This as any).waveView = Recorder.WaveView({
 									compatibleCanvas: canvas1,
 									width: waveViewConfig.value.width / 4,
 									height: waveViewConfig.value.height / 2
-									// linear1: [0, "rgba(126,211,33,1)", 1, "rgba(70,160,10,1)"],
-									// linear2: [0, "rgba(126,211,33,0.4)", 1, "rgba(70,160,10,0.4)"],
-									// linearBg: [
-									// 	0,
-									// 	"rgba(255,255,255,0.0)",
-									// 	1,
-									// 	"rgba(255,255,255,0.0)"
-									// ]
 								});
 								waveViewConfig.value.canvas = canvas1;
 							}
@@ -279,6 +279,10 @@ function stopAndEmit(isCancel: boolean) {
 						{ src: savePath, soundTime, mode: mode.value },
 						...records.value
 					].slice(0, 10);
+					// 针对微信小程序，清晰打印 wxfile 路径，方便调试 / 复制
+					// #ifdef MP-WEIXIN
+					pushDebug("[MP] 保存录音文件", { tempFilePath: savePath });
+					// #endif
 					emit("emitCheck", {
 						status: !isCancel,
 						path: [
