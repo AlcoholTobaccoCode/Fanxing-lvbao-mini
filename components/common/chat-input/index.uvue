@@ -4,6 +4,8 @@ import { isDark } from "@/cool";
 import type { ToolItem, Tools, ActionItem, Actions, SendData } from "./types";
 
 import SimpleCard from "@/components/common/card/simple-card.uvue";
+import VoiceRecord from "./voice-record.uvue";
+import ActionsPopup from "./actions-popup.uvue";
 
 const props = defineProps({
 	modelValue: {
@@ -36,6 +38,10 @@ const props = defineProps({
 const emit = defineEmits<{
 	(e: "update:modelValue", value: string): void;
 	(e: "send", value: SendData): void;
+	(e: "voice-start"): void;
+	(e: "voice-finish"): void;
+	(e: "voice-cancel"): void;
+	(e: "voice-translate"): void;
 }>();
 
 // 文本输入
@@ -43,6 +49,9 @@ const innerValue = ref(props.modelValue);
 
 // 输入模式
 const inputModeVal = ref(props.inputMode);
+
+// 语音浮层显隐
+const voiceVisible = ref(false);
 
 // 外挂 tool
 const tools = ref<Tools>([
@@ -67,6 +76,7 @@ const tools = ref<Tools>([
 ]);
 
 // 交互按钮
+const showMoreAction = ref(false);
 const actions = ref<Actions>([
 	{
 		icon: "add-circle-line",
@@ -74,6 +84,7 @@ const actions = ref<Actions>([
 		disabled: true,
 		onClick: (item: ActionItem) => {
 			console.info("添加", item.disabled);
+			showMoreAction.value = true;
 		}
 	},
 	{
@@ -126,6 +137,31 @@ const handleSend = () => {
 const handleConfirm = () => {
 	handleSend();
 };
+
+// ===== 语音录制相关 =====
+
+// 按住说话：按下时显示语音浮层并通知开始
+const handlePressStart = () => {
+	voiceVisible.value = true;
+	emit("voice-start");
+};
+
+// 松开：关闭浮层并通知结束
+const handlePressEnd = () => {
+	voiceVisible.value = false;
+	emit("voice-finish");
+};
+
+// 浮层回调
+const handleVoiceCancel = () => {
+	voiceVisible.value = false;
+	emit("voice-cancel");
+};
+
+const handleVoiceTranslate = () => {
+	voiceVisible.value = false;
+	emit("voice-translate");
+};
 </script>
 
 <template>
@@ -160,9 +196,15 @@ const handleConfirm = () => {
 			</view>
 			<!-- 语音输入 -->
 			<view class="flex-1 flex flex-row items-center" v-else>
-				<cl-button size="large" type="primary" class="w-full">
-					<span>按住</span>
-					<span>说话</span>
+				<cl-button
+					size="large"
+					type="primary"
+					class="w-full flex flex-row gap-2 justify-center items-center"
+					@touchstart.native.stop="handlePressStart"
+					@touchend.native.stop="handlePressEnd"
+					@touchcancel.native.stop="handlePressEnd"
+				>
+					<span>按住说话</span>
 				</cl-button>
 			</view>
 		</view>
@@ -205,6 +247,22 @@ const handleConfirm = () => {
 				</template>
 			</view>
 		</view>
+
+		<view class="chat-tips">
+			<cl-text size="10px" color="info">AI检索结果仅供参考，以官方法条和权威案例为准</cl-text>
+		</view>
+
+		<!-- 更多交互弹窗 -->
+		<actions-popup v-model:is-show="showMoreAction"></actions-popup>
+
+		<!-- 语音录制浮层，仅在按住说话时显示 -->
+		<voice-record
+			v-model="voiceVisible"
+			@start="handlePressStart"
+			@finish="handlePressEnd"
+			@cancel="handleVoiceCancel"
+			@translate="handleVoiceTranslate"
+		/>
 	</simple-card>
 </template>
 
@@ -230,5 +288,9 @@ const handleConfirm = () => {
 
 .chat-input-bottom-item {
 	@apply flex flex-row items-center justify-between flex-wrap;
+}
+
+.chat-tips {
+	@apply flex items-center justify-center;
 }
 </style>

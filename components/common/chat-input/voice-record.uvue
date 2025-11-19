@@ -1,0 +1,187 @@
+<script lang="ts" setup>
+import { ref, computed } from "vue";
+
+const props = defineProps({
+	modelValue: {
+		type: Boolean,
+		default: false
+	}
+});
+
+const emit = defineEmits<{
+	(e: "update:modelValue", value: boolean): void;
+	(e: "start"): void;
+	(e: "finish"): void;
+	(e: "cancel"): void;
+	(e: "translate"): void;
+}>();
+
+const status = ref<"recording" | "cancel" | "translate">("recording");
+
+const tipText = computed(() => {
+	if (status.value === "cancel") return "松开 手指，取消发送";
+	if (status.value === "translate") return "松开 手指，转为文字";
+	return "松开 发送";
+});
+
+const subText = computed(() => {
+	if (status.value === "cancel") return "松开即可取消";
+	if (status.value === "translate") return "松开即可转为文字";
+	return "上滑 取消 / 转文字";
+});
+
+function close() {
+	emit("update:modelValue", false);
+}
+
+function handleStart() {
+	status.value = "recording";
+	emit("start");
+}
+
+function handleFinish() {
+	close();
+	emit("finish");
+}
+
+function handleCancel() {
+	status.value = "cancel";
+	close();
+	emit("cancel");
+}
+
+function handleTranslate() {
+	status.value = "translate";
+	close();
+	emit("translate");
+}
+</script>
+
+<template>
+	<view
+		v-if="modelValue"
+		class="voice-record-mask"
+		@contextmenu.prevent
+		@longpress.prevent
+	>
+		<view class="voice-record-center">
+			<view class="voice-record-panel">
+				<view class="voice-record-panel-icon">
+					<cl-icon name="mic-line" size="28" color="#fff"></cl-icon>
+				</view>
+				<view class="voice-record-panel-wave">
+					<view class="voice-record-wave"></view>
+				</view>
+				<view class="voice-record-panel-time">00:08</view>
+				<view class="voice-record-panel-texts">
+					<text class="voice-record-tip-text">{{ tipText }}</text>
+					<text class="voice-record-tip-sub">{{ subText }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 底部操作区：取消 / 转文字 -->
+		<view class="voice-record-bottom">
+			<view class="voice-record-bottom-item" @click="handleCancel">
+				<text>取消</text>
+			</view>
+			<view class="voice-record-bottom-divider">
+				<cl-icon name="arrow-up-s-fill" size="20" color="#fff"></cl-icon>
+			</view>
+			<view class="voice-record-bottom-item" @click="handleTranslate">
+				<text>滑到这里 转文字</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style scoped lang="scss">
+.voice-record-mask {
+	@apply fixed inset-0 z-[9999] flex flex-col justify-center items-center;
+	background-color: rgba(0, 0, 0, 0.4);
+}
+
+.voice-record-center {
+	@apply flex-1 flex flex-col items-center justify-center w-full;
+}
+
+.voice-record-panel {
+	@apply rounded-[36px] px-10 py-6 bg-primary-500 flex flex-col items-center justify-center shadow-2xl relative mx-6;
+}
+
+.voice-record-panel::after {
+	content: "";
+	position: absolute;
+	bottom: -18px;
+	left: 50%;
+	transform: translateX(-50%);
+	border-width: 12px;
+	border-style: solid;
+	border-color: rgba(14, 165, 233, 1) transparent transparent transparent;
+}
+
+.voice-record-panel-icon {
+	@apply w-[56px] h-[56px] rounded-full bg-white/25 flex items-center justify-center mb-4 backdrop-blur;
+}
+
+.voice-record-panel-wave {
+	@apply w-full flex items-center justify-center mb-3;
+}
+
+.voice-record-wave {
+	@apply w-[160px] h-[32px] rounded-full bg-white/30 overflow-hidden relative;
+}
+
+.voice-record-wave::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background-image: repeating-linear-gradient(
+		90deg,
+		transparent,
+		transparent 6px,
+		rgba(15, 23, 42, 0.35) 8px,
+		rgba(15, 23, 42, 0.35) 12px
+	);
+	animation: voice-wave 1.2s linear infinite;
+}
+
+.voice-record-panel-time {
+	@apply text-white text-lg font-semibold tracking-[0.4em] mb-2;
+}
+
+.voice-record-panel-texts {
+	@apply flex flex-col items-center;
+}
+
+.voice-record-tip-text {
+	@apply text-base text-white font-medium;
+}
+
+.voice-record-tip-sub {
+	@apply mt-1 text-xs text-white/70;
+}
+
+.voice-record-bottom {
+	@apply w-full pb-12 px-8 flex flex-row items-center justify-between;
+}
+
+.voice-record-bottom-item {
+	@apply w-[42%] h-[74px] rounded-full bg-[rgba(0,0,0,0.35)] flex items-center justify-center;
+	color: #fff;
+	font-size: 15px;
+}
+
+.voice-record-bottom-divider {
+	@apply w-[48px] h-[48px] rounded-full bg-[rgba(0,0,0,0.2)] backdrop-blur flex items-center justify-center;
+}
+
+@keyframes voice-wave {
+	0% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(-40px);
+	}
+}
+</style>

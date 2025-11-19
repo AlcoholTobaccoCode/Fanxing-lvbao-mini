@@ -1,0 +1,51 @@
+<script lang="ts" setup>
+import { ref } from "vue";
+import type { ActionItem, Actions } from "./types";
+
+const isShowModal = defineModel<boolean>("isShow", {
+	type: Boolean,
+	default: () => false
+});
+
+const moreActions = ref([
+	{
+		icon: "add-circle-line",
+		text: "上传图片",
+		disabled: true,
+		onClick: (item: ActionItem) => {
+			console.info("上传图片", item.disabled);
+		}
+	},
+	{
+		icon: "add-circle-line",
+		text: "上传文件",
+		disabled: true,
+		onClick: (item: ActionItem) => {
+			console.info("上传文件", item.disabled);
+		}
+	},
+	{
+		icon: "add-circle-line",
+		text: "语音通话",
+		disabled: true,
+		onClick: (item: ActionItem) => {
+			console.info("语音通话", item.disabled);
+		}
+	}
+]);
+</script>
+
+<template>
+	<cl-popup v-model="isShowModal" :show-close="false">
+		<view class="flex flex-row flex-wrap items-center justify-start gap-2 p-4">
+			<template v-for="(item, index) in moreActions" :key="index">
+				<cl-button type="light" :border="false" @click="item.onClick">
+					<view class="flex flex-col gap-2 items-center justify-center">
+						<cl-icon name="heart-fill"></cl-icon>
+						<cl-text>{{ item.text }}</cl-text>
+					</view>
+				</cl-button>
+			</template>
+		</view>
+	</cl-popup>
+</template>
