@@ -134,6 +134,7 @@ function handleTouchStart(e: any) {
 				type: "mp3",
 				// 16k 语音足够，体积也小
 				sampleRate: 16000,
+				// 比特率，越高音质越好，文件越大
 				bitRate: 16,
 				onProcess: (
 					buffers: Int16Array[],
@@ -169,7 +170,7 @@ function handleTouchStart(e: any) {
 								this.waveView = Recorder.WaveView({
 									compatibleCanvas: canvas1,
 									width: ${waveViewConfig.value.width},
-									height: ${waveViewConfig.value.height}
+									height: ${waveViewConfig.value.height},
 								});
 					`,
 							(canvas1: any) => {
@@ -177,6 +178,14 @@ function handleTouchStart(e: any) {
 									compatibleCanvas: canvas1,
 									width: waveViewConfig.value.width / 4,
 									height: waveViewConfig.value.height / 2
+									// linear1: [0, "rgba(126,211,33,1)", 1, "rgba(70,160,10,1)"],
+									// linear2: [0, "rgba(126,211,33,0.4)", 1, "rgba(70,160,10,0.4)"],
+									// linearBg: [
+									// 	0,
+									// 	"rgba(255,255,255,0.0)",
+									// 	1,
+									// 	"rgba(255,255,255,0.0)"
+									// ]
 								});
 								waveViewConfig.value.canvas = canvas1;
 							}
