@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
+import { router } from "@/cool";
 
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
 import type { OptionsItemKey } from "@/components/common/module-switch/types";
@@ -13,6 +14,7 @@ import Consult from "./components/consult.vue";
 import Document from "./components/document.vue";
 import Search from "./components/search.vue";
 import Contract from "./components/contract.vue";
+import SimpleCard from "@/components/common/card/simple-card.uvue";
 
 const log = new Logger("HomePage"); // 或 createLogger("Home")
 const ui = useUi();
@@ -43,6 +45,11 @@ const handleModuleChange = (value: OptionsItemKey, item: ClTabsItem) => {
 	log.groupEnd();
 };
 
+// 点击预设问题
+const handlePresetSelect = (question: string) => {
+	inputValue.value = question;
+};
+
 // 打开对话历史、知识库、个人资料弹窗
 const handleOpenSetting = () => {
 	log.info("handleOpenSetting");
@@ -68,6 +75,10 @@ const handleSend = (data: SendData) => {
 	// TODO: 根据 activeModule 调用对应模块的对话接口
 	inputValue.value = "";
 };
+
+const navToTools = () => {
+	router.to("/test/tools/index");
+};
 </script>
 
 <template>
@@ -88,19 +99,18 @@ const handleSend = (data: SendData) => {
 				</template>
 			</module-switch>
 
-			<!-- 对话内容区域 -->
-			<view class="flex-1 p-4">
+			<simple-card class="flex-1 p-4">
 				<!-- #ifndef MP-WEIXIN -->
-				<component :is="componentsMap[activeModule]" />
+				<component :is="componentsMap[activeModule]" @preset-select="handlePresetSelect" />
 				<!-- #endif -->
 				<!-- #ifdef MP-WEIXIN -->
-				<Consult v-if="activeModule === 'consult'"></Consult>
-				<Document v-if="activeModule === 'document'"></Document>
-				<Search v-if="activeModule === 'search'"></Search>
-				<Contract v-if="activeModule === 'contract'"></Contract>
+				<Consult v-if="activeModule === 'consult'" @preset-select="handlePresetSelect" />
+				<Document v-if="activeModule === 'document'" @preset-select="handlePresetSelect" />
+				<Search v-if="activeModule === 'search'" @preset-select="handlePresetSelect" />
+				<Contract v-if="activeModule === 'contract'" @preset-select="handlePresetSelect" />
 				<!-- #endif -->
-			</view>
-			<!-- 底部输入区域 -->
+			</simple-card>
+
 			<chat-input v-model="inputValue" @send="handleSend"></chat-input>
 		</view>
 	</cl-page>
