@@ -99,7 +99,7 @@ const navToTools = () => {
 				</template>
 			</module-switch>
 
-			<simple-card class="flex-1 p-4">
+			<simple-card class="flex-1 p-4 !px-8">
 				<!-- #ifndef MP-WEIXIN -->
 				<component :is="componentsMap[activeModule]" @preset-select="handlePresetSelect" />
 				<!-- #endif -->

@@ -3,30 +3,15 @@
 -->
 <script lang="ts" setup>
 import { computed, ref } from "vue";
+import { contractPresets, type ContractType } from "../config";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
 }>();
 
-type ContractType = "generate" | "review";
-
 const activeType = ref<ContractType>("generate");
 
-const generateQuestions = [
-	"根据以下要点帮我生成一份劳动合同草稿。",
-	"请帮我生成一份房屋租赁合同，租期一年，月租金3000元，押一付三。",
-	"根据以下条款，帮我起草一份合作协议。"
-];
-
-const reviewQuestions = [
-	"请帮我审核这份买卖合同是否存在明显风险。",
-	"从乙方角度帮我看看这份租赁合同有哪些不公平条款。",
-	"根据以下合同内容，提示可能的法律风险。"
-];
-
-const questions = computed(() =>
-	activeType.value === "generate" ? generateQuestions : reviewQuestions
-);
+const questions = computed(() => contractPresets[activeType.value]);
 
 const title = computed(() => (activeType.value === "generate" ? "合同生成" : "合同审核"));
 

@@ -4,28 +4,15 @@
 
 <script lang="ts" setup>
 import { computed, ref } from "vue";
+import { searchPresets, type SearchType } from "../config";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
 }>();
 
-type SearchType = "law" | "case";
-
 const activeType = ref<SearchType>("law");
 
-const lawQuestions = [
-	"请检索杭州市近三年颁布的与物业管理相关的法规。",
-	"请检索关于侵犯他人隐私的相关法条。",
-	"请检索南京市近5年对于摩托车骑行的法规。"
-];
-
-const caseQuestions = [
-	"请检索近期关于遗产继承纠纷的典型案例。",
-	"请检索商标侵权案件中原告胜诉的案例。",
-	"请检索劳动争议中员工获得经济补偿的案例。"
-];
-
-const questions = computed(() => (activeType.value === "law" ? lawQuestions : caseQuestions));
+const questions = computed(() => searchPresets[activeType.value]);
 
 const title = computed(() => (activeType.value === "law" ? "法条检索" : "案例检索"));
 

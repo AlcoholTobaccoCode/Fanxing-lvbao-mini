@@ -3,30 +3,15 @@
 -->
 <script lang="ts" setup>
 import { computed, ref } from "vue";
+import { documentPresets, type DocumentType } from "../config";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
 }>();
 
-type DocumentType = "indictment" | "defense";
-
 const activeType = ref<DocumentType>("indictment");
 
-const indictmentQuestions = [
-	"帮我生成一份民事起诉状草稿。",
-	"根据这个案情，起草一份起诉状。",
-	"优化一下我现有的起诉状，让结构更清晰。"
-];
-
-const defenseQuestions = [
-	"根据这个案情，帮我起草一份刑事答辩状。",
-	"请根据以下案情撰写一份民事答辩状。",
-	"优化一下我现有的答辩状，让逻辑更严谨。"
-];
-
-const questions = computed(() =>
-	activeType.value === "indictment" ? indictmentQuestions : defenseQuestions
-);
+const questions = computed(() => documentPresets[activeType.value]);
 
 const title = computed(() => (activeType.value === "indictment" ? "起诉状" : "答辩状"));
 
