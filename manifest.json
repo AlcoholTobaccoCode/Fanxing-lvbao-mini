@@ -9,7 +9,6 @@
 	"mp-weixin": {
 		"darkmode": true,
 		"appid": "wx0196a4c661ef2bd6",
-		"requiredPrivateInfos": ["getRecorderManager", "chooseImage"],
 		"setting": {
 			"urlCheck": false,
 			"es6": true
