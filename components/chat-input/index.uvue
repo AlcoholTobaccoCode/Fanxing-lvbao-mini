@@ -30,6 +30,11 @@ const props = defineProps({
 		type: String,
 		default: () => "text"
 	},
+	// 实时语音音量（0-100），用于驱动录音气泡水波纹
+	voiceVolume: {
+		type: Number,
+		default: () => 0
+	},
 	// 顶部工具栏：额外传入的工具项
 	tools: {
 		type: Array as PropType<Tools>,
@@ -108,7 +113,10 @@ const createDefaultTools = (): Tools => {
 	return list;
 };
 
-const tools = ref<Tools>([...createDefaultTools(), ...(props.tools || []).map(item => ({ ...item }))]);
+const tools = ref<Tools>([
+	...createDefaultTools(),
+	...(props.tools || []).map((item) => ({ ...item }))
+]);
 
 // 当外部传入的 tools 或默认展示配置变化时，同步内部列表
 watch(
@@ -120,14 +128,14 @@ watch(
 	}),
 	() => {
 		const activeMap = new Map<string, boolean>();
-		tools.value.forEach(t => {
+		tools.value.forEach((t) => {
 			activeMap.set(t.text, !!t.enable);
 		});
 
 		const next: Tools = [
 			...createDefaultTools(),
-			...(props.tools || []).map(item => ({ ...item }))
-		].map(item => ({
+			...(props.tools || []).map((item) => ({ ...item }))
+		].map((item) => ({
 			...item,
 			enable: activeMap.get(item.text) ?? item.enable ?? false
 		}));
@@ -142,7 +150,7 @@ const showMoreAction = ref(false);
 
 // 顶部工具点击
 const handleToolTap = (item: ToolItem) => {
-	const target = tools.value.find(t => t.text === item.text);
+	const target = tools.value.find((t) => t.text === item.text);
 	if (!target) return;
 
 	target.enable = !target.enable;
@@ -225,7 +233,9 @@ const handleOpenCall = () => {
 							color="currentColor"
 							:pt="{ className: 'mr-1' }"
 						></cl-icon>
-						<cl-text size="13px" class="chat-intent-chip__text">{{ item.text }}</cl-text>
+						<cl-text size="13px" class="chat-intent-chip__text">{{
+							item.text
+						}}</cl-text>
 					</view>
 				</view>
 			</scroll-view>
@@ -235,13 +245,13 @@ const handleOpenCall = () => {
 		<view class="chat-main">
 			<view class="chat-main__inner">
 				<view class="chat-main__left">
-					<cl-button
-						text
-						:icon="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
-						size="large"
-						@click="handleRecording"
-						:pt="{ icon: { size: '20px' } }"
-					></cl-button>
+					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
+						<cl-icon
+							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
+							:size="32"
+							color="currentColor"
+						></cl-icon>
+					</view>
 				</view>
 
 				<view class="chat-main__center">
@@ -259,33 +269,26 @@ const handleOpenCall = () => {
 					></cl-input>
 
 					<view v-else class="chat-main__voice">
-						<cl-button
-							type="primary"
-							size="large"
-							class="chat-main__voice-btn"
-							@touchstart.native.stop="handlePressStart"
-							@touchend.native.stop="handlePressEnd"
-							@touchcancel.native.stop="handlePressEnd"
+						<view
+							class="chat-main__voice-hit"
+							@touchstart.stop="handlePressStart"
+							@touchend.stop="handlePressEnd"
+							@touchcancel.stop="handlePressEnd"
 						>
-							按住 说话
-						</cl-button>
+							<cl-button type="primary" size="large" class="chat-main__voice-btn">
+								按住 说话
+							</cl-button>
+						</view>
 					</view>
 				</view>
 
 				<view class="chat-main__right">
-					<cl-button
-						text
-						icon="camera-line"
-						size="large"
-						:pt="{ icon: { size: '20px' } }"
-					></cl-button>
-					<cl-button
-						text
-						icon="add-line"
-						size="large"
-						:pt="{ icon: { size: '20px' } }"
-						@click="showMoreAction = true"
-					></cl-button>
+					<view class="chat-main__icon-btn">
+						<cl-icon name="camera-line" :size="28" color="currentColor"></cl-icon>
+					</view>
+					<view class="chat-main__icon-btn" @tap.stop="showMoreAction = true">
+						<cl-icon name="add-line" :size="28" color="currentColor"></cl-icon>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -303,6 +306,7 @@ const handleOpenCall = () => {
 		<!-- 语音录制浮层，仅在按住说话时显示 -->
 		<voice-record
 			v-model="voiceVisible"
+			:volume="props.voiceVolume"
 			@start="handlePressStart"
 			@finish="handlePressEnd"
 			@cancel="handleVoiceCancel"
@@ -357,12 +361,20 @@ const handleOpenCall = () => {
 	@apply w-full;
 }
 
+.chat-main__voice-hit {
+	@apply w-full;
+}
+
 .chat-main__voice-btn {
 	@apply w-full h-[40px] flex flex-row items-center justify-center rounded-full;
 }
 
 .chat-main__right {
 	@apply flex flex-row items-center gap-1;
+}
+
+.chat-main__icon-btn {
+	@apply flex items-center justify-center text-surface-700;
 }
 
 .chat-tips {

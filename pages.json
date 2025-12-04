@@ -4,7 +4,14 @@
 		{
 			"path": "pages/home/index",
 			"style": {
-				"navigationBarTitleText": "律先锋"
+				"navigationBarTitleText": "律先锋",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/test-pages/general",
+			"style": {
+				"navigationBarTitleText": "全局配置"
 			}
 		}
 	],

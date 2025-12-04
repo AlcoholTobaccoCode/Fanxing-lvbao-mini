@@ -1,10 +1,15 @@
 <script lang="ts" setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 
 const props = defineProps({
 	modelValue: {
 		type: Boolean,
 		default: false
+	},
+	// 实时音量：推荐传 0-100 的 powerLevel，内部会自动归一化
+	volume: {
+		type: Number,
+		default: 0
 	}
 });
 
@@ -36,6 +41,42 @@ const subText = computed(() => {
 	return "上滑 取消 / 转文字";
 });
 
+// ===== 声波动画相关 =====
+// waveLevel 0-1，来源于外部传入的 volume（0-100）
+const waveLevel = ref(0);
+
+const waveBars = [0, 1, 2, 3, 4, 5];
+
+const getBarStyle = (index: number) => {
+	const base = 0.4 + index * 0.08;
+	const scale = base + waveLevel.value * 0.9;
+	return {
+		transform: `scaleY(${scale})`
+	};
+};
+
+// 根据外部传入的实时音量更新波形
+watch(
+	() => props.volume,
+	val => {
+		const v = Number.isFinite(val) ? Math.max(0, Math.min(val, 100)) : 0;
+		const target = v / 100;
+		// 简单平滑处理，避免抖动太厉害
+		waveLevel.value = waveLevel.value * 0.6 + target * 0.4;
+	},
+	{ immediate: true }
+);
+
+// 录音浮层关闭时重置波形
+watch(
+	() => props.modelValue,
+	val => {
+		if (!val) {
+			waveLevel.value = 0;
+		}
+	}
+);
+
 function close() {
 	emit("update:modelValue", false);
 }
@@ -66,9 +107,16 @@ function handleTranslate() {
 <template>
 	<view v-if="modelValue" class="voice-record-mask" @contextmenu.prevent @longpress.prevent>
 		<view class="voice-record-center">
-			<!-- 绿色语音气泡，只显示声波条 -->
+			<!-- 语音气泡：中间为主色圆形按钮，内部显示动态声波条 -->
 			<view class="voice-record-bubble">
-				<view class="voice-record-wave"></view>
+				<view class="voice-record-wave">
+					<view
+						v-for="(item, index) in waveBars"
+						:key="index"
+						class="voice-record-wave-bar"
+						:style="getBarStyle(index)"
+					></view>
+				</view>
 			</view>
 		</view>
 
@@ -96,32 +144,23 @@ function handleTranslate() {
 }
 
 .voice-record-center {
-	@apply flex-1 flex flex-col items-center justify-start pt-4 w-full;
+	@apply flex flex-col items-center justify-center w-full;
 }
 
 .voice-record-bubble {
-	@apply rounded-[24px] px-12 py-8 flex items-center justify-center shadow-lg mx-6;
-	background-color: #7ed321;
-	min-width: 280px;
+	@apply rounded-[24px] px-10 py-6 flex items-center justify-center shadow-lg mx-6 bg-primary-500;
+	min-width: 260px;
 }
 
 .voice-record-wave {
-	@apply w-[160px] h-[6px] rounded-full overflow-hidden relative;
-	background-color: rgba(0, 0, 0, 0.2);
+	@apply flex flex-row items-end justify-center gap-1 w-[160px] h-[32px];
 }
 
-.voice-record-wave::after {
-	content: "";
-	position: absolute;
-	inset: 0;
-	background-image: repeating-linear-gradient(
-		90deg,
-		transparent,
-		transparent 3px,
-		rgba(0, 0, 0, 0.4) 4px,
-		rgba(0, 0, 0, 0.4) 8px
-	);
-	animation: voice-wave 1.2s linear infinite;
+
+.voice-record-wave-bar {
+	@apply w-[6px] rounded-full bg-white/90;
+	transform-origin: center bottom;
+	transition: transform 0.12s ease-out;
 }
 
 .voice-record-bottom {
@@ -153,14 +192,5 @@ function handleTranslate() {
 	background-color: rgba(0, 0, 0, 0.4);
 	color: #fff;
 	font-size: 16px;
-}
-
-@keyframes voice-wave {
-	0% {
-		transform: translateX(0);
-	}
-	100% {
-		transform: translateX(-40px);
-	}
 }
 </style>
