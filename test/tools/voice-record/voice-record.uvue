@@ -16,7 +16,7 @@ import "recorder-core/src/engine/mp3";
 import "recorder-core/src/engine/mp3-engine";
 // #endif
 
-// WaveView 只在 H5 使用，避免小程序 Recorder 全局变量相关问题
+// WaveView 可视化插件：仅在 H5 启用水波纹，避免小程序环境缺少全局 Recorder 导致报错
 // #ifdef H5
 import "recorder-core/src/extensions/waveview";
 // #endif
@@ -159,7 +159,7 @@ function handleTouchStart(e: any) {
 					sampleRate: number
 				) => {
 					durationMs.value = duration;
-					// H5 用 waveview 绘制声纹（小程序暂不启用）
+					// H5：用 WaveView 绘制实时声纹（小程序仍使用 CSS 假水波纹，避免依赖全局 Recorder）
 					// #ifdef H5
 					const waveView = (vue3This as any).waveView;
 					if (waveView && buffers.length) {
@@ -190,12 +190,12 @@ function handleTouchStart(e: any) {
 							vue3This,
 							[".recwave-WaveView"],
 							`
-					this.waveView = Recorder.WaveView({
-						compatibleCanvas: canvas1,
-						width: ${waveViewConfig.value.width},
-						height: ${waveViewConfig.value.height},
-					});
-					`,
+								this.waveView = Recorder.WaveView({
+									compatibleCanvas: canvas1,
+									width: ${waveViewConfig.value.width},
+									height: ${waveViewConfig.value.height},
+								});
+							`,
 							(canvas1: any) => {
 								(vue3This as any).waveView = Recorder.WaveView({
 									compatibleCanvas: canvas1,
@@ -209,6 +209,7 @@ function handleTouchStart(e: any) {
 					// #endif
 				},
 				(msg: any) => {
+					// TODO
 					console.error("开始录音失败：", msg);
 					pushDebug("开始录音失败", msg);
 					isRecording.value = false;
