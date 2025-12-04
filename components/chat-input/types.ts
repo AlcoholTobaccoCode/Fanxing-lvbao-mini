@@ -1,8 +1,9 @@
 export type ToolItem = {
 	icon: string;
 	text: string;
-	enable: boolean;
-	onClick: (item: ToolItem) => void;
+	enable?: boolean;
+	color?: string;
+	onClick?: (item: ToolItem) => void;
 };
 
 export type Tools = ToolItem[];

@@ -1,51 +1,151 @@
 <script lang="ts" setup>
-import { ref } from "vue";
-import type { ActionItem, Actions } from "./types";
+import { ref, watch } from "vue";
+import type { ActionItem } from "./types";
 
 const isShowModal = defineModel<boolean>("isShow", {
 	type: Boolean,
 	default: () => false
 });
 
-const moreActions = ref([
+const emit = defineEmits<{
+	(e: "select-call"): void;
+}>();
+
+const MIN_SHEET_HEIGHT = 260;
+const MAX_SHEET_HEIGHT = 620;
+
+// 当前弹层高度，跟随拖拽变化
+const sheetHeight = ref(MIN_SHEET_HEIGHT);
+
+const moreActions = ref<ActionItem[]>([
 	{
-		icon: "add-circle-line",
-		text: "上传图片",
-		disabled: true,
+		icon: "camera-line",
+		text: "拍摄",
+		disabled: false,
 		onClick: (item: ActionItem) => {
-			console.info("上传图片", item.disabled);
+			isShowModal.value = false;
 		}
 	},
 	{
-		icon: "add-circle-line",
-		text: "上传文件",
-		disabled: true,
+		icon: "image-line",
+		text: "相册",
+		disabled: false,
 		onClick: (item: ActionItem) => {
-			console.info("上传文件", item.disabled);
+			isShowModal.value = false;
 		}
 	},
 	{
-		icon: "add-circle-line",
-		text: "语音通话",
-		disabled: true,
+		icon: "mic-line",
+		text: "录音",
+		disabled: false,
 		onClick: (item: ActionItem) => {
-			console.info("语音通话", item.disabled);
+			isShowModal.value = false;
+		}
+	},
+	{
+		icon: "file-text-line",
+		text: "文档",
+		disabled: false,
+		onClick: (item: ActionItem) => {
+			isShowModal.value = false;
+		}
+	},
+	{
+		icon: "phone-line",
+		text: "通话",
+		disabled: false,
+		onClick: (item: ActionItem) => {
+			isShowModal.value = false;
+			emit("select-call");
 		}
 	}
 ]);
+
+// 打开时重置为最小高度
+watch(
+	() => isShowModal.value,
+	val => {
+		if (val) {
+			sheetHeight.value = MIN_SHEET_HEIGHT;
+		}
+	}
+);
+
+// 句柄拖拽，丝滑改变高度
+const dragging = ref(false);
+const dragStartY = ref(0);
+const dragStartHeight = ref(MIN_SHEET_HEIGHT);
+
+const handleHandleTouchStart = (e: any) => {
+	const touch = e?.touches?.[0];
+	dragging.value = true;
+	dragStartY.value = touch ? touch.pageY : 0;
+	dragStartHeight.value = sheetHeight.value;
+};
+
+const handleHandleTouchMove = (e: any) => {
+	if (!dragging.value) return;
+	const touch = e?.touches?.[0];
+	const currentY = touch ? touch.pageY : 0;
+	const delta = dragStartY.value - currentY; // 上滑为正
+	// uni-app 下 1px ≈ 2rpx，这里做个简单换算让拖动距离更贴合手指
+	let next = dragStartHeight.value + delta * 2;
+
+	if (next < MIN_SHEET_HEIGHT) next = MIN_SHEET_HEIGHT;
+	if (next > MAX_SHEET_HEIGHT) next = MAX_SHEET_HEIGHT;
+
+	sheetHeight.value = next;
+};
+
+const handleHandleTouchEnd = () => {
+	dragging.value = false;
+};
 </script>
 
 <template>
-	<cl-popup v-model="isShowModal" :show-close="false">
-		<view class="flex flex-row flex-wrap items-center justify-start gap-2 p-4">
-			<template v-for="(item, index) in moreActions" :key="index">
-				<cl-button type="light" :border="false" @click="item.onClick">
-					<view class="flex flex-col gap-2 items-center justify-center">
-						<cl-icon name="heart-fill"></cl-icon>
-						<cl-text>{{ item.text }}</cl-text>
-					</view>
-				</cl-button>
-			</template>
+	<cl-popup
+		v-model="isShowModal"
+		:show-close="false"
+		direction="bottom"
+		:swipe-close="false"
+		:size="sheetHeight"
+	>
+		<view class="actions-sheet">
+			<view
+				class="actions-sheet__handle"
+				@touchstart.stop="handleHandleTouchStart"
+				@touchmove.stop.prevent="handleHandleTouchMove"
+				@touchend.stop="handleHandleTouchEnd"
+				@touchcancel.stop="handleHandleTouchEnd"
+			></view>
+			<view class="actions-sheet__content">
+				<view class="flex flex-row flex-wrap items-center justify-start gap-4 px-4 pb-4 pt-1">
+					<template v-for="(item, index) in moreActions" :key="index">
+						<cl-button type="light" :border="false" @click="item.onClick(item)">
+							<view
+								class="w-[72px] h-[72px] rounded-2xl bg-surface-50 flex flex-col items-center justify-center gap-2"
+							>
+								<cl-icon :name="item.icon" :size="28"></cl-icon>
+								<cl-text size="12px">{{ item.text }}</cl-text>
+							</view>
+						</cl-button>
+					</template>
+				</view>
+			</view>
 		</view>
 	</cl-popup>
 </template>
+
+<style scoped lang="scss">
+.actions-sheet {
+	@apply w-full h-full bg-white rounded-t-3xl;
+}
+
+.actions-sheet__handle {
+	@apply w-[40px] h-[4px] rounded-full bg-surface-200 mx-auto mt-1 mb-1;
+}
+
+.actions-sheet__content {
+	@apply flex-1;
+}
+</style>
