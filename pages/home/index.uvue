@@ -104,6 +104,13 @@ const toGlobalSet = () => {
 			</view>
 
 			<view class="home-main" :class="{ 'home-main--history-open': isHistoryOpen }">
+				<view
+					v-if="isHistoryOpen"
+					class="home-main--shadow"
+					@tap.stop="handleToggleHistory"
+				></view>
+				<!-- E 用来关闭打开的历史列表 -->
+
 				<app-header
 					@new-chat="handleOpenNewChat"
 					@voice-play-change="handleHeaderVoiceChange"
@@ -131,7 +138,6 @@ const toGlobalSet = () => {
 						@open-call="handleOpenCall"
 					></chat-input>
 				</view>
-
 				<!-- 通话演示浮层：简单全屏遮罩 + 通话控制组件 -->
 				<view v-if="showCallDemo" class="fixed left-0 top-0 right-0 bottom-0 z-50 bg-black">
 					<call-controls @hangup="handleHangup"></call-controls>
@@ -157,13 +163,17 @@ const toGlobalSet = () => {
 	@apply absolute left-0 right-0 top-0 bottom-0 rounded-none shadow-none;
 	transform: translateX(0) scale(1);
 	transition:
-		transform 0.1s ease,
-		border-radius 0.1s ease,
-		box-shadow 0.1s ease;
+		transform 0.5s ease,
+		border-radius 0.5s ease,
+		box-shadow 0.5s ease;
+}
+
+.home-main--shadow {
+	@apply absolute w-full h-full opacity-0 z-10;
 }
 
 .home-main--history-open {
-	@apply rounded-2xl;
+	@apply rounded-3xl;
 	transform: translateX(80vw) scale(0.78);
 	box-shadow: -6px 5px 10px #e6e6e6;
 }
