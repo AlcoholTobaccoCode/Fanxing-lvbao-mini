@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref } from "vue";
 import { isDark } from "@/cool";
 import type { ToolItem, Tools, ActionItem, Actions, SendData } from "./types";
 
@@ -8,10 +8,6 @@ import VoiceRecord from "./voice-record.uvue";
 import ActionsPopup from "./actions-popup.uvue";
 
 const props = defineProps({
-	modelValue: {
-		type: String,
-		default: () => ""
-	},
 	placeholder: {
 		type: String,
 		default: () => "在这里输入你的问题"
@@ -35,8 +31,12 @@ const props = defineProps({
 	}
 });
 
+// 使用 defineModel 作为 v-model 绑定值
+const modelValue = defineModel<string>({
+	default: ""
+});
+
 const emit = defineEmits<{
-	(e: "update:modelValue", value: string): void;
 	(e: "send", value: SendData): void;
 	(e: "voice-start"): void;
 	(e: "voice-finish"): void;
@@ -52,9 +52,6 @@ const footerCheck = (value: boolean) => {
 };
 
 //#endregion
-
-// 文本输入
-const innerValue = ref(props.modelValue);
 
 // 输入模式
 const inputModeVal = ref(props.inputMode);
@@ -107,30 +104,15 @@ const actions = ref<Actions>([
 	}
 ]);
 
-watch(
-	() => props.modelValue,
-	(val) => {
-		if (val !== innerValue.value) {
-			innerValue.value = val;
-		}
-	}
-);
-
 // 切换输入模式
 const handleRecording = () => {
 	inputModeVal.value = inputModeVal.value === "text" ? "voice" : "text";
 };
 
-// 输入框内容变化
-const handleInput = (val: string) => {
-	innerValue.value = val;
-	emit("update:modelValue", val);
-};
-
 // 发送
 const handleSend = () => {
 	if (props.disabled || props.loading) return;
-	const val = innerValue.value.trim();
+	const val = modelValue.value.trim();
 
 	const isVoice = inputModeVal.value === "voice";
 
@@ -208,14 +190,13 @@ const handleOpenCall = () => {
 			<!-- 输入框 -->
 			<view class="flex-1 flex flex-row items-center" v-if="inputModeVal === 'text'">
 				<cl-input
-					v-model="innerValue"
+					v-model="modelValue"
 					:placeholder="placeholder"
 					:disabled="disabled"
 					:pt="{
 						className: 'flex-1 !h-[36px] rounded-full px-3 !border-none'
 					}"
 					clearable
-					@update:model-value="handleInput"
 					@confirm="handleConfirm"
 				></cl-input>
 			</view>

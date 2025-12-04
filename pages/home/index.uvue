@@ -2,16 +2,14 @@
 import { ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
-import { router } from "@/cool";
 
 import type { SendData } from "@/components/chat-input/types";
 
+import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/index.uvue";
-import Consult from "./components/consult.vue";
 import SimpleCard from "@/components/card/simple-card.uvue";
+import Consult from "./components/consult.vue";
 import CallControls from "@/components/call-controls/index.uvue";
-import SizeSet from "@/components/common/size-set.uvue";
-import AppHeader from "@/components/common/app-header.uvue";
 
 const log = new Logger("HomePage"); // 或 createLogger("Home")
 const ui = useUi();
@@ -19,51 +17,11 @@ const ui = useUi();
 // 对话输入内容
 const inputValue = ref("");
 
-// 是否展示通话演示浮层
-const showCallDemo = ref(false);
-
-// 语音播放开关
-const voicePlay = ref(false);
-
-// 是否打开对话历史侧栏
-const isHistoryOpen = ref(false);
-
 onLoad(() => {
 	// TODO
-	console.info("uni.getSystemInfoSync() => ", uni.getSystemInfoSync());
 });
 
 //#region 交互区域
-
-// 点击预设问题
-const handlePresetSelect = (question: string) => {
-	inputValue.value = question;
-};
-
-// 打开新对话（来自页面按钮或头部菜单）
-const handleOpenNewChat = () => {
-	log.info("handleOpenNewChat");
-	ui.showToast({
-		message: "打开新对话"
-	});
-};
-
-// 头部：语音播放切换
-const handleHeaderVoiceChange = (val: boolean) => {
-	voicePlay.value = val;
-};
-
-// 头部：音色选择
-const handleHeaderVoiceSelect = () => {
-	ui.showToast({
-		message: "打开音色选择（待实现）"
-	});
-};
-
-// 侧栏：打开 / 关闭对话历史
-const handleToggleHistory = () => {
-	isHistoryOpen.value = !isHistoryOpen.value;
-};
 
 // 发送当前对话输入
 const handleSend = (data: SendData) => {
@@ -75,7 +33,26 @@ const handleSend = (data: SendData) => {
 	inputValue.value = "";
 };
 
-// 打开通话演示（来自 chat-input 电话按钮）
+// 点击预设问题
+const handlePresetSelect = (question: string) => {
+	console.info("handlePresetSelect => ", question);
+	inputValue.value = question;
+};
+
+// 打开新对话（来自页面按钮或头部菜单）
+const handleOpenNewChat = () => {
+	log.info("handleOpenNewChat");
+	ui.showToast({
+		message: "打开新对话"
+	});
+};
+
+//#region 通话
+
+// 是否展示通话演示浮层
+const showCallDemo = ref(false);
+
+// 打开通话演示
 const handleOpenCall = () => {
 	showCallDemo.value = true;
 };
@@ -85,96 +62,29 @@ const handleHangup = () => {
 	showCallDemo.value = false;
 };
 
-const navToTools = () => {
-	router.to("/test/tools/index");
-};
-
-const toGlobalSet = () => {
-	router.to("/pages/test-pages/general");
-};
+//#endregion
 </script>
 
 <template>
-	<cl-page :back-top="false">
-		<view class="home-root">
-			<view class="home-history">
-				<view class="w-full h-full overflow-auto">
-					<view> duqings </view>
-				</view>
-			</view>
-
-			<view class="home-main" :class="{ 'home-main--history-open': isHistoryOpen }">
-				<view
-					v-if="isHistoryOpen"
-					class="home-main--shadow"
-					@tap.stop="handleToggleHistory"
-				></view>
-				<!-- E 用来关闭打开的历史列表 -->
-
-				<app-header
-					@new-chat="handleOpenNewChat"
-					@voice-play-change="handleHeaderVoiceChange"
-					@voice-select="handleHeaderVoiceSelect"
-				>
-					<template #left>
-						<cl-icon
-							name="menu-line"
-							:size="40"
-							color="currentColor"
-							@tap.stop="handleToggleHistory"
-						></cl-icon>
-					</template>
-				</app-header>
-				<view class="h-full flex flex-col">
-					<simple-card class="flex-1 p-4 !px-8 !rounded-none">
+	<app-page title="律先锋" :back-top="false" @new-chat="handleOpenNewChat">
+		<template #content>
+			<view class="h-full flex flex-col">
+				<simple-card class="flex-1 !p-0 !rounded-none">
+					<view class="flex-1 p-4 !px-8">
 						<Consult @preset-select="handlePresetSelect" />
-					</simple-card>
-
-					<!-- <cl-button @tap="toGlobalSet"> 全局配置1111 </cl-button> -->
-
+					</view>
 					<chat-input
 						v-model="inputValue"
 						@send="handleSend"
 						@open-call="handleOpenCall"
 					></chat-input>
-				</view>
-				<!-- 通话演示浮层：简单全屏遮罩 + 通话控制组件 -->
-				<view v-if="showCallDemo" class="fixed left-0 top-0 right-0 bottom-0 z-50 bg-black">
-					<call-controls @hangup="handleHangup"></call-controls>
-				</view>
+				</simple-card>
 			</view>
+		</template>
+
+		<!-- 通话演示浮层：简单全屏遮罩 + 通话控制组件 -->
+		<view v-if="showCallDemo" class="fixed left-0 top-0 right-0 bottom-0 z-50 bg-black">
+			<call-controls @hangup="handleHangup"></call-controls>
 		</view>
-	</cl-page>
+	</app-page>
 </template>
-
-<style lang="scss" scoped>
-.home-root {
-	position: relative;
-	height: 100%;
-	overflow: hidden;
-}
-
-.home-history {
-	@apply absolute left-0 top-0 bottom-0 w-full;
-	padding-right: 12%;
-}
-
-.home-main {
-	@apply absolute left-0 right-0 top-0 bottom-0 rounded-none shadow-none;
-	transform: translateX(0) scale(1);
-	transition:
-		transform 0.5s ease,
-		border-radius 0.5s ease,
-		box-shadow 0.5s ease;
-}
-
-.home-main--shadow {
-	@apply absolute w-full h-full opacity-0 z-10;
-}
-
-.home-main--history-open {
-	@apply rounded-3xl;
-	transform: translateX(80vw) scale(0.78);
-	box-shadow: -6px 5px 10px #e6e6e6;
-}
-</style>

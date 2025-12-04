@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { computed, ref, useSlots } from "vue";
 import AppHeader from "@/components/common/layout/app-header.uvue";
-import AppSetting from "@/components/common/layout/app-setting/index.uvue";
+// import AppSetting from "@/components/common/layout/app-setting/index.uvue";
 
 const props = withDefaults(
 	defineProps<{
@@ -124,11 +124,6 @@ const handleHeaderClickRecord = () => {
 			</view>
 			<!-- E 主体展示区域 -->
 		</view>
-
-		<!-- 通话演示浮层：简单全屏遮罩 + 通话控制组件 -->
-		<!-- <view v-if="showCallDemo" class="fixed left-0 top-0 right-0 bottom-0 z-50 bg-black">
-			<call-controls @hangup="handleHangup"></call-controls>
-		</view> -->
 	</cl-page>
 </template>
 

@@ -55,13 +55,14 @@ const handleRefresh = () => {
 				</view>
 			</view>
 			<view class="flex flex-col gap-2">
-				<view v-for="(item, i) in presetQuestions" :key="i" @click="handleClick(item)">
+				<view v-for="(item, i) in presetQuestions" :key="i">
 					<cl-button
 						border
 						:pt="{
 							className: '',
 							label: { className: 'w-full text-left' }
 						}"
+						@click.stop="handleClick(item)"
 					>
 						{{ item }}
 					</cl-button>
