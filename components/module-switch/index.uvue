@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, useSlots } from "vue";
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
-import SimpleCard from "@/components/common/card/simple-card.uvue";
+import SimpleCard from "@/components/card/simple-card.uvue";
 import type { OptionsItemKey } from "@/components/common/module-switch/types";
 
 const props = defineProps({

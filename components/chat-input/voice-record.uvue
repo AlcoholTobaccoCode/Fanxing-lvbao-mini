@@ -1,0 +1,166 @@
+<script lang="ts" setup>
+import { ref, computed } from "vue";
+
+const props = defineProps({
+	modelValue: {
+		type: Boolean,
+		default: false
+	}
+});
+
+const emit = defineEmits<{
+	(e: "update:modelValue", value: boolean): void;
+	(e: "start"): void;
+	(e: "finish"): void;
+	(e: "cancel"): void;
+	(e: "translate"): void;
+}>();
+
+/**
+ * 录音状态
+ * recording -> 录音中
+ * cancel -> 取消
+ * translate -> 转文字
+ */
+const status = ref<"recording" | "cancel" | "translate">("recording");
+
+const tipText = computed(() => {
+	if (status.value === "cancel") return "松开 手指，取消发送";
+	if (status.value === "translate") return "松开 手指，转为文字";
+	return "松开 发送";
+});
+
+const subText = computed(() => {
+	if (status.value === "cancel") return "松开即可取消";
+	if (status.value === "translate") return "松开即可转为文字";
+	return "上滑 取消 / 转文字";
+});
+
+function close() {
+	emit("update:modelValue", false);
+}
+
+function handleStart() {
+	status.value = "recording";
+	emit("start");
+}
+
+function handleFinish() {
+	close();
+	emit("finish");
+}
+
+function handleCancel() {
+	status.value = "cancel";
+	close();
+	emit("cancel");
+}
+
+function handleTranslate() {
+	status.value = "translate";
+	close();
+	emit("translate");
+}
+</script>
+
+<template>
+	<view v-if="modelValue" class="voice-record-mask" @contextmenu.prevent @longpress.prevent>
+		<view class="voice-record-center">
+			<!-- 绿色语音气泡，只显示声波条 -->
+			<view class="voice-record-bubble">
+				<view class="voice-record-wave"></view>
+			</view>
+		</view>
+
+		<!-- 底部操作区：取消 / 松开发送 / 转文字 -->
+		<!-- <view class="voice-record-bottom">
+			<view class="voice-record-bottom-left" @click="handleCancel">
+				<text>取消</text>
+			</view>
+
+			<view class="voice-record-bottom-center">
+				<text class="voice-record-center-text">松开 发送</text>
+			</view>
+
+			<view class="voice-record-bottom-right" @click="handleTranslate">
+				<text>滑到这里 转文字</text>
+			</view>
+		</view> -->
+	</view>
+</template>
+
+<style scoped lang="scss">
+.voice-record-mask {
+	@apply fixed inset-0 z-[9999] flex flex-col justify-center items-center;
+	background-color: rgba(0, 0, 0, 0.4);
+}
+
+.voice-record-center {
+	@apply flex-1 flex flex-col items-center justify-start pt-4 w-full;
+}
+
+.voice-record-bubble {
+	@apply rounded-[24px] px-12 py-8 flex items-center justify-center shadow-lg mx-6;
+	background-color: #7ed321;
+	min-width: 280px;
+}
+
+.voice-record-wave {
+	@apply w-[160px] h-[6px] rounded-full overflow-hidden relative;
+	background-color: rgba(0, 0, 0, 0.2);
+}
+
+.voice-record-wave::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background-image: repeating-linear-gradient(
+		90deg,
+		transparent,
+		transparent 3px,
+		rgba(0, 0, 0, 0.4) 4px,
+		rgba(0, 0, 0, 0.4) 8px
+	);
+	animation: voice-wave 1.2s linear infinite;
+}
+
+.voice-record-bottom {
+	@apply absolute bottom-0 left-0 right-0 pb-16 px-6 flex flex-row items-end justify-between;
+}
+
+.voice-record-bottom-left {
+	@apply w-[120px] h-[64px] rounded-full flex items-center justify-center;
+	background-color: rgba(0, 0, 0, 0.4);
+	color: #fff;
+	font-size: 16px;
+}
+
+.voice-record-bottom-center {
+	@apply w-[120px] h-[120px] rounded-full flex flex-col items-center justify-center shadow-xl mb-6;
+	color: #333;
+	font-size: 16px;
+	font-weight: 500;
+	background-color: rgba(255, 255, 255, 0.9);
+}
+
+.voice-record-center-text {
+	line-height: 1.2;
+	text-align: center;
+}
+
+.voice-record-bottom-right {
+	@apply w-[120px] h-[64px] rounded-full flex items-center justify-center;
+	background-color: rgba(0, 0, 0, 0.4);
+	color: #fff;
+	font-size: 16px;
+}
+
+@keyframes voice-wave {
+	0% {
+		transform: translateX(0);
+	}
+	100% {
+		transform: translateX(-40px);
+	}
+}
+</style>

@@ -3,7 +3,7 @@ import { ref, watch } from "vue";
 import { isDark } from "@/cool";
 import type { ToolItem, Tools, ActionItem, Actions, SendData } from "./types";
 
-import SimpleCard from "@/components/common/card/simple-card.uvue";
+import SimpleCard from "@/components/card/simple-card.uvue";
 import VoiceRecord from "./voice-record.uvue";
 import ActionsPopup from "./actions-popup.uvue";
 
@@ -181,7 +181,7 @@ const handleOpenCall = () => {
 <template>
 	<simple-card class="chat-input-wrapper" :class="{ 'is-dark': isDark }">
 		<view class="chat-input-top">
-			<view class="flex flex-row justify-center items-center" hoverClass="block-hover-class">
+			<view class="flex flex-row justify-center items-center">
 				<cl-button
 					text
 					:icon="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
@@ -236,7 +236,7 @@ const handleOpenCall = () => {
 
 		<view class="chat-input-bottom">
 			<view class="chat-input-bottom-item -ml-1">
-				<template v-for="(item, index) in tools" :key="index">
+				<template v-for="item in tools" :key="index">
 					<cl-button
 						text
 						size="large"

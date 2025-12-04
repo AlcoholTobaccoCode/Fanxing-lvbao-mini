@@ -4,7 +4,7 @@
 <script lang="ts" setup>
 import { LEGAL_QUICK_QUESTIONS, chunkArray, type chunkArrayType } from "@/utils/index";
 
-import SimpleCard from "@/components/common/card/simple-card.uvue";
+import SimpleCard from "@/components/card/simple-card.uvue";
 import { ref } from "vue";
 
 const emit = defineEmits<{

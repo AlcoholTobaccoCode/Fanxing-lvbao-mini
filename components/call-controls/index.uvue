@@ -1,0 +1,257 @@
+<script lang="ts" setup>
+import { computed, ref } from "vue";
+import SimpleCard from "@/components/card/simple-card.uvue";
+
+const props = defineProps({
+	micOn: {
+		type: Boolean,
+		default: true
+	},
+	speakerOn: {
+		type: Boolean,
+		default: true
+	},
+	cameraOn: {
+		type: Boolean,
+		default: true
+	},
+	showCapture: {
+		type: Boolean,
+		default: false
+	}
+});
+
+const emit = defineEmits<{
+	(e: "update:micOn", value: boolean): void;
+	(e: "update:speakerOn", value: boolean): void;
+	(e: "update:cameraOn", value: boolean): void;
+	(e: "toggle-mic", value: boolean): void;
+	(e: "toggle-speaker", value: boolean): void;
+	(e: "toggle-camera", value: boolean): void;
+	(e: "hangup"): void;
+	(e: "capture"): void;
+}>();
+
+// 本地演示状态：与 props 初始化同步，点击后本地切换即可
+const micState = ref(props.micOn);
+const speakerState = ref(props.speakerOn);
+const cameraState = ref(props.cameraOn);
+
+const featureItems = computed(() => [
+	{
+		key: "mic" as const,
+		icon: micState.value ? "mic-line" : "mic-off-line",
+		label: micState.value ? "麦克风已开启" : "麦克风已关闭",
+		active: micState.value
+	},
+	{
+		key: "speaker" as const,
+		icon: speakerState.value ? "volume-down-line" : "volume-mute-line",
+		label: speakerState.value ? "扬声器已开启" : "扬声器已关闭",
+		active: speakerState.value
+	},
+	{
+		key: "camera" as const,
+		icon: cameraState.value ? "video-on-line" : "video-off-line",
+		label: cameraState.value ? "摄像头已开启" : "摄像头已关闭",
+		active: cameraState.value
+	}
+]);
+
+function handleToggle(key: "mic" | "speaker" | "camera") {
+	if (key === "mic") {
+		const val = !micState.value;
+		micState.value = val;
+		emit("update:micOn", val);
+		emit("toggle-mic", val);
+	}
+	if (key === "speaker") {
+		const val = !speakerState.value;
+		speakerState.value = val;
+		emit("update:speakerOn", val);
+		emit("toggle-speaker", val);
+	}
+	if (key === "camera") {
+		const val = !cameraState.value;
+		cameraState.value = val;
+		emit("update:cameraOn", val);
+		emit("toggle-camera", val);
+	}
+}
+
+function onHangup() {
+	emit("hangup");
+}
+
+function onCapture() {
+	emit("capture");
+}
+</script>
+
+<template>
+	<view class="call-root">
+		<!-- 顶部状态栏（例如网络/通话指示灯） -->
+		<view class="call-status-bar">
+			<view class="status-dot" />
+		</view>
+
+		<!-- 视频展示区域，默认占满上半区域，业务可以通过插槽自定义 -->
+		<view class="call-video-area">
+			<slot name="video" />
+		</view>
+
+		<!-- 中间等待动画（打电话中三个点） -->
+		<view class="call-waiting">
+			<text class="text-md text-white">接通中...请稍后</text>
+			<view class="waiting-dots">
+				<view class="waiting-dot waiting-dot-1" />
+				<view class="waiting-dot waiting-dot-2" />
+				<view class="waiting-dot waiting-dot-3" />
+			</view>
+		</view>
+
+		<!-- 底部控制区 -->
+		<view class="call-bottom">
+			<!-- 功能按钮（麦克风 / 扬声器 / 摄像头） -->
+			<view class="call-feature-row">
+				<view class="feature-item" v-for="item in featureItems" :key="item.key">
+					<SimpleCard
+						class="feature-icon-wrapper"
+						:class="{ 'feature-icon-active': item.active }"
+						@click="handleToggle(item.key)"
+						@tap="handleToggle(item.key)"
+					>
+						<cl-icon
+							:name="item.icon"
+							:pt="{
+								icon: {
+									size: '18px'
+								}
+							}"
+							size="22px"
+						/>
+					</SimpleCard>
+					<!-- <cl-text size="12px" color="info">{{ item.label }}</cl-text> -->
+				</view>
+			</view>
+
+			<!-- 挂断 / 其它操作 -->
+			<view class="call-main-actions">
+				<view class="hangup-btn" @click="onHangup">
+					<cl-icon
+						name="phone-line"
+						:pt="{
+							icon: {
+								size: '18px'
+							}
+						}"
+						size="30px"
+						color="#fff"
+					/>
+				</view>
+
+				<!-- 预留拍照按钮，可选 -->
+				<view v-if="showCapture" class="capture-btn" @click="onCapture">
+					<cl-icon
+						name="camera-line"
+						:pt="{
+							icon: {
+								size: '18px'
+							}
+						}"
+						size="30px"
+					/>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style scoped lang="scss">
+.call-root {
+	@apply flex flex-col w-full h-full relative bg-gray-300;
+}
+
+.call-status-bar {
+	@apply w-full flex flex-row justify-end items-center px-3 pt-3;
+}
+
+.status-dot {
+	@apply w-2 h-2 rounded-full bg-green-500;
+}
+
+.call-video-area {
+	@apply flex-1 w-full overflow-hidden;
+}
+
+.call-waiting {
+	@apply absolute inset-0 flex items-center justify-center flex-col gap-2;
+	pointer-events: none;
+}
+
+.waiting-dots {
+	@apply flex flex-row items-center gap-2;
+}
+
+.waiting-dot {
+	@apply w-2 h-2 rounded-full bg-white;
+	animation: call-dot 1.2s infinite ease-in-out both;
+}
+
+.waiting-dot-1 {
+	animation-delay: -0.24s;
+}
+
+.waiting-dot-2 {
+	animation-delay: -0.12s;
+}
+
+.waiting-dot-3 {
+	animation-delay: 0s;
+}
+
+@keyframes call-dot {
+	0%,
+	80%,
+	100% {
+		transform: scale(0.4);
+		opacity: 0.6;
+	}
+	40% {
+		transform: scale(1);
+		opacity: 1;
+	}
+}
+
+.call-bottom {
+	@apply w-full pb-16 pt-4 px-6 flex flex-col items-center bg-gradient-to-t from-black/80 to-black/20;
+}
+
+.call-feature-row {
+	@apply w-full flex flex-row items-center justify-center gap-10 mb-6;
+}
+
+.feature-item {
+	@apply flex flex-col items-center gap-2;
+}
+
+.feature-icon-wrapper {
+	@apply w-16 h-16 rounded-full flex items-center justify-center;
+}
+
+.feature-icon-active {
+	@apply bg-white;
+}
+
+.call-main-actions {
+	@apply mt-1 flex flex-row items-center justify-center gap-6;
+}
+
+.hangup-btn {
+	@apply w-20 h-20 rounded-full bg-red-500 flex items-center justify-center text-white;
+}
+
+.capture-btn {
+	@apply w-10 h-10 rounded-full border border-white flex items-center justify-center text-white;
+}
+</style>
