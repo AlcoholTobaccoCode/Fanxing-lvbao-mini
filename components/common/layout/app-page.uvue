@@ -1,0 +1,165 @@
+<script lang="ts" setup>
+import { computed, ref, useSlots } from "vue";
+import AppHeader from "@/components/common/layout/app-header.uvue";
+import AppSetting from "@/components/common/layout/app-setting/index.uvue";
+
+const props = withDefaults(
+	defineProps<{
+		title?: string;
+		initialVoicePlay?: boolean;
+		voiceName?: string;
+		backTop?: boolean;
+	}>(),
+	{
+		backTop: false
+	}
+);
+
+const emit = defineEmits<{
+	(e: "new-chat"): void;
+	(e: "voice-play-change", value: boolean): void;
+	(e: "voice-select"): void;
+	(e: "click-left"): void;
+	(e: "click-record"): void;
+}>();
+
+// 语音播放开关（仅用于传给 header 的初始值和本地展示）
+const voicePlay = ref(props.initialVoicePlay ?? false);
+
+// 是否打开对话历史侧栏
+const isHistoryOpen = ref(false);
+
+const slots = useSlots();
+const hasHistorySlot = computed(() => !!slots.history);
+
+//#region 交互区域
+
+// 打开新对话（来自页面按钮或头部菜单）
+const handleOpenNewChat = () => {
+	emit("new-chat");
+};
+
+// 头部：语音播放切换
+const handleHeaderVoiceChange = (val: boolean) => {
+	voicePlay.value = val;
+	emit("voice-play-change", val);
+};
+
+// 头部：音色选择
+const handleHeaderVoiceSelect = () => {
+	emit("voice-select");
+};
+
+// 默认菜单按钮点击：打开 / 关闭对话历史
+const handleDefaultLeftTap = () => {
+	isHistoryOpen.value = !isHistoryOpen.value;
+	emit("click-left");
+};
+
+// header 内置返回按钮点击
+const handleHeaderClickLeft = () => {
+	emit("click-left");
+};
+
+// header 右侧录音按钮点击
+const handleHeaderClickRecord = () => {
+	emit("click-record");
+};
+
+//#endregion
+</script>
+
+<template>
+	<cl-page :back-top="false">
+		<view class="app-page-root">
+			<view class="app-page-history">
+				<view class="w-full h-full overflow-auto">
+					<slot name="history">
+						<app-setting></app-setting>
+					</slot>
+				</view>
+			</view>
+			<!-- E 左侧历史列表区域 -->
+
+			<view class="app-page-main" :class="{ 'app-page-main--history-open': isHistoryOpen }">
+				<view
+					v-if="isHistoryOpen"
+					class="app-page-main__shadow"
+					@tap.stop="isHistoryOpen = false"
+				></view>
+				<!-- E 用来点击关闭历史列表 -->
+
+				<app-header
+					:title="props.title"
+					:initial-voice-play="voicePlay"
+					:voice-name="props.voiceName"
+					:back-top="props.backTop"
+					@new-chat="handleOpenNewChat"
+					@voice-play-change="handleHeaderVoiceChange"
+					@voice-select="handleHeaderVoiceSelect"
+					@click-left="handleHeaderClickLeft"
+					@click-record="handleHeaderClickRecord"
+				>
+					<template #left>
+						<slot name="header-left">
+							<cl-icon
+								name="menu-line"
+								:size="40"
+								color="currentColor"
+								@tap.stop="handleDefaultLeftTap"
+							></cl-icon>
+						</slot>
+					</template>
+
+					<template #right>
+						<slot name="header-right"></slot>
+					</template>
+				</app-header>
+				<!-- E 自定义头部 -->
+
+				<view class="app-page-content flex-1 flex flex-col overflow-hidden">
+					<slot name="content"></slot>
+				</view>
+				<!-- E 自定义内容区域 -->
+			</view>
+			<!-- E 主体展示区域 -->
+		</view>
+
+		<!-- 通话演示浮层：简单全屏遮罩 + 通话控制组件 -->
+		<!-- <view v-if="showCallDemo" class="fixed left-0 top-0 right-0 bottom-0 z-50 bg-black">
+			<call-controls @hangup="handleHangup"></call-controls>
+		</view> -->
+	</cl-page>
+</template>
+
+<style lang="scss" scoped>
+.app-page-root {
+	position: relative;
+	height: 100%;
+	overflow: hidden;
+}
+
+.app-page-history {
+	@apply absolute left-0 top-0 bottom-0 w-full;
+	padding-right: 12%;
+}
+
+.app-page-main {
+	@apply absolute left-0 right-0 top-0 bottom-0 rounded-none shadow-none flex flex-col;
+	transform: translateX(0) scale(1);
+	transition:
+		transform 0.5s ease,
+		border-radius 0.5s ease,
+		box-shadow 0.5s ease;
+}
+
+.app-page-main__shadow {
+	@apply absolute w-full h-full opacity-0 z-10;
+}
+
+.app-page-main--history-open {
+	@apply rounded-3xl;
+	transform: translateX(80vw) scale(0.78);
+	box-shadow: -6px 5px 10px #e6e6e6;
+}
+</style>

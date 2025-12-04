@@ -44,7 +44,6 @@ onMounted(() => {
 		const menuButtonInfo = uni.getMenuButtonBoundingClientRect();
 
 		if (sysInfo && menuButtonInfo) {
-			// windowWidth - 胶囊左侧位置 = 右侧实际被胶囊占用的宽度
 			rightPadding.value = sysInfo.windowWidth - menuButtonInfo.left;
 		}
 	} catch (e) {
@@ -118,7 +117,12 @@ const handleClickRecord = () => {
 				<cl-text :pt="{ className: 'text-base font-bold tracking-wide' }">
 					{{ title }}
 				</cl-text>
-				<cl-icon name="arrow-up-s-fill" :size="32" :pt="{ className: 'ml-1' }"></cl-icon>
+				<cl-icon
+					v-if="title"
+					name="arrow-up-s-fill"
+					:size="32"
+					:pt="{ className: 'ml-1' }"
+				></cl-icon>
 			</view>
 
 			<template #append>

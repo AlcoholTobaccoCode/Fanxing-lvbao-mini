@@ -2,7 +2,7 @@
 	<view class="simple-card dark:!bg-surface-800">
 		<cl-text
 			:pt="{
-				className: 'text-sm text-surface-400 mb-2 '
+				className: 'text-sm text-surface-400 mb-2'
 			}"
 			v-if="label != ''"
 			>{{ label }}</cl-text
