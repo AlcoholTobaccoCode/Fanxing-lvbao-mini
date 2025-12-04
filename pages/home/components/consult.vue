@@ -2,20 +2,33 @@
 @description: 咨询起始页
 -->
 <script lang="ts" setup>
+import { LEGAL_QUICK_QUESTIONS, chunkArray, type chunkArrayType } from "@/utils/index";
+
 import SimpleCard from "@/components/common/card/simple-card.uvue";
-import { consultPresets } from "../config";
+import { ref } from "vue";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
 }>();
+
+const questionPools = ref<chunkArrayType>([]);
+const currentPoolIndex = ref(0);
+const presetQuestions = ref<string[]>([]);
+
+onLoad(() => {
+	questionPools.value = chunkArray(LEGAL_QUICK_QUESTIONS, 3);
+	presetQuestions.value = questionPools.value[0] || [];
+});
 
 const handleClick = (q: string) => {
 	emit("preset-select", q);
 };
 
 const handleRefresh = () => {
-	// TODO: 实现换一换功能
-	console.log("换一换");
+	if (!questionPools.value.length) return;
+	const nextIndex = (currentPoolIndex.value + 1) % questionPools.value.length;
+	currentPoolIndex.value = nextIndex;
+	presetQuestions.value = questionPools.value[nextIndex];
 };
 </script>
 
@@ -42,9 +55,8 @@ const handleRefresh = () => {
 				</view>
 			</view>
 			<view class="flex flex-col gap-2">
-				<view v-for="item in consultPresets" :key="item" @click="handleClick(item)">
+				<view v-for="(item, i) in presetQuestions" :key="i" @click="handleClick(item)">
 					<cl-button
-						text
 						border
 						:pt="{
 							className: '',
