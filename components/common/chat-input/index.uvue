@@ -42,7 +42,16 @@ const emit = defineEmits<{
 	(e: "voice-finish"): void;
 	(e: "voice-cancel"): void;
 	(e: "voice-translate"): void;
+	(e: "open-call"): void;
 }>();
+
+//#region test
+
+const footerCheck = (value: boolean) => {
+	console.info("footerCheck", value);
+};
+
+//#endregion
 
 // 文本输入
 const innerValue = ref(props.modelValue);
@@ -162,12 +171,17 @@ const handleVoiceTranslate = () => {
 	voiceVisible.value = false;
 	emit("voice-translate");
 };
+
+// 打开通话组件
+const handleOpenCall = () => {
+	emit("open-call");
+};
 </script>
 
 <template>
 	<simple-card class="chat-input-wrapper" :class="{ 'is-dark': isDark }">
 		<view class="chat-input-top">
-			<view class="mr-2 flex justify-center items-center" hoverClass="block-hover-class">
+			<view class="flex flex-row justify-center items-center" hoverClass="block-hover-class">
 				<cl-button
 					text
 					:icon="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
@@ -175,7 +189,18 @@ const handleVoiceTranslate = () => {
 					@click="handleRecording"
 					:pt="{
 						icon: {
-							size: '22px'
+							size: '18px'
+						}
+					}"
+				></cl-button>
+				<cl-button
+					text
+					icon="phone-line"
+					size="large"
+					@click="handleOpenCall"
+					:pt="{
+						icon: {
+							size: '18px'
 						}
 					}"
 				></cl-button>
@@ -262,7 +287,7 @@ const handleVoiceTranslate = () => {
 			@finish="handlePressEnd"
 			@cancel="handleVoiceCancel"
 			@translate="handleVoiceTranslate"
-		/>
+		></voice-record>
 	</simple-card>
 </template>
 
@@ -279,7 +304,7 @@ const handleVoiceTranslate = () => {
 }
 
 .chat-input-top {
-	@apply flex flex-row items-center;
+	@apply flex flex-row items-center gap-2;
 }
 
 .chat-input-bottom {
