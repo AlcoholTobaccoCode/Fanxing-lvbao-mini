@@ -4,12 +4,12 @@ import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { router } from "@/cool";
 
-import type { SendData } from "@/components/common/chat-input/types";
+import type { SendData } from "@/components/chat-input/types";
 
-import ChatInput from "@/components/common/chat-input/index.uvue";
+import ChatInput from "@/components/chat-input/index.uvue";
 import Consult from "./components/consult.vue";
-import SimpleCard from "@/components/common/card/simple-card.uvue";
-import CallControls from "@/components/common/call-controls/index.uvue";
+import SimpleCard from "@/components/card/simple-card.uvue";
+import CallControls from "@/components/call-controls/index.uvue";
 import SizeSet from "@/components/common/size-set.uvue";
 import AppHeader from "@/components/common/app-header.uvue";
 
@@ -25,8 +25,12 @@ const showCallDemo = ref(false);
 // 语音播放开关
 const voicePlay = ref(false);
 
+// 是否打开对话历史侧栏
+const isHistoryOpen = ref(false);
+
 onLoad(() => {
 	// TODO
+	console.info("uni.getSystemInfoSync() => ", uni.getSystemInfoSync());
 });
 
 //#region 交互区域
@@ -54,6 +58,11 @@ const handleHeaderVoiceSelect = () => {
 	ui.showToast({
 		message: "打开音色选择（待实现）"
 	});
+};
+
+// 侧栏：打开 / 关闭对话历史
+const handleToggleHistory = () => {
+	isHistoryOpen.value = !isHistoryOpen.value;
 };
 
 // 发送当前对话输入
@@ -87,30 +96,75 @@ const toGlobalSet = () => {
 
 <template>
 	<cl-page :back-top="false">
-		<app-header
-			@new-chat="handleOpenNewChat"
-			@voice-play-change="handleHeaderVoiceChange"
-			@voice-select="handleHeaderVoiceSelect"
-		></app-header>
-		<view class="h-full flex flex-col">
-			<simple-card class="flex-1 p-4 !px-8">
-				<Consult @preset-select="handlePresetSelect" />
-			</simple-card>
+		<view class="home-root">
+			<view class="home-history">
+				<view class="w-full h-full overflow-auto">
+					<view> duqings </view>
+				</view>
+			</view>
 
-			<!-- <cl-button @tap="toGlobalSet"> 全局配置1111 </cl-button> -->
+			<view class="home-main" :class="{ 'home-main--history-open': isHistoryOpen }">
+				<app-header
+					@new-chat="handleOpenNewChat"
+					@voice-play-change="handleHeaderVoiceChange"
+					@voice-select="handleHeaderVoiceSelect"
+				>
+					<template #left>
+						<cl-icon
+							name="menu-line"
+							:size="40"
+							color="currentColor"
+							@tap.stop="handleToggleHistory"
+						></cl-icon>
+					</template>
+				</app-header>
+				<view class="h-full flex flex-col">
+					<simple-card class="flex-1 p-4 !px-8 !rounded-none">
+						<Consult @preset-select="handlePresetSelect" />
+					</simple-card>
 
-			<chat-input
-				v-model="inputValue"
-				@send="handleSend"
-				@open-call="handleOpenCall"
-			></chat-input>
-		</view>
+					<!-- <cl-button @tap="toGlobalSet"> 全局配置1111 </cl-button> -->
 
-		<!-- 通话演示浮层：简单全屏遮罩 + 通话控制组件 -->
-		<view v-if="showCallDemo" class="fixed left-0 top-0 right-0 bottom-0 z-50 bg-black">
-			<call-controls @hangup="handleHangup"></call-controls>
+					<chat-input
+						v-model="inputValue"
+						@send="handleSend"
+						@open-call="handleOpenCall"
+					></chat-input>
+				</view>
+
+				<!-- 通话演示浮层：简单全屏遮罩 + 通话控制组件 -->
+				<view v-if="showCallDemo" class="fixed left-0 top-0 right-0 bottom-0 z-50 bg-black">
+					<call-controls @hangup="handleHangup"></call-controls>
+				</view>
+			</view>
 		</view>
 	</cl-page>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.home-root {
+	position: relative;
+	height: 100%;
+	overflow: hidden;
+}
+
+.home-history {
+	@apply absolute left-0 top-0 bottom-0 w-full;
+	padding-right: 12%;
+}
+
+.home-main {
+	@apply absolute left-0 right-0 top-0 bottom-0 rounded-none shadow-none;
+	transform: translateX(0) scale(1);
+	transition:
+		transform 0.1s ease,
+		border-radius 0.1s ease,
+		box-shadow 0.1s ease;
+}
+
+.home-main--history-open {
+	@apply rounded-2xl;
+	transform: translateX(80vw) scale(0.78);
+	box-shadow: -6px 5px 10px #e6e6e6;
+}
+</style>
