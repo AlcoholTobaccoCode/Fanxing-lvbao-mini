@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
-import { getSafeAreaHeight } from "@/cool";
+import { ref, computed, onMounted, useSlots } from "vue";
+import { router } from "@/cool";
 
-const props = defineProps<{
-	title?: string;
-	initialVoicePlay?: boolean;
-	voiceName?: string;
-}>();
+const props = withDefaults(
+	defineProps<{
+		title?: string;
+		initialVoicePlay?: boolean;
+		voiceName?: string;
+		backTop?: boolean;
+	}>(),
+	{
+		backTop: false
+	}
+);
 
 const emit = defineEmits<{
 	(e: "new-chat"): void;
@@ -22,8 +28,30 @@ const isVoicePlay = ref<boolean>(props.initialVoicePlay ?? false);
 const title = computed(() => props.title ?? "律先锋");
 const voiceName = computed(() => props.voiceName ?? "七七");
 
-// 计算弹出菜单距顶部的距离：安全区域高度 + 顶部栏高度（cl-topbar 默认 44px）
-const menuTop = computed(() => `${getSafeAreaHeight("top") + 44}px`);
+// 右侧需要为小程序胶囊预留的 padding（px）
+const rightPadding = ref(0);
+
+// 是否提供了自定义 left 插槽
+const slots = useSlots();
+const hasLeftSlot = computed(() => !!slots.left);
+
+onMounted(() => {
+	// 仅在微信小程序中计算胶囊按钮占用的右侧空间
+	// #ifdef MP-WEIXIN
+	try {
+		const sysInfo = uni.getSystemInfoSync();
+		// @ts-ignore 小程序环境下存在该 API
+		const menuButtonInfo = uni.getMenuButtonBoundingClientRect();
+
+		if (sysInfo && menuButtonInfo) {
+			// windowWidth - 胶囊左侧位置 = 右侧实际被胶囊占用的宽度
+			rightPadding.value = sysInfo.windowWidth - menuButtonInfo.left;
+		}
+	} catch (e) {
+		rightPadding.value = 0;
+	}
+	// #endif
+});
 
 const toggleMenu = () => {
 	showMenu.value = !showMenu.value;
@@ -49,6 +77,9 @@ const handleVoiceSelect = () => {
 };
 
 const handleClickLeft = () => {
+	if (props.backTop) {
+		router.back();
+	}
 	emit("click-left");
 };
 
@@ -62,7 +93,6 @@ const handleClickRecord = () => {
 		<cl-topbar
 			:title="''"
 			:safe-area-top="true"
-			:fixed="true"
 			:show-back="false"
 			:backable="false"
 			:pt="{
@@ -72,8 +102,11 @@ const handleClickRecord = () => {
 		>
 			<template #prepend>
 				<view class="flex flex-row items-center h-full pl-3">
+					<slot v-if="hasLeftSlot" name="left"></slot>
+
 					<cl-icon
-						name="menu-line"
+						v-else-if="backTop"
+						name="arrow-left-s-line"
 						:size="40"
 						color="currentColor"
 						@tap.stop="handleClickLeft"
@@ -89,27 +122,31 @@ const handleClickRecord = () => {
 			</view>
 
 			<template #append>
-				<view class="flex flex-row items-center h-full pr-3">
-					<view
-						class="flex flex-row items-center rounded-full bg-white/90 px-2 py-1 shadow-sm"
-					>
-						<view class="flex items-center justify-center px-1" @tap.stop="toggleMenu">
-							<cl-icon name="more-2-fill" :size="32"></cl-icon>
-						</view>
-						<view class="w-px h-4 mx-1 bg-surface-200"></view>
-						<view
-							class="flex items-center justify-center px-1"
-							@tap.stop="handleClickRecord"
-						>
-							<cl-icon name="radio-button-line" :size="32"></cl-icon>
-						</view>
-					</view>
+				<view
+					class="flex flex-row items-center h-full"
+					:style="{ paddingRight: rightPadding + 'px' }"
+				>
+					<slot name="right"></slot>
 				</view>
 			</template>
 		</cl-topbar>
 
-		<view v-if="showMenu" class="fixed left-0 right-0 top-0 bottom-0 z-50" @tap="closeMenu">
-			<view class="absolute left-1/2 -translate-x-1/2" :style="{ top: menuTop }" @tap.stop>
+		<cl-popup
+			v-model="showMenu"
+			direction="bottom"
+			:size="260"
+			:show-header="false"
+			:show-close="false"
+			:swipe-close="false"
+			:mask-closable="true"
+			:pt="{
+				className: '',
+				inner: { className: 'bg-transparent' },
+				container: { className: 'bg-transparent' },
+				mask: { className: 'bg-black/20' }
+			}"
+		>
+			<view class="w-full flex justify-center mt-[8rpx]">
 				<view class="relative">
 					<view
 						class="absolute left-1/2 -top-2 -translate-x-1/2 w-3 h-3 bg-white rounded-sm shadow-md rotate-45"
@@ -145,7 +182,7 @@ const handleClickRecord = () => {
 					</view>
 				</view>
 			</view>
-		</view>
+		</cl-popup>
 	</view>
 </template>
 
