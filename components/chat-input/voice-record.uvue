@@ -1,8 +1,8 @@
 <script lang="ts" setup>
-import { ref, computed, watch, onBeforeUnmount } from "vue";
+import { ref, computed, watch, getCurrentInstance } from "vue";
 import type { VoiceResult } from "./types";
 
-import "recorder-core";
+import Recorder from "recorder-core";
 import RecordApp from "recorder-core/src/app-support/app";
 import "@/uni_modules/Recorder-UniCore/app-uni-support.js";
 // #ifdef MP-WEIXIN
@@ -10,6 +10,11 @@ import "recorder-core/src/app-support/app-miniProgram-wx-support.js";
 // #endif
 import "recorder-core/src/engine/mp3";
 import "recorder-core/src/engine/mp3-engine";
+// #ifdef H5 || MP-WEIXIN
+import "recorder-core/src/extensions/waveview.js";
+import "recorder-core/src/extensions/frequency.histogram.view.js";
+import "recorder-core/src/extensions/lib.fft.js";
+// #endif
 
 const props = defineProps({
 	modelValue: {
@@ -20,6 +25,11 @@ const props = defineProps({
 	volume: {
 		type: Number,
 		default: 0
+	},
+	// 波形类型：WaveView 或 Histogram3
+	waveType: {
+		type: String,
+		default: "Histogram3"
 	}
 });
 
@@ -53,73 +63,58 @@ const subText = computed(() => {
 
 //#region 声波动画相关
 
-// waveLevel 0-1
-const waveLevel = ref(0);
+// 频谱波形类型
+const instance = getCurrentInstance();
+const pageCtx = instance?.proxy as any;
 
-// 内部录音状态和音量
-const recording = ref(false);
-const hasRecordPermission = ref(false);
-const useInnerVolume = ref(false);
-const innerVolume = ref(0);
-
-// 多根细小竖条波形，整体左右略高、中间略低
-const waveBars = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
-const barBase = [1.2, 1.4, 0.9, 0.7, 1.1, 0.8, 0.8, 1.1, 0.7, 0.9, 1.4, 1.2];
-
-// 内部相位，用来让波形有流动感
-const phase = ref(0);
-let phaseTimer: any = null;
-
-const startPhase = () => {
-	if (phaseTimer) return;
-	phaseTimer = setInterval(() => {
-		phase.value += 0.35;
-	}, 80);
-};
-
-const stopPhase = () => {
-	if (phaseTimer) {
-		clearInterval(phaseTimer);
-		phaseTimer = null;
-	}
-};
-
-const getBarStyle = (index: number) => {
-	const baseAmp = barBase[index] || 1;
-	// 体感音量因子，整体控制高度
-	const volFactor = 0.3 + waveLevel.value * 0.7;
-	// 流动相位：每根柱子错位一点
-	const flow = 0.8 + 0.2 * Math.sin(phase.value + index * 0.7);
-	const scale = baseAmp * volFactor * flow;
-	return {
-		transform: `scaleY(${scale})`
-	};
-};
-
-const applyVolume = (val: number) => {
-	const v = Number.isFinite(val) ? Math.max(0, Math.min(val, 100)) : 0;
-	const target = v / 100;
-	waveLevel.value = waveLevel.value * 0.6 + target * 0.4;
-};
-
-// 根据外部传入的实时音量更新波形（兼容旧用法）
-watch(
-	() => props.volume,
-	(val) => {
-		if (useInnerVolume.value) return;
-		applyVolume(val);
-	},
-	{ immediate: true }
+const waveType = computed<"WaveView" | "Histogram3">(() =>
+	props.waveType === "WaveView" ? "WaveView" : "Histogram3"
 );
 
-// 根据内部录音实时音量更新波形
-watch(innerVolume, (val) => {
-	applyVolume(val);
-	console.info("innerVolume val > ", val);
-});
+// Recorder 频谱视图实例
+const waveStore = ref<any | null>(null);
 
-//#endregion
+// 录音状态和权限
+const recording = ref(false);
+const hasRecordPermission = ref(false);
 
+// 初始化 Recorder 频谱视图（WaveView / Histogram3）
+const initWaveStore = () => {
+	if (!pageCtx) return;
+	if (!waveStore.value) waveStore.value = {};
+	const store = waveStore.value as any;
+
+	// WaveView
+	if (!store.WaveView) {
+		RecordApp.UniFindCanvas(pageCtx, [".recwave-WaveView"], "", (canvas1: any) => {
+			if (!canvas1 || !(Recorder as any).WaveView) return;
+			store.WaveView = (Recorder as any).WaveView({
+				compatibleCanvas: canvas1,
+				width: 120,
+				height: 28
+			});
+		});
+	}
+
+	// Histogram3
+	if (!store.Histogram3) {
+		RecordApp.UniFindCanvas(pageCtx, [".recwave-Histogram3"], "", (canvas1: any) => {
+			if (!canvas1 || !(Recorder as any).FrequencyHistogramView) return;
+			store.Histogram3 = (Recorder as any).FrequencyHistogramView({
+				compatibleCanvas: canvas1,
+				width: 120,
+				height: 28,
+				lineCount: 20,
+				position: 0,
+				minHeight: 1,
+				fallDuration: 400,
+				stripeEnable: false,
+				mirrorEnable: true,
+				linear: [0, "#fff", 1, "#fff"]
+			});
+		});
+	}
+};
 // 请求权限
 const ensureRecordPermission = () =>
 	new Promise<void>((resolve, reject) => {
@@ -139,27 +134,30 @@ const ensureRecordPermission = () =>
 		);
 	});
 
-// 开始录音
+// 开始录音（同时驱动 Recorder 波形绘制）
 const startRecordInner = async () => {
 	try {
 		await ensureRecordPermission();
-		useInnerVolume.value = true;
 		RecordApp.Start(
 			{
 				type: "mp3",
 				sampleRate: 16000,
 				bitRate: 16,
-				onProcess(
-					_buffers: any,
-					powerLevel: number,
-					_duration: number,
-					_sampleRate: number
-				) {
-					innerVolume.value = powerLevel || 0;
+				onProcess(buffers: any, powerLevel: number, _duration: number, sampleRate: number) {
+					const store = waveStore.value as any;
+					const buf = buffers && buffers.length ? buffers[buffers.length - 1] : null;
+					if (!store || !buf) return;
+					const key = waveType.value;
+					if (key === "WaveView" && store.WaveView) {
+						store.WaveView.input(buf, powerLevel, sampleRate);
+					} else if (key === "Histogram3" && store.Histogram3) {
+						store.Histogram3.input(buf, powerLevel, sampleRate);
+					}
 				}
 			},
 			() => {
 				recording.value = true;
+				initWaveStore();
 			},
 			(msg: string) => {
 				console.error("开始录音失败", msg);
@@ -175,8 +173,6 @@ const startRecordInner = async () => {
 const stopRecordInner = (discard: boolean, options?: { translate?: boolean }) => {
 	if (!recording.value) return;
 	recording.value = false;
-	innerVolume.value = 0;
-	useInnerVolume.value = false;
 	RecordApp.Stop(
 		(arrayBuffer: ArrayBuffer, duration: number, mime: string) => {
 			if (discard) return;
@@ -199,11 +195,8 @@ watch(
 	() => props.modelValue,
 	(val) => {
 		if (val) {
-			startPhase();
 			startRecordInner();
 		} else {
-			waveLevel.value = 0;
-			stopPhase();
 			if (status.value === "cancel") {
 				stopRecordInner(true);
 			} else if (status.value === "translate") {
@@ -214,10 +207,7 @@ watch(
 		}
 	}
 );
-
-onBeforeUnmount(() => {
-	stopPhase();
-});
+//#endregion
 
 defineExpose({
 	ensureRecordPermission
@@ -230,12 +220,16 @@ defineExpose({
 			<!-- 语音气泡：亮色圆角气泡，中间一行细小竖条波形 -->
 			<view class="voice-record-bubble">
 				<view class="voice-record-wave">
-					<view
-						v-for="(item, index) in waveBars"
-						:key="index"
-						class="voice-record-wave-bar"
-						:style="getBarStyle(index)"
-					></view>
+					<canvas
+						v-show="waveType === 'WaveView'"
+						type="2d"
+						class="recwave-WaveView"
+					></canvas>
+					<canvas
+						v-show="waveType === 'Histogram3'"
+						type="2d"
+						class="recwave-Histogram3"
+					></canvas>
 				</view>
 				<view class="voice-record-bubble-tail"></view>
 			</view>
@@ -283,18 +277,9 @@ defineExpose({
 }
 
 .voice-record-wave {
-	@apply flex flex-row items-end justify-center gap-1;
+	@apply flex flex-row items-end justify-center;
 	width: 120px;
-	height: 14px;
-}
-
-.voice-record-wave-bar {
-	@apply rounded-full;
-	width: 2px;
-	height: 8px;
-	background-color: rgba(0, 0, 0, 0.75);
-	transform-origin: center bottom;
-	transition: transform 0.12s ease-out;
+	height: 28px;
 }
 
 .voice-record-bubble-tail {
