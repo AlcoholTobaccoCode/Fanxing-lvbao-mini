@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
 
 const props = defineProps({
 	modelValue: {
@@ -45,11 +45,35 @@ const subText = computed(() => {
 // waveLevel 0-1，来源于外部传入的 volume（0-100）
 const waveLevel = ref(0);
 
+// 6 根柱子：左右高、中间低，形成一组有大有小的波纹
 const waveBars = [0, 1, 2, 3, 4, 5];
+const barBase = [1.3, 1.6, 0.9, 0.7, 0.9, 1.5];
+
+// 内部相位，用来让波形有流动感
+const phase = ref(0);
+let phaseTimer: any = null;
+
+const startPhase = () => {
+	if (phaseTimer) return;
+	phaseTimer = setInterval(() => {
+		phase.value += 0.35;
+	}, 80);
+};
+
+const stopPhase = () => {
+	if (phaseTimer) {
+		clearInterval(phaseTimer);
+		phaseTimer = null;
+	}
+};
 
 const getBarStyle = (index: number) => {
-	const base = 0.4 + index * 0.08;
-	const scale = base + waveLevel.value * 0.9;
+	const baseAmp = barBase[index] || 1;
+	// 体感音量因子：0.4-1.2
+	const volFactor = 0.4 + waveLevel.value * 0.8;
+	// 流动相位：每根柱子错位一点
+	const flow = 0.7 + 0.3 * Math.sin(phase.value + index * 0.7);
+	const scale = baseAmp * volFactor * flow;
 	return {
 		transform: `scaleY(${scale})`
 	};
@@ -58,7 +82,7 @@ const getBarStyle = (index: number) => {
 // 根据外部传入的实时音量更新波形
 watch(
 	() => props.volume,
-	val => {
+	(val) => {
 		const v = Number.isFinite(val) ? Math.max(0, Math.min(val, 100)) : 0;
 		const target = v / 100;
 		// 简单平滑处理，避免抖动太厉害
@@ -70,12 +94,19 @@ watch(
 // 录音浮层关闭时重置波形
 watch(
 	() => props.modelValue,
-	val => {
-		if (!val) {
+	(val) => {
+		if (val) {
+			startPhase();
+		} else {
 			waveLevel.value = 0;
+			stopPhase();
 		}
 	}
 );
+
+onBeforeUnmount(() => {
+	stopPhase();
+});
 
 function close() {
 	emit("update:modelValue", false);
@@ -153,12 +184,11 @@ function handleTranslate() {
 }
 
 .voice-record-wave {
-	@apply flex flex-row items-end justify-center gap-1 w-[160px] h-[32px];
+	@apply flex flex-row items-end justify-center gap-1 w-[160px] h-[40px];
 }
 
-
 .voice-record-wave-bar {
-	@apply w-[6px] rounded-full bg-white/90;
+	@apply w-[6px] h-[18px] rounded-full bg-white/90;
 	transform-origin: center bottom;
 	transition: transform 0.12s ease-out;
 }
