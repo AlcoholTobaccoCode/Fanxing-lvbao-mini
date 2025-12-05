@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { ref, computed, watch, getCurrentInstance } from "vue";
+import { ref, computed, watch, getCurrentInstance, onMounted } from "vue";
 import type { VoiceResult } from "./types";
+import { useUi } from "@/uni_modules/cool-ui";
 
 import Recorder from "recorder-core";
 import RecordApp from "recorder-core/src/app-support/app";
@@ -17,29 +18,20 @@ import "recorder-core/src/extensions/lib.fft.js";
 // #endif
 
 const props = defineProps({
-	modelValue: {
-		type: Boolean,
-		default: false
-	},
-	// 实时音量：推荐传 0-100 的 powerLevel，内部会自动归一化
-	volume: {
-		type: Number,
-		default: 0
-	},
 	// 波形类型：WaveView 或 Histogram3
 	waveType: {
 		type: String,
-		default: "Histogram3"
+		default: () => "Histogram3"
 	}
 });
 
 const emit = defineEmits<{
-	(e: "update:modelValue", value: boolean): void;
-	(e: "start"): void;
-	(e: "cancel"): void;
-	(e: "translate"): void;
 	(e: "finish", value: VoiceResult): void;
 }>();
+
+const ui = useUi();
+
+const isShowModal = ref(false);
 
 /**
  * 录音状态
@@ -67,6 +59,11 @@ const subText = computed(() => {
 const instance = getCurrentInstance();
 const pageCtx = instance?.proxy as any;
 
+const waveConfig = ref({
+	width: 80,
+	height: 28
+});
+
 const waveType = computed<"WaveView" | "Histogram3">(() =>
 	props.waveType === "WaveView" ? "WaveView" : "Histogram3"
 );
@@ -84,40 +81,49 @@ const initWaveStore = () => {
 	if (!waveStore.value) waveStore.value = {};
 	const store = waveStore.value as any;
 
+	const payload = {
+		width: waveConfig.value.width / 2,
+		height: waveConfig.value.height / 2,
+		position: 0,
+		minHeight: 1,
+		lineCount: 8,
+		widthRatio: 0.8,
+		fallDuration: 1000,
+		stripeFallDuration: 3500,
+		stripeEnable: false,
+		mirrorEnable: true,
+		linear: [0, "#fff", 1, "#fff"]
+	};
+
 	// WaveView
 	if (!store.WaveView) {
+		// nextTick(() => {
 		RecordApp.UniFindCanvas(pageCtx, [".recwave-WaveView"], "", (canvas1: any) => {
 			if (!canvas1 || !(Recorder as any).WaveView) return;
 			store.WaveView = (Recorder as any).WaveView({
 				compatibleCanvas: canvas1,
-				width: 120,
-				height: 28
+				...payload
 			});
 		});
+		// });
 	}
 
 	// Histogram3
 	if (!store.Histogram3) {
+		// nextTick(() => {
 		RecordApp.UniFindCanvas(pageCtx, [".recwave-Histogram3"], "", (canvas1: any) => {
 			if (!canvas1 || !(Recorder as any).FrequencyHistogramView) return;
 			store.Histogram3 = (Recorder as any).FrequencyHistogramView({
 				compatibleCanvas: canvas1,
-				width: 120,
-				height: 28,
-				lineCount: 20,
-				position: 0,
-				minHeight: 1,
-				fallDuration: 400,
-				stripeEnable: false,
-				mirrorEnable: true,
-				linear: [0, "#fff", 1, "#fff"]
+				...payload
 			});
 		});
+		// });
 	}
 };
 // 请求权限
 const ensureRecordPermission = () =>
-	new Promise<void>((resolve, reject) => {
+	new Promise<void>((resolve) => {
 		if (hasRecordPermission.value) {
 			resolve();
 			return;
@@ -129,7 +135,7 @@ const ensureRecordPermission = () =>
 			},
 			(msg: string, _isUserNotAllow: boolean) => {
 				hasRecordPermission.value = false;
-				reject(new Error(msg));
+				resolve();
 			}
 		);
 	});
@@ -138,12 +144,21 @@ const ensureRecordPermission = () =>
 const startRecordInner = async () => {
 	try {
 		await ensureRecordPermission();
+		if (!hasRecordPermission.value) {
+			isShowModal.value = false;
+			return ui.showToast({
+				message: "请设置中打开录音权限"
+			});
+		}
+
 		RecordApp.Start(
 			{
 				type: "mp3",
 				sampleRate: 16000,
 				bitRate: 16,
 				onProcess(buffers: any, powerLevel: number, _duration: number, sampleRate: number) {
+					console.info("startRecordInner powerLevel ===> ", powerLevel);
+
 					const store = waveStore.value as any;
 					const buf = buffers && buffers.length ? buffers[buffers.length - 1] : null;
 					if (!store || !buf) return;
@@ -165,7 +180,7 @@ const startRecordInner = async () => {
 		);
 	} catch (err) {
 		console.error("录音权限失败", err);
-		emit("update:modelValue", false);
+		isShowModal.value = false;
 	}
 };
 
@@ -192,7 +207,7 @@ const stopRecordInner = (discard: boolean, options?: { translate?: boolean }) =>
 
 // 录音浮层开关：驱动动画和录音开始/结束
 watch(
-	() => props.modelValue,
+	() => isShowModal.value,
 	(val) => {
 		if (val) {
 			startRecordInner();
@@ -209,29 +224,60 @@ watch(
 );
 //#endregion
 
+const startFromPress = async () => {
+	status.value = "recording";
+	await ensureRecordPermission();
+	if (!hasRecordPermission.value) {
+		isShowModal.value = false;
+		return ui.showToast({
+			message: "请设置中打开录音权限"
+		});
+	}
+
+	isShowModal.value = true;
+};
+
+const endFromPress = () => {
+	status.value = "recording";
+	isShowModal.value = false;
+};
+
+const cancelFromPress = () => {
+	status.value = "cancel";
+	isShowModal.value = false;
+};
+
 defineExpose({
-	ensureRecordPermission
+	ensureRecordPermission,
+	startFromPress,
+	endFromPress,
+	cancelFromPress
 });
 </script>
 
 <template>
-	<view v-if="modelValue" class="voice-record-mask" @contextmenu.prevent @longpress.prevent>
+	<view v-if="isShowModal" class="voice-record-mask" @contextmenu.prevent @longpress.prevent>
 		<view class="voice-record-center">
-			<!-- 语音气泡：亮色圆角气泡，中间一行细小竖条波形 -->
+			<!-- 语音气泡 -->
 			<view class="voice-record-bubble">
-				<view class="voice-record-wave">
+				<view
+					class="voice-record-wave"
+					:style="{
+						height: `${waveConfig.height}px`
+					}"
+				>
+					<!-- width: `${waveConfig.width / 4}px`, -->
 					<canvas
 						v-show="waveType === 'WaveView'"
 						type="2d"
-						class="recwave-WaveView"
+						class="recwave-WaveView w-full h-full"
 					></canvas>
 					<canvas
 						v-show="waveType === 'Histogram3'"
 						type="2d"
-						class="recwave-Histogram3"
+						class="recwave-Histogram3 w-full h-full"
 					></canvas>
 				</view>
-				<view class="voice-record-bubble-tail"></view>
 			</view>
 
 			<view class="voice-record-tip-wrap">
@@ -241,19 +287,7 @@ defineExpose({
 		</view>
 
 		<!-- 底部操作区：取消 / 松开发送 / 转文字 -->
-		<!-- <view class="voice-record-bottom">
-			<view class="voice-record-bottom-left" @click="handleCancel">
-				<text>取消</text>
-			</view>
-
-			<view class="voice-record-bottom-center">
-				<text class="voice-record-center-text">松开 发送</text>
-			</view>
-
-			<view class="voice-record-bottom-right" @click="handleTranslate">
-				<text>滑到这里 转文字</text>
-			</view>
-		</view> -->
+		<view class="voice-record-bottom"> 底部 </view>
 	</view>
 </template>
 
@@ -264,7 +298,7 @@ defineExpose({
 }
 
 .voice-record-center {
-	@apply flex flex-col items-center w-full h-full;
+	@apply flex flex-col items-center justify-end w-full;
 	padding-top: 120px;
 	padding-bottom: 120px;
 	box-sizing: border-box;
@@ -277,19 +311,7 @@ defineExpose({
 }
 
 .voice-record-wave {
-	@apply flex flex-row items-end justify-center;
-	width: 120px;
-	height: 28px;
-}
-
-.voice-record-bubble-tail {
-	position: absolute;
-	bottom: -7px;
-	left: 50%;
-	transform: translateX(-50%) rotate(45deg);
-	width: 14px;
-	height: 14px;
-	background-color: inherit;
+	@apply w-full flex flex-row items-end justify-center py-4;
 }
 
 .voice-record-tip-wrap {
@@ -309,33 +331,6 @@ defineExpose({
 }
 
 .voice-record-bottom {
-	@apply absolute bottom-0 left-0 right-0 pb-16 px-6 flex flex-row items-end justify-between;
-}
-
-.voice-record-bottom-left {
-	@apply w-[120px] h-[64px] rounded-full flex items-center justify-center;
-	background-color: rgba(0, 0, 0, 0.4);
-	color: #fff;
-	font-size: 16px;
-}
-
-.voice-record-bottom-center {
-	@apply w-[120px] h-[120px] rounded-full flex flex-col items-center justify-center shadow-xl mb-6;
-	color: #333;
-	font-size: 16px;
-	font-weight: 500;
-	background-color: rgba(255, 255, 255, 0.9);
-}
-
-.voice-record-center-text {
-	line-height: 1.2;
-	text-align: center;
-}
-
-.voice-record-bottom-right {
-	@apply w-[120px] h-[64px] rounded-full flex items-center justify-center;
-	background-color: rgba(0, 0, 0, 0.4);
-	color: #fff;
-	font-size: 16px;
+	@apply h-[300px] absolute bottom-0 left-0 right-0 pb-16 px-6 flex flex-row items-end justify-between;
 }
 </style>

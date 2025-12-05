@@ -30,11 +30,6 @@ const props = defineProps({
 		type: String,
 		default: () => "text"
 	},
-	// 实时语音音量（0-100），用于驱动录音气泡水波纹（兼容旧用法，当前由内部录音驱动）
-	voiceVolume: {
-		type: Number,
-		default: () => 0
-	},
 	// 顶部工具栏：额外传入的工具项
 	tools: {
 		type: Array as PropType<Tools>,
@@ -55,17 +50,12 @@ const props = defineProps({
 	}
 });
 
-// 使用 defineModel 作为 v-model 绑定值
 const modelValue = defineModel<string>({
 	default: ""
 });
 
 const emit = defineEmits<{
 	(e: "send", value: SendData): void;
-	(e: "voice-start"): void;
-	(e: "voice-finish"): void;
-	(e: "voice-cancel"): void;
-	(e: "voice-translate"): void;
 	(e: "open-call"): void;
 	(e: "input-mode-change", value: string): void;
 	// 顶部工具选中变化
@@ -110,31 +100,21 @@ const tools = ref<Tools>([
 
 //#region 语音录制相关
 
-// 语音浮层显隐
-const voiceVisible = ref(false);
 const voiceRecordRef = ref<any>();
 
 // 按住说话：按下时显示语音浮层并通知开始
 const handlePressStart = () => {
-	voiceVisible.value = true;
-	emit("voice-start");
+	voiceRecordRef.value?.startFromPress?.();
 };
 
 // 松开：关闭浮层并通知结束
 const handlePressEnd = () => {
-	voiceVisible.value = false;
-	emit("voice-finish");
+	voiceRecordRef.value?.endFromPress?.();
 };
 
 // 浮层回调
 const handleVoiceCancel = () => {
-	voiceVisible.value = false;
-	emit("voice-cancel");
-};
-
-const handleVoiceTranslate = () => {
-	voiceVisible.value = false;
-	emit("voice-translate");
+	voiceRecordRef.value?.cancelFromPress?.();
 };
 
 const handleVoiceRecordFinish = (result: VoiceResult) => {
@@ -316,14 +296,7 @@ watch(
 		></actions-popup>
 
 		<!-- 语音录制浮层，仅在按住说话时显示 -->
-		<voice-record
-			ref="voiceRecordRef"
-			v-model="voiceVisible"
-			@start="handlePressStart"
-			@cancel="handleVoiceCancel"
-			@translate="handleVoiceTranslate"
-			@finish="handleVoiceRecordFinish"
-		></voice-record>
+		<voice-record ref="voiceRecordRef" @finish="handleVoiceRecordFinish"></voice-record>
 	</simple-card>
 </template>
 
