@@ -12,3 +12,16 @@ export const chunkArray = (arr: Array<string>, size: number): chunkArrayType => 
 	}
 	return res;
 };
+
+/**
+ * 生成随机len位数字
+ * @param len 指定位数，默认 4
+ * @param date 是否添加时间戳
+ */
+export const randomLenNum = (len, date) => {
+	let random = Math.ceil(Math.random() * 100000000000000)
+		.toString()
+		.slice(0, len || 4);
+	if (date) random = random + Date.now();
+	return random;
+};

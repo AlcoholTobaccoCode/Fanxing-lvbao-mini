@@ -1,0 +1,10 @@
+<script setup lang="ts"></script>
+
+<template>
+	<view class="w-full h-full flex flex-col p-4">
+		<view class="text-sm text-surface-400 mb-2">对话历史 / 全局设置（占位）</view>
+		<view class="flex-1 rounded-2xl bg-surface-50"></view>
+	</view>
+</template>
+
+<style lang="scss" scoped></style>
