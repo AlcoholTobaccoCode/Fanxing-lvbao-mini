@@ -2,7 +2,7 @@
 import { ref, watch } from "vue";
 import type { PropType } from "vue";
 import { isDark } from "@/cool";
-import type { ToolItem, Tools, ActionItem, Actions, SendData } from "./types";
+import type { ToolItem, Tools, ActionItem, Actions, SendData, VoiceResult } from "./types";
 
 import SimpleCard from "@/components/card/simple-card.uvue";
 import VoiceRecord from "./voice-record.uvue";
@@ -30,7 +30,7 @@ const props = defineProps({
 		type: String,
 		default: () => "text"
 	},
-	// 实时语音音量（0-100），用于驱动录音气泡水波纹
+	// 实时语音音量（0-100），用于驱动录音气泡水波纹（兼容旧用法，当前由内部录音驱动）
 	voiceVolume: {
 		type: Number,
 		default: () => 0
@@ -67,24 +67,14 @@ const emit = defineEmits<{
 	(e: "voice-cancel"): void;
 	(e: "voice-translate"): void;
 	(e: "open-call"): void;
+	(e: "input-mode-change", value: string): void;
 	// 顶部工具选中变化
 	(e: "tool-change", value: Tools): void;
 	(e: "tool-toggle", value: ToolItem): void;
 }>();
 
-//#region test
-
-const footerCheck = (value: boolean) => {
-	console.info("footerCheck", value);
-};
-
-//#endregion
-
 // 输入模式
 const inputModeVal = ref(props.inputMode);
-
-// 语音浮层显隐
-const voiceVisible = ref(false);
 
 // 顶部意图 chips：默认工具 + 外部传入工具
 const createDefaultTools = (): Tools => {
@@ -106,7 +96,7 @@ const createDefaultTools = (): Tools => {
 	if (props.showDefaultNetwork) {
 		list.push({
 			icon: "fxzh-hulianwang",
-			text: "联网",
+			text: "联网搜索",
 			enable: false
 		});
 	}
@@ -117,6 +107,97 @@ const tools = ref<Tools>([
 	...createDefaultTools(),
 	...(props.tools || []).map((item) => ({ ...item }))
 ]);
+
+//#region 语音录制相关
+
+// 语音浮层显隐
+const voiceVisible = ref(false);
+const voiceRecordRef = ref<any>();
+
+// 按住说话：按下时显示语音浮层并通知开始
+const handlePressStart = () => {
+	voiceVisible.value = true;
+	emit("voice-start");
+};
+
+// 松开：关闭浮层并通知结束
+const handlePressEnd = () => {
+	voiceVisible.value = false;
+	emit("voice-finish");
+};
+
+// 浮层回调
+const handleVoiceCancel = () => {
+	voiceVisible.value = false;
+	emit("voice-cancel");
+};
+
+const handleVoiceTranslate = () => {
+	voiceVisible.value = false;
+	emit("voice-translate");
+};
+
+const handleVoiceRecordFinish = (result: VoiceResult) => {
+	const data: SendData = {
+		text: "",
+		mode: "voice",
+		voice: result
+	};
+	emit("send", data);
+};
+
+//#endregion
+
+//#region 交互
+// 更多功能弹层显隐
+const showMoreAction = ref(false);
+
+// 顶部工具点击
+const handleToolTap = (item: ToolItem) => {
+	const target = tools.value.find((t) => t.text === item.text);
+	if (!target) return;
+
+	target.enable = !target.enable;
+	target.onClick?.(target);
+	emit("tool-toggle", { ...target });
+	emit("tool-change", tools.value);
+};
+
+// 切换输入模式
+const handleRecording = () => {
+	inputModeVal.value = inputModeVal.value === "text" ? "voice" : "text";
+	emit("input-mode-change", inputModeVal.value);
+	// 切换到语音模式时，预请求一次录音权限，减少长按时等待
+	if (inputModeVal.value === "voice") {
+		voiceRecordRef.value?.ensureRecordPermission?.();
+	}
+};
+
+// 发送
+const handleSend = () => {
+	if (props.disabled || props.loading) return;
+	const val = modelValue.value.trim();
+
+	const data = {
+		text: val,
+		mode: "text" as const
+	};
+
+	if (!val) return;
+	emit("send", data);
+};
+
+// 确认
+const handleConfirm = () => {
+	handleSend();
+};
+
+// 打开通话组件
+const handleOpenCall = () => {
+	emit("open-call");
+};
+
+//#endregion
 
 // 当外部传入的 tools 或默认展示配置变化时，同步内部列表
 watch(
@@ -144,75 +225,6 @@ watch(
 	},
 	{ deep: true }
 );
-
-// 更多功能弹层显隐
-const showMoreAction = ref(false);
-
-// 顶部工具点击
-const handleToolTap = (item: ToolItem) => {
-	const target = tools.value.find((t) => t.text === item.text);
-	if (!target) return;
-
-	target.enable = !target.enable;
-	target.onClick?.(target);
-	emit("tool-toggle", { ...target });
-	emit("tool-change", tools.value);
-};
-
-// 切换输入模式
-const handleRecording = () => {
-	inputModeVal.value = inputModeVal.value === "text" ? "voice" : "text";
-};
-
-// 发送
-const handleSend = () => {
-	if (props.disabled || props.loading) return;
-	const val = modelValue.value.trim();
-
-	const isVoice = inputModeVal.value === "voice";
-
-	const data = {
-		text: val
-	};
-
-	if (!val) return;
-	emit("send", data);
-};
-
-// 确认
-const handleConfirm = () => {
-	handleSend();
-};
-
-// ===== 语音录制相关 =====
-
-// 按住说话：按下时显示语音浮层并通知开始
-const handlePressStart = () => {
-	voiceVisible.value = true;
-	emit("voice-start");
-};
-
-// 松开：关闭浮层并通知结束
-const handlePressEnd = () => {
-	voiceVisible.value = false;
-	emit("voice-finish");
-};
-
-// 浮层回调
-const handleVoiceCancel = () => {
-	voiceVisible.value = false;
-	emit("voice-cancel");
-};
-
-const handleVoiceTranslate = () => {
-	voiceVisible.value = false;
-	emit("voice-translate");
-};
-
-// 打开通话组件
-const handleOpenCall = () => {
-	emit("open-call");
-};
 </script>
 
 <template>
@@ -248,7 +260,7 @@ const handleOpenCall = () => {
 					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 						<cl-icon
 							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
-							:size="32"
+							:size="28"
 							color="currentColor"
 						></cl-icon>
 					</view>
@@ -284,10 +296,10 @@ const handleOpenCall = () => {
 
 				<view class="chat-main__right">
 					<view class="chat-main__icon-btn">
-						<cl-icon name="camera-line" :size="28" color="currentColor"></cl-icon>
+						<cl-icon name="camera-line" :size="24" color="currentColor"></cl-icon>
 					</view>
 					<view class="chat-main__icon-btn" @tap.stop="showMoreAction = true">
-						<cl-icon name="add-line" :size="28" color="currentColor"></cl-icon>
+						<cl-icon name="add-line" :size="24" color="currentColor"></cl-icon>
 					</view>
 				</view>
 			</view>
@@ -305,12 +317,12 @@ const handleOpenCall = () => {
 
 		<!-- 语音录制浮层，仅在按住说话时显示 -->
 		<voice-record
+			ref="voiceRecordRef"
 			v-model="voiceVisible"
-			:volume="props.voiceVolume"
 			@start="handlePressStart"
-			@finish="handlePressEnd"
 			@cancel="handleVoiceCancel"
 			@translate="handleVoiceTranslate"
+			@finish="handleVoiceRecordFinish"
 		></voice-record>
 	</simple-card>
 </template>
@@ -370,7 +382,7 @@ const handleOpenCall = () => {
 }
 
 .chat-main__right {
-	@apply flex flex-row items-center gap-1;
+	@apply flex flex-row items-center gap-2;
 }
 
 .chat-main__icon-btn {

@@ -17,6 +17,15 @@ export type ActionItem = {
 
 export type Actions = ActionItem[];
 
+export type VoiceResult = {
+	buffer: ArrayBuffer;
+	duration: number;
+	mime: string;
+	translate?: boolean;
+};
+
 export type SendData = {
 	text: string;
+	mode?: "text" | "voice";
+	voice?: VoiceResult;
 };
