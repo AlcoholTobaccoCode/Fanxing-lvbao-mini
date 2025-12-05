@@ -260,7 +260,7 @@ watch(
 					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 						<cl-icon
 							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
-							:size="28"
+							:size="38"
 							color="currentColor"
 						></cl-icon>
 					</view>
@@ -282,7 +282,7 @@ watch(
 
 					<view v-else class="chat-main__voice">
 						<view
-							class="chat-main__voice-hit"
+							class="chat-main__voice-hit !h-[40px]"
 							@touchstart.stop="handlePressStart"
 							@touchend.stop="handlePressEnd"
 							@touchcancel.stop="handlePressEnd"
@@ -296,17 +296,17 @@ watch(
 
 				<view class="chat-main__right">
 					<view class="chat-main__icon-btn">
-						<cl-icon name="camera-line" :size="24" color="currentColor"></cl-icon>
+						<cl-icon name="camera-line" :size="38" color="currentColor"></cl-icon>
 					</view>
 					<view class="chat-main__icon-btn" @tap.stop="showMoreAction = true">
-						<cl-icon name="add-line" :size="24" color="currentColor"></cl-icon>
+						<cl-icon name="add-line" :size="38" color="currentColor"></cl-icon>
 					</view>
 				</view>
 			</view>
 		</view>
 
 		<view class="chat-tips">
-			<cl-text size="10px" color="info">内容由 AI 生成</cl-text>
+			<cl-text size="10px" color="info">AI检索结果仅供参考，以官方法条和权威案例为准</cl-text>
 		</view>
 
 		<!-- 更多交互弹窗 -->

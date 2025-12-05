@@ -77,7 +77,7 @@ const handleHangup = () => {
 						v-model="inputValue"
 						@send="handleSend"
 						@open-call="handleOpenCall"
-					></chat-input>
+					/>
 				</simple-card>
 			</view>
 		</template>
