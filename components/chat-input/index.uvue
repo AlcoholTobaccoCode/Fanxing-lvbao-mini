@@ -101,20 +101,16 @@ const tools = ref<Tools>([
 //#region 语音录制相关
 
 const voiceRecordRef = ref<any>();
+const isShowVoiceRecord = ref<any>(false);
 
 // 按住说话：按下时显示语音浮层并通知开始
 const handlePressStart = () => {
-	voiceRecordRef.value?.startFromPress?.();
+	isShowVoiceRecord.value = true;
 };
 
 // 松开：关闭浮层并通知结束
 const handlePressEnd = () => {
-	voiceRecordRef.value?.endFromPress?.();
-};
-
-// 浮层回调
-const handleVoiceCancel = () => {
-	voiceRecordRef.value?.cancelFromPress?.();
+	isShowVoiceRecord.value = false;
 };
 
 const handleVoiceRecordFinish = (result: VoiceResult) => {
@@ -274,7 +270,7 @@ watch(
 					</view>
 				</view>
 
-				<view class="chat-main__right">
+				<view v-if="false" class="chat-main__right">
 					<view class="chat-main__icon-btn">
 						<cl-icon name="camera-line" :size="38" color="currentColor"></cl-icon>
 					</view>
@@ -296,7 +292,11 @@ watch(
 		></actions-popup>
 
 		<!-- 语音录制浮层，仅在按住说话时显示 -->
-		<voice-record ref="voiceRecordRef" @finish="handleVoiceRecordFinish"></voice-record>
+		<voice-record
+			v-model:is-show="isShowVoiceRecord"
+			ref="voiceRecordRef"
+			@finish="handleVoiceRecordFinish"
+		></voice-record>
 	</simple-card>
 </template>
 
@@ -351,7 +351,7 @@ watch(
 }
 
 .chat-main__voice-btn {
-	@apply w-full h-[40px] flex flex-row items-center justify-center rounded-full;
+	@apply w-full flex flex-row items-center justify-center rounded-full;
 }
 
 .chat-main__right {

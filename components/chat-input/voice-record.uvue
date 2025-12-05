@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, watch, getCurrentInstance, onMounted } from "vue";
+import { ref, computed, watch, getCurrentInstance, onMounted, nextTick } from "vue";
 import type { VoiceResult } from "./types";
 import { useUi } from "@/uni_modules/cool-ui";
 
@@ -31,7 +31,10 @@ const emit = defineEmits<{
 
 const ui = useUi();
 
-const isShowModal = ref(false);
+const isShowModal = defineModel("isShow", {
+	type: Boolean,
+	default: () => false
+});
 
 /**
  * 录音状态
@@ -81,44 +84,37 @@ const initWaveStore = () => {
 	if (!waveStore.value) waveStore.value = {};
 	const store = waveStore.value as any;
 
-	const payload = {
-		width: waveConfig.value.width / 2,
-		height: waveConfig.value.height / 2,
-		position: 0,
-		minHeight: 1,
-		lineCount: 8,
-		widthRatio: 0.8,
-		fallDuration: 1000,
-		stripeFallDuration: 3500,
-		stripeEnable: false,
-		mirrorEnable: true,
-		linear: [0, "#fff", 1, "#fff"]
-	};
-
 	// WaveView
 	if (!store.WaveView) {
-		// nextTick(() => {
 		RecordApp.UniFindCanvas(pageCtx, [".recwave-WaveView"], "", (canvas1: any) => {
 			if (!canvas1 || !(Recorder as any).WaveView) return;
 			store.WaveView = (Recorder as any).WaveView({
 				compatibleCanvas: canvas1,
-				...payload
+				width: waveConfig.value.width / 2,
+				height: waveConfig.value.height / 2
 			});
 		});
-		// });
 	}
 
 	// Histogram3
 	if (!store.Histogram3) {
-		// nextTick(() => {
 		RecordApp.UniFindCanvas(pageCtx, [".recwave-Histogram3"], "", (canvas1: any) => {
 			if (!canvas1 || !(Recorder as any).FrequencyHistogramView) return;
 			store.Histogram3 = (Recorder as any).FrequencyHistogramView({
 				compatibleCanvas: canvas1,
-				...payload
+				width: waveConfig.value.width / 2,
+				height: waveConfig.value.height / 2,
+				position: 0,
+				minHeight: 1,
+				lineCount: 12,
+				widthRatio: 0.2,
+				fallDuration: 1000,
+				stripeFallDuration: 2500,
+				stripeEnable: false,
+				mirrorEnable: true,
+				linear: [0, "#fff", 1, "#fff"]
 			});
 		});
-		// });
 	}
 };
 // 请求权限
@@ -142,15 +138,14 @@ const ensureRecordPermission = () =>
 
 // 开始录音（同时驱动 Recorder 波形绘制）
 const startRecordInner = async () => {
-	try {
-		await ensureRecordPermission();
-		if (!hasRecordPermission.value) {
-			isShowModal.value = false;
-			return ui.showToast({
-				message: "请设置中打开录音权限"
-			});
-		}
+	// 防止重复 Start
+	if (recording.value) {
+		console.warn("[voice-record] 已在录音中，跳过重复 Start");
+		return;
+	}
 
+	console.info("startRecordInner ============> ");
+	try {
 		RecordApp.Start(
 			{
 				type: "mp3",
@@ -158,7 +153,6 @@ const startRecordInner = async () => {
 				bitRate: 16,
 				onProcess(buffers: any, powerLevel: number, _duration: number, sampleRate: number) {
 					console.info("startRecordInner powerLevel ===> ", powerLevel);
-
 					const store = waveStore.value as any;
 					const buf = buffers && buffers.length ? buffers[buffers.length - 1] : null;
 					if (!store || !buf) return;
@@ -179,7 +173,7 @@ const startRecordInner = async () => {
 			}
 		);
 	} catch (err) {
-		console.error("录音权限失败", err);
+		console.error("开始录音失败", err);
 		isShowModal.value = false;
 	}
 };
@@ -191,6 +185,7 @@ const stopRecordInner = (discard: boolean, options?: { translate?: boolean }) =>
 	RecordApp.Stop(
 		(arrayBuffer: ArrayBuffer, duration: number, mime: string) => {
 			if (discard) return;
+			// if (duration < 1000) return;
 			const result: VoiceResult = {
 				buffer: arrayBuffer,
 				duration,
@@ -260,22 +255,17 @@ defineExpose({
 		<view class="voice-record-center">
 			<!-- 语音气泡 -->
 			<view class="voice-record-bubble">
-				<view
-					class="voice-record-wave"
-					:style="{
-						height: `${waveConfig.height}px`
-					}"
-				>
+				<view class="voice-record-wave">
 					<!-- width: `${waveConfig.width / 4}px`, -->
 					<canvas
 						v-show="waveType === 'WaveView'"
 						type="2d"
-						class="recwave-WaveView w-full h-full"
+						class="recwave-WaveView h-[28px] w-full"
 					></canvas>
 					<canvas
 						v-show="waveType === 'Histogram3'"
 						type="2d"
-						class="recwave-Histogram3 w-full h-full"
+						class="recwave-Histogram3 h-[28px] w-full"
 					></canvas>
 				</view>
 			</view>
@@ -305,13 +295,13 @@ defineExpose({
 }
 
 .voice-record-bubble {
-	@apply rounded-[24px] px-10 py-4 flex items-center justify-center shadow-lg mx-6 bg-primary-500;
+	@apply rounded-[24px] px-16 py-2 flex items-center justify-center shadow-lg mx-6 bg-primary-500;
 	min-width: 260px;
 	position: relative;
 }
 
 .voice-record-wave {
-	@apply w-full flex flex-row items-end justify-center py-4;
+	@apply w-full h-full flex flex-row items-center justify-center py-4;
 }
 
 .voice-record-tip-wrap {
