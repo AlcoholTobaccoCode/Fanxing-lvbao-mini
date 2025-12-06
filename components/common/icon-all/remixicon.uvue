@@ -2,22 +2,17 @@
 @description: 历史记录
 -->
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import { remixicon } from "@/icons/remixicon/index";
+import { useUi } from "@/uni_modules/cool-ui";
 
 // 所有图标名称
 const allIcons = ref<string[]>([]);
 
+const ui = useUi();
+
 // 搜索关键字
 const searchText = ref("");
-
-// 虚拟列表相关配置
-const ROW_SIZE = 10; // 每行 10 个 icon
-const ROW_HEIGHT = 64; // 每行高度（px）
-const VISIBLE_ROWS = 14; // 可视区域最多渲染的行数
-const BUFFER_ROWS = 4; // 上下缓冲行数
-
-const scrollTop = ref(0);
 
 onLoad(() => {
 	allIcons.value = Object.keys(remixicon || {});
@@ -31,54 +26,17 @@ const filteredIcons = computed(() => {
 	return allIcons.value.filter((name) => name.toLowerCase().includes(keyword));
 });
 
-// 总行数
-const totalRows = computed(() => {
-	return Math.ceil(filteredIcons.value.length / ROW_SIZE);
-});
-
-// 当前起始渲染行
-const startRow = computed(() => {
-	if (!totalRows.value) return 0;
-	const rawRow = Math.floor(scrollTop.value / ROW_HEIGHT) - BUFFER_ROWS;
-	const minRow = 0;
-	const maxRow = Math.max(0, totalRows.value - VISIBLE_ROWS - BUFFER_ROWS);
-	return Math.min(Math.max(rawRow, minRow), maxRow);
-});
-
-// 当前结束渲染行（不包含 endRow 本身）
-const endRow = computed(() => {
-	return Math.min(totalRows.value, startRow.value + VISIBLE_ROWS + BUFFER_ROWS);
-});
-
-// 可视区域内的行数据（每行 10 个 icon）
-const visibleRows = computed(() => {
-	const rows: string[][] = [];
-	for (let row = startRow.value; row < endRow.value; row++) {
-		const startIndex = row * ROW_SIZE;
-		rows.push(filteredIcons.value.slice(startIndex, startIndex + ROW_SIZE));
-	}
-	return rows;
-});
-
-// 顶部、底部占位高度
-const topSpacerHeight = computed(() => startRow.value * ROW_HEIGHT);
-const bottomSpacerHeight = computed(() => {
-	const remainRows = totalRows.value - endRow.value;
-	return remainRows > 0 ? remainRows * ROW_HEIGHT : 0;
-});
-
-// 滚动事件，更新 scrollTop
-const handleScroll = (e: any) => {
-	scrollTop.value = e.detail?.scrollTop || 0;
+// 点击图标：复制名称到剪贴板
+const handleClickIcon = (name: string) => {
+	uni.setClipboardData({
+		data: name,
+		success: () => {
+			ui.showToast({
+				message: `已复制：${name}`
+			});
+		}
+	});
 };
-
-// 关键字变化时重置滚动位置
-watch(
-	() => searchText.value,
-	() => {
-		scrollTop.value = 0;
-	}
-);
 </script>
 
 <template>
@@ -99,24 +57,17 @@ watch(
 			scroll-y
 			class="app-setting-list__scroll icon-picker-list__scroll"
 			show-scrollbar="false"
-			@scroll="handleScroll"
 		>
-			<!-- 顶部占位 -->
-			<view :style="{ height: topSpacerHeight + 'px' }"></view>
-
-			<!-- 可视区域行 -->
-			<view
-				v-for="(row, rowIndex) in visibleRows"
-				:key="`${startRow}-${rowIndex}`"
-				class="icon-picker-row"
-			>
-				<view v-for="name in row" :key="name" class="icon-picker-item">
+			<view class="icon-picker-grid">
+				<view
+					v-for="name in filteredIcons"
+					:key="name"
+					class="icon-picker-item"
+					@tap="handleClickIcon(name)"
+				>
 					<cl-icon :size="28" :name="name"></cl-icon>
 				</view>
 			</view>
-
-			<!-- 底部占位 -->
-			<view :style="{ height: bottomSpacerHeight + 'px' }"></view>
 		</scroll-view>
 	</view>
 </template>
@@ -142,11 +93,11 @@ watch(
 	@apply w-full h-full;
 }
 
-.icon-picker-row {
-	@apply flex flex-row flex-nowrap items-center mb-2 h-16;
+.icon-picker-item {
+	@apply w-[40px] h-16 flex items-center justify-center;
 }
 
-.icon-picker-item {
-	@apply w-[40px] flex items-center justify-center flex-wrap;
+.icon-picker-grid {
+	@apply flex flex-row flex-wrap gap-x-2 gap-y-1;
 }
 </style>
