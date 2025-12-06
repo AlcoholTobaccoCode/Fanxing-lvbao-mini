@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import { t } from "@/locale";
 import { computed, inject, ref, type PropType } from "vue";
-import { isDark, parseClass, request, useRefs, type Response } from "@/cool";
+import { isDark, parseClass, useRefs, type Response } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
-import type { LoginByCode } from "../../types";
+import type { Register } from "../../types";
 import SmsBtn from "@/components/common/sms-btn.uvue";
+import { RegisterUser } from "@/api/user";
 
 const props = defineProps({
 	form: {
-		type: Object as PropType<LoginByCode>,
-		default: () => ({})
+		type: Object as PropType<Register>,
+		default: () =>
+			({
+				phone: "",
+				code: "",
+				password: "",
+				username: ""
+			}) as Register
 	}
 });
 
@@ -24,7 +31,7 @@ const isAgree = inject("isAgree") as () => boolean;
 // 是否显示验证码
 const showCode = ref(false);
 
-// 仅用于 UI 的注册字段
+// 仅用于 UI 的附加字段
 const username = ref("");
 const password = ref("");
 const confirmPassword = ref("");
@@ -34,28 +41,48 @@ const showConfirmPassword = ref(false);
 // 是否加载中
 const loading = ref(false);
 
-// 是否禁用（沿用原有逻辑：根据手机+验证码）
+// 是否禁用（根据手机+验证码+密码基础校验）
 const disabled = computed(() => {
-	return props.form.phone == "" || props.form.code == "";
+	return (
+		props.form.phone == "" ||
+		props.form.code == "" ||
+		password.value == "" ||
+		confirmPassword.value == ""
+	);
 });
 
-// 登录（沿用原有登录接口，后续可替换为注册接口）
+// 注册并登录（调用新的 RegisterUser 接口）
 async function toLogin() {
 	if (!isAgree()) {
 		return;
 	}
 
-	const { phone, code } = props.form;
+	if (password.value === "") {
+		ui.showToast({
+			message: t("请输入密码")
+		});
+		return;
+	}
+
+	if (confirmPassword.value !== password.value) {
+		ui.showToast({
+			message: t("两次输入的密码不一致")
+		});
+		return;
+	}
+
+	const finalUsername =
+		username.value && username.value.trim() !== ""
+			? username.value.trim()
+			: props.form.phone.slice(-4);
 
 	loading.value = true;
 
-	await request({
-		url: "/app/user/login/phone",
-		method: "POST",
-		data: {
-			phone,
-			code
-		}
+	await RegisterUser({
+		phone: props.form.phone,
+		code: props.form.code,
+		password: password.value,
+		username: finalUsername
 	})
 		.then((res) => {
 			emit("success", res);
@@ -87,6 +114,7 @@ async function toLogin() {
 					:placeholder="t('请输入手机号')"
 					:border="false"
 					:type="'number'"
+					:maxlength="11"
 					:pt="{
 						className: parseClass([
 							'!h-[90rpx] flex-1 !rounded-xl !px-0',
@@ -110,7 +138,7 @@ async function toLogin() {
 						:clearable="false"
 						:type="'number'"
 						:placeholder="t('请输入验证码')"
-						:maxlength="4"
+						:maxlength="6"
 						:border="false"
 						:pt="{
 							className: parseClass([
@@ -161,7 +189,8 @@ async function toLogin() {
 					v-model="password"
 					:placeholder="t('请输入密码')"
 					:border="false"
-					:type="(showPassword ? 'text' : 'password') as any"
+					:minlength="6"
+					:password="!showPassword"
 					:pt="{
 						className: parseClass([
 							'!h-[90rpx] flex-1 !rounded-xl !px-0',
@@ -169,13 +198,6 @@ async function toLogin() {
 						])
 					}"
 				></cl-input>
-				<cl-icon
-					class="ml-2"
-					:name="showPassword ? 'eye-off-line' : 'eye-line'"
-					:size="36"
-					color="rgba(0,0,0,0.4)"
-					@tap.stop="showPassword = !showPassword"
-				></cl-icon>
 			</view>
 		</view>
 
@@ -192,7 +214,8 @@ async function toLogin() {
 					v-model="confirmPassword"
 					:placeholder="t('请再次输入密码')"
 					:border="false"
-					:type="(showConfirmPassword ? 'text' : 'password') as any"
+					:minlength="6"
+					:password="!showConfirmPassword"
 					:pt="{
 						className: parseClass([
 							'!h-[90rpx] flex-1 !rounded-xl !px-0',
@@ -200,13 +223,6 @@ async function toLogin() {
 						])
 					}"
 				></cl-input>
-				<cl-icon
-					class="ml-2"
-					:name="showConfirmPassword ? 'eye-off-line' : 'eye-line'"
-					:size="36"
-					color="rgba(0,0,0,0.4)"
-					@tap.stop="showConfirmPassword = !showConfirmPassword"
-				></cl-icon>
 			</view>
 		</view>
 

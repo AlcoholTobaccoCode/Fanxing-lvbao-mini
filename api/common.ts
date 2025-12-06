@@ -54,6 +54,8 @@ export interface SendSmsPayload {
 
 /**
  * 发送短信验证码
+ * @param data.phone 手机号
+ * @param data.scene 场景 - login 登录 ｜ lawyer 律师认证
  */
 export const SendSms = (data: SendSmsPayload): Promise<any | null> => {
 	return request({

@@ -1,5 +1,5 @@
 {
-	"entryPagePath": "pages/home/index",
+	"entryPagePath": "pages/user/login",
 	"pages": [
 		//#region ---------------- TEST PAGE ----------------
 		// {
@@ -9,20 +9,50 @@
 		// 	}
 		// },
 		//#endregion
-		{
-			"path": "pages/home/index",
-			"style": {
-				"navigationBarTitleText": "律先锋",
-				"navigationStyle": "custom"
-			}
-		},
+		// {
+		// 	"path": "pages/home/index",
+		// 	"style": {
+		// 		"navigationBarTitleText": "律先锋",
+		// 		"navigationStyle": "custom"
+		// 	}
+		// },
+		//#endregion
+		//#region ---------------- 登录 ----------------
 		{
 			"path": "pages/user/login",
 			"style": {
 				"navigationBarTitleText": "登录",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/user/edit",
+			"style": {
+				"navigationBarTitleText": "编辑资料"
+			},
+			"meta": {
+				"isAuth": true
+			}
+		},
+		{
+			"path": "pages/user/edit-name",
+			"style": {
+				"navigationStyle": "custom"
+			},
+			"meta": {
+				"isAuth": true
+			}
+		},
+		{
+			"path": "pages/user/edit-description",
+			"style": {
+				"navigationStyle": "custom"
+			},
+			"meta": {
+				"isAuth": true
+			}
 		}
+		//#endregion
 	],
 	"subPackages": [
 		//#region ---------------- 设置 ----------------

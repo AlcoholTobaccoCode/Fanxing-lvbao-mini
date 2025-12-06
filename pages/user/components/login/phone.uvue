@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { t } from "@/locale";
 import { computed, inject, ref, type PropType } from "vue";
-import { isDark, parseClass, request, useRefs, type Response } from "@/cool";
+import { isDark, parseClass, useRefs, type Response } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import type { LoginByCode } from "../../types";
 import SmsBtn from "@/components/common/sms-btn.uvue";
+import { LoginByCode as LoginByCodeApi } from "@/api/user";
 
 const props = defineProps({
 	form: {
@@ -32,24 +33,19 @@ const disabled = computed(() => {
 	return props.form.phone == "" || props.form.code == "";
 });
 
-// 登录
 async function toLogin() {
 	if (!isAgree()) {
 		return;
 	}
 
-	const { phone, code } = props.form;
+	const payload: LoginByCode = {
+		phone: props.form.phone,
+		code: props.form.code
+	};
 
 	loading.value = true;
 
-	await request({
-		url: "/app/user/login/phone",
-		method: "POST",
-		data: {
-			phone,
-			code
-		}
-	})
+	await LoginByCodeApi(payload)
 		.then((res) => {
 			emit("success", res);
 		})
@@ -79,11 +75,13 @@ async function toLogin() {
 				class="flex flex-row items-center rounded-2xl border border-surface-200 px-3 py-1"
 			>
 				<text class="mr-3 text-sm text-surface-400">+86</text>
+				<!-- 目前只支持 cn phone -->
 				<cl-input
 					v-model="form.phone"
 					:placeholder="t('请输入手机号')"
 					:border="false"
 					:type="'number'"
+					:maxlength="11"
 					:pt="{
 						className: parseClass([
 							'!h-[90rpx] flex-1 !rounded-xl !px-0',
@@ -107,7 +105,7 @@ async function toLogin() {
 						:clearable="false"
 						:type="'number'"
 						:placeholder="t('请输入验证码')"
-						:maxlength="4"
+						:maxlength="6"
 						:border="false"
 						:pt="{
 							className: parseClass([

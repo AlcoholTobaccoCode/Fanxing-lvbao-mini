@@ -3,7 +3,7 @@ import { config } from "@/config";
 import { isDark, parse, router, useRefs, useStore, type Token } from "@/cool";
 import { t } from "@/locale";
 import { provide, reactive, ref } from "vue";
-import type { LoginByCode } from "./types";
+import type { LoginByCode, LoginByPassword, Register as RegisterForm } from "./types";
 import { useUi } from "@/uni_modules/cool-ui";
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
 
@@ -36,10 +36,21 @@ const loginTypeList = ref<ClTabsItem[]>([
 ]);
 //#endregion
 
-// 表单
-const form = reactive<LoginByCode>({
+const formCode = reactive<LoginByCode>({
 	phone: "",
 	code: ""
+});
+
+const formPassword = reactive<LoginByPassword>({
+	phone: "",
+	password: ""
+});
+
+const formRegister = reactive<RegisterForm>({
+	phone: "",
+	code: "",
+	password: "",
+	username: ""
 });
 
 // 登录成功
@@ -109,17 +120,17 @@ provide("isAgree", isAgree);
 
 			<!-- 手机号登录 -->
 			<template v-if="loginTypeTab === 'code-login'">
-				<login-phone :form="form" @success="toLogin"></login-phone>
+				<login-phone :form="formCode" @success="toLogin"></login-phone>
 			</template>
 
 			<!-- 密码登录 -->
 			<template v-if="loginTypeTab === 'psw-login'">
-				<psw-login :form="form" @success="toLogin"></psw-login>
+				<psw-login :form="formPassword" @success="toLogin"></psw-login>
 			</template>
 
 			<!-- 注册 -->
 			<template v-if="loginTypeTab === 'register'">
-				<register :form="form" @success="toLogin"></register>
+				<register :form="formRegister" @success="toLogin"></register>
 			</template>
 
 			<!-- 微信登录 -->

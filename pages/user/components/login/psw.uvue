@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { t } from "@/locale";
 import { computed, inject, ref, type PropType } from "vue";
-import { isDark, parseClass, request, type Response } from "@/cool";
+import { isDark, parseClass, type Response } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
-import type { LoginByCode } from "../../types";
+import type { LoginByPassword } from "../../types";
+import { LoginByPassword as LoginByPasswordApi } from "@/api/user";
 
 const props = defineProps({
 	form: {
-		type: Object as PropType<LoginByCode>,
-		default: () => ({})
+		type: Object as PropType<LoginByPassword>,
+		default: () => ({
+			phone: "",
+			password: ""
+		})
 	}
 });
 
@@ -25,29 +29,25 @@ const loading = ref(false);
 // 密码可见
 const showPassword = ref(false);
 
-// 是否禁用（沿用原逻辑：根据手机+code）
+// 是否禁用（根据手机+密码）
 const disabled = computed(() => {
-	return props.form.phone == "" || props.form.code == "";
+	return props.form.phone == "" || props.form.password == "";
 });
 
-// 登录（沿用原登录接口，暂时仍使用 phone+code）
+// 登录（使用手机号+密码接口）
 async function toLogin() {
 	if (!isAgree()) {
 		return;
 	}
 
-	const { phone, code } = props.form;
+	const payload = {
+		phone: props.form.phone,
+		password: props.form.password
+	};
 
 	loading.value = true;
 
-	await request({
-		url: "/app/user/login/phone",
-		method: "POST",
-		data: {
-			phone,
-			code
-		}
-	})
+	await LoginByPasswordApi(payload)
 		.then((res) => {
 			emit("success", res);
 		})
@@ -69,12 +69,12 @@ async function toLogin() {
 			<view
 				class="flex flex-row items-center rounded-2xl border border-surface-200 px-3 py-1"
 			>
-				<text class="mr-3 text-sm text-surface-400">+86</text>
 				<cl-input
 					v-model="form.phone"
 					:placeholder="t('请输入手机号')"
 					:border="false"
 					:type="'number'"
+					:maxlength="11"
 					:pt="{
 						className: parseClass([
 							'!h-[90rpx] flex-1 !rounded-xl !px-0',
@@ -92,10 +92,11 @@ async function toLogin() {
 				class="rounded-2xl border border-surface-200 px-3 py-1 flex flex-row items-center"
 			>
 				<cl-input
-					v-model="form.code"
+					v-model="form.password"
 					:placeholder="t('请输入密码')"
 					:border="false"
 					:password="!showPassword"
+					:minlength="6"
 					:pt="{
 						className: parseClass([
 							'!h-[90rpx] flex-1 !rounded-xl !px-0',

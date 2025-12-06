@@ -34,7 +34,7 @@ export interface RegisterPayload {
  */
 export const LoginByCode = (data: LoginByCodePayload): Promise<UserAuthToken> => {
 	return request({
-		url: "/user/login",
+		url: "/user/smsLogin",
 		method: "POST",
 		data
 	}) as Promise<UserAuthToken>;
