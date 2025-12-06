@@ -1,0 +1,179 @@
+<script setup lang="ts">
+import { config } from "@/config";
+import { isDark, parse, router, useRefs, useStore, type Token } from "@/cool";
+import { t } from "@/locale";
+import { provide, reactive, ref } from "vue";
+import type { LoginByCode } from "./types";
+import { useUi } from "@/uni_modules/cool-ui";
+import type { ClTabsItem } from "@/uni_modules/cool-ui";
+
+import LoginPhone from "./components/login/phone.uvue";
+// import LoginWx from "./components/login/wx.uvue";
+import PswLogin from "./components/login/psw.uvue";
+import Register from "./components/login/register.uvue";
+
+const { user } = useStore();
+const ui = useUi();
+const refs = useRefs();
+
+//#region 登录选项切换
+
+const loginTypeTab = ref("code-login");
+
+const loginTypeList = ref<ClTabsItem[]>([
+	{
+		label: t("验证码登录"),
+		value: "code-login"
+	},
+	{
+		label: t("密码登录"),
+		value: "psw-login"
+	},
+	{
+		label: t("注册"),
+		value: "register"
+	}
+]);
+//#endregion
+
+// 表单
+const form = reactive<LoginByCode>({
+	phone: "",
+	code: ""
+});
+
+// 登录成功
+const toLogin = async (res: any) => {
+	user.setToken(parse<Token>(res)!);
+	user.get();
+	router.nextLogin();
+};
+
+//#region 协议相关
+const agree = ref(false);
+
+// 跳转文档
+const toDoc = (name: string, path: string) => {
+	uni.showToast({
+		title: `查看${name}`,
+		icon: "success",
+		mask: true
+	});
+};
+
+// 是否同意
+const isAgree = () => {
+	if (!agree.value) {
+		ui.showToast({
+			message: t("请先阅读并同意《用户协议》和《隐私政策》")
+		});
+
+		return false;
+	}
+
+	return true;
+};
+
+provide("isAgree", isAgree);
+//#endregion
+</script>
+
+<template>
+	<cl-page>
+		<cl-topbar
+			fixed
+			:show-back="false"
+			safe-area-top
+			background-color="transparent"
+		></cl-topbar>
+
+		<view class="px-10">
+			<!-- Logo -->
+			<view class="flex flex-col items-center justify-center pt-10 pb-6">
+				<view class="p-3 rounded-2xl">
+					<cl-image
+						src="/static/logo.png"
+						mode="widthFix"
+						:width="100"
+						:height="100"
+					></cl-image>
+				</view>
+
+				<cl-text :pt="{ className: 'text-xl font-bold mt-3' }">{{ config.name }}</cl-text>
+			</view>
+
+			<!-- 登录选项 - 登录 / 注册 -->
+			<view class="pb-6">
+				<cl-tabs v-model="loginTypeTab" :list="loginTypeList"></cl-tabs>
+			</view>
+
+			<!-- 手机号登录 -->
+			<template v-if="loginTypeTab === 'code-login'">
+				<login-phone :form="form" @success="toLogin"></login-phone>
+			</template>
+
+			<!-- 密码登录 -->
+			<template v-if="loginTypeTab === 'psw-login'">
+				<psw-login :form="form" @success="toLogin"></psw-login>
+			</template>
+
+			<!-- 注册 -->
+			<template v-if="loginTypeTab === 'register'">
+				<register :form="form" @success="toLogin"></register>
+			</template>
+
+			<!-- 微信登录 -->
+			<!-- <login-wx :ref="refs.set('loginWx')"></login-wx> -->
+
+			<!-- 协议 -->
+			<view class="mt-6 flex flex-row flex-wrap items-center justify-center">
+				<cl-checkbox
+					v-model="agree"
+					:pt="{ icon: { size: 28 } }"
+					active-icon="checkbox-circle-fill"
+					inactive-icon="checkbox-blank-circle-line"
+				>
+				</cl-checkbox>
+				<cl-text color="info" :pt="{ className: 'text-xs' }">{{
+					t("已阅读并同意")
+				}}</cl-text>
+				<cl-text
+					:pt="{ className: 'text-xs' }"
+					@tap.stop="toDoc(t('用户协议'), 'userAgreement')"
+				>
+					《{{ t("用户协议") }}》
+				</cl-text>
+				<cl-text color="info" :pt="{ className: 'text-xs' }">、</cl-text>
+				<cl-text
+					:pt="{ className: 'text-xs' }"
+					@tap.stop="toDoc(t('隐私政策'), 'privacyPolicy')"
+				>
+					《{{ t("隐私政策") }}》
+				</cl-text>
+			</view>
+
+			<!-- 第三方登录 -->
+			<!-- <view class="flex flex-row justify-center mt-10 px-10">
+				<view
+					class="login-item"
+					:class="{
+						'is-dark': isDark
+					}"
+					@tap="refs.callMethod('loginWx', 'login')"
+				>
+					<cl-icon name="wechat-fill" :size="38" color="#00b223"></cl-icon>
+				</view>
+			</view> -->
+		</view>
+	</cl-page>
+</template>
+
+<style lang="scss" scoped>
+.login-item {
+	@apply mx-2 p-2 flex items-center justify-center rounded-full bg-white border border-solid border-surface-100;
+
+	&.is-dark {
+		@apply border-surface-600 bg-surface-700;
+	}
+}
+</style>
