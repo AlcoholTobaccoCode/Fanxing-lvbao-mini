@@ -8,6 +8,9 @@ export const isDev = process.env.NODE_ENV == "development";
 // 忽略 token 校验的接口路径
 export const ignoreTokens: string[] = [];
 
+// 404 白名单：这些路径返回 404 时不当成错误（支持 * 通配符）
+export const ignore404s: string[] = ["/lawyer/info"];
+
 // 微信配置
 type WxConfig = {
 	debug: boolean;

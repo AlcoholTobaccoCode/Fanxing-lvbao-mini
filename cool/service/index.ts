@@ -1,7 +1,8 @@
-import { isDev, ignoreTokens, config } from "@/config";
+import { isDev, ignoreTokens, ignore404s, config } from "@/config";
 import { locale, t } from "@/locale";
 import { isNull, isObject, parse, storage } from "../utils";
 import { useStore } from "../store";
+import { ERROR_DEFAULT_MESSAGE } from "./error.map";
 
 // 请求参数类型定义
 export type RequestOptions = {
@@ -21,6 +22,7 @@ export type Response = {
 	code?: number;
 	message?: string;
 	data?: any;
+	error?: string; // 后端错误码字符串，如 User.SmsCode.Invalid
 };
 
 // 请求队列（用于等待token刷新后继续请求）
@@ -32,6 +34,13 @@ let isRefreshing = false;
 // 判断当前url是否忽略token校验
 const isIgnoreToken = (url: string) => {
 	return ignoreTokens.some((e) => {
+		const pattern = e.replace(/\*/g, ".*");
+		return new RegExp(pattern).test(url);
+	});
+};
+
+const isIgnore404 = (url: string) => {
+	return ignore404s.some((e) => {
 		const pattern = e.replace(/\*/g, ".*");
 		return new RegExp(pattern).test(url);
 	});
@@ -95,9 +104,13 @@ export function request(options: RequestOptions): Promise<any | null> {
 
 					// 404 未找到
 					else if (res.statusCode == 404) {
-						return reject({
-							message: `[404] ${url}`
-						} as Response);
+						if (isIgnore404(url)) {
+							resolve(null);
+						} else {
+							return reject({
+								message: `[404] ${url}`
+							} as Response);
+						}
 					}
 
 					// 200 正常响应
@@ -108,18 +121,21 @@ export function request(options: RequestOptions): Promise<any | null> {
 							resolve(res.data);
 						} else {
 							// 解析响应数据
-							const { code, message, data } = parse<Response>(
+							const { code, message, data, error } = parse<Response>(
 								res.data ?? { code: 0 }
 							)!;
 
-							switch (code) {
-								case 1000:
-									resolve(data);
-									break;
-								default:
-									reject({ message, code } as Response);
-									break;
+							if (code === 200) {
+								resolve(data);
+								return;
 							}
+
+							const fallback =
+								(error && ERROR_DEFAULT_MESSAGE[error]) ||
+								(error && ERROR_DEFAULT_MESSAGE[error.trim?.() || error]) ||
+								t("服务异常");
+							const finalMessage = message && message !== "" ? message : fallback;
+							reject({ message: finalMessage, code, error } as Response);
 						}
 					} else {
 						reject({ message: t("服务异常") } as Response);
