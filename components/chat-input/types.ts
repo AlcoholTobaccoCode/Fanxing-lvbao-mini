@@ -22,6 +22,7 @@ export type VoiceResult = {
 	duration: number;
 	mime: string;
 	translate?: boolean;
+	tempFilePath: string;
 };
 
 export type SendData = {
