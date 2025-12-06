@@ -1,5 +1,5 @@
 {
-	"entryPagePath": "pages/user/login",
+	"entryPagePath": "pages/home/index",
 	"pages": [
 		//#region ---------------- TEST PAGE ----------------
 		// {
@@ -9,14 +9,14 @@
 		// 	}
 		// },
 		//#endregion
-		// {
-		// 	"path": "pages/home/index",
-		// 	"style": {
-		// 		"navigationBarTitleText": "律先锋",
-		// 		"navigationStyle": "custom"
-		// 	}
-		// },
 		//#endregion
+		{
+			"path": "pages/home/index",
+			"style": {
+				"navigationBarTitleText": "律先锋",
+				"navigationStyle": "custom"
+			}
+		},
 		//#region ---------------- 登录 ----------------
 		{
 			"path": "pages/user/login",

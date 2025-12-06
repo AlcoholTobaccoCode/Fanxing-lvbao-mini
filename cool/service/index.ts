@@ -1,6 +1,6 @@
 import { isDev, ignoreTokens, ignore404s, config } from "@/config";
 import { locale, t } from "@/locale";
-import { isNull, isObject, parse, storage } from "../utils";
+import { isNull, isObject, parse } from "../utils";
 import { useStore } from "../store";
 import { ERROR_DEFAULT_MESSAGE } from "./error.map";
 
@@ -165,50 +165,9 @@ export function request(options: RequestOptions): Promise<any | null> {
 			});
 		};
 
-		// 非刷新token接口才进行token有效性校验
-		if (!options.url.includes("/refreshToken")) {
-			if (!isNull(Authorization)) {
-				// 判断token是否过期
-				if (storage.isExpired("token")) {
-					// 判断refreshToken是否过期
-					if (storage.isExpired("refreshToken")) {
-						// 刷新token也过期，直接退出登录
-						user.logout();
-						return;
-					}
-
-					// 如果当前没有在刷新token，则发起刷新
-					if (!isRefreshing) {
-						isRefreshing = true;
-						user.refreshToken()
-							.then((token) => {
-								// 刷新成功后，执行队列中的请求
-								requests.forEach((cb) => cb(token));
-								requests = [];
-								isRefreshing = false;
-							})
-							.catch((err) => {
-								reject(err);
-								user.logout();
-							});
-					}
-
-					// 将当前请求加入队列，等待token刷新后再执行
-					new Promise((resolve) => {
-						requests.push((token: string) => {
-							// 重新设置token
-							Authorization = token;
-							next();
-							resolve(true);
-						});
-					});
-					// 此处return，等待token刷新
-					return;
-				}
-			}
-		}
-
-		// token有效，直接发起请求
+		// TODO  - 等到 refreshToken 接入
+		// 不再在客户端做 token 过期与刷新判断，统一由服务端通过 401 控制
+		// token 存在时直接发起请求，401 时在上方逻辑中退出登录
 		next();
 	});
 }

@@ -137,7 +137,7 @@ provide("isAgree", isAgree);
 			<!-- <login-wx :ref="refs.set('loginWx')"></login-wx> -->
 
 			<!-- 协议 -->
-			<view class="mt-6 flex flex-row flex-wrap items-center justify-center gap-2">
+			<view class="mt-6 flex flex-row flex-wrap items-center justify-center gap-2 pb-10">
 				<cl-checkbox
 					v-model="agree"
 					:pt="{ icon: { size: 28 } }"

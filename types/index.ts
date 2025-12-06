@@ -1,5 +1,4 @@
 export type UserInfo = {
-	unionid: string; // 用户唯一id
 	id: number; // 用户id
 	nickName: string; // 昵称
 	avatarUrl?: string; // 头像
@@ -14,4 +13,5 @@ export type UserInfo = {
 	birthday?: string; // 生日
 	createTime: string; // 创建时间
 	updateTime: string; // 更新时间
+	userType: number; // 用户类型
 };

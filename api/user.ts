@@ -1,4 +1,5 @@
 import { request } from "@/cool";
+import { type UserInfo } from "@/types/index.ts";
 
 // 登录/注册统一返回的用户凭证结构
 export interface UserAuthToken {
@@ -60,4 +61,14 @@ export const RegisterUser = (data: RegisterPayload): Promise<UserAuthToken> => {
 		method: "POST",
 		data
 	}) as Promise<UserAuthToken>;
+};
+
+/**
+ * 用户注册
+ */
+export const GetUserProfile = (): Promise<UserInfo> => {
+	return request({
+		url: "/user/profile",
+		method: "GET"
+	}) as Promise<UserInfo>;
 };

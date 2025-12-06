@@ -2,13 +2,17 @@ import { computed, ref } from "vue";
 import { forInObject, isNull, isObject, parse, storage } from "../utils";
 import { router } from "../router";
 import { request } from "../service";
+import { GetUserProfile } from "@/api/user";
 import type { UserInfo } from "@/types";
 
+// 登录成功返回的认证信息
+// 对应后端 data: { access_token, token_type, userType, phone, username }
 export type Token = {
-	token: string; // 访问token
-	expire: number; // token过期时间（秒）
-	refreshToken: string; // 刷新token
-	refreshExpire: number; // 刷新token过期时间（秒）
+	access_token: string; // 访问 token，例如 "Bearer xxx"
+	token_type: string; // token 类型，通常为 "bearer"
+	userType: number; // 用户类型
+	phone: string; // 手机号
+	username: string; // 用户名
 };
 
 export class User {
@@ -44,9 +48,7 @@ export class User {
 	 */
 	async get() {
 		if (this.token != null) {
-			await request({
-				url: "/app/user/info/person"
-			})
+			await GetUserProfile()
 				.then((res) => {
 					if (res != null) {
 						this.set(res);
@@ -67,11 +69,46 @@ export class User {
 			return;
 		}
 
-		// 设置
-		this.info.value = parse<UserInfo>(data)!;
+		let info: UserInfo;
 
-		// 持久化到本地存储
-		storage.set("userInfo", data, 0);
+		// 兼容后端新返回结构：{ id, username, phone, user_type, gender, avatar_url, created_at, updated_at }
+		if (
+			"username" in data ||
+			"user_type" in data ||
+			"avatar_url" in data ||
+			"created_at" in data
+		) {
+			const genderRaw = Number(data.gender ?? 0);
+			const gender = genderRaw === 1 || genderRaw === 2 ? genderRaw : 0; // 0=保密，其它映射为保密
+
+			info = {
+				id: Number(data.id ?? 0),
+				nickName: data.username ?? "",
+				avatarUrl: data.avatar_url ?? "",
+				phone: data.phone ?? "",
+				gender,
+				userType: data.user_type ?? "",
+				loginType: Number(data.user_type ?? data.userType ?? 1),
+				createTime: data.created_at ?? data.createTime ?? "",
+				updateTime: data.updated_at ?? data.updateTime ?? "",
+				// 预留
+				description: data.description ?? "",
+				province: data.province ?? "",
+				city: data.city ?? "",
+				district: data.district ?? "",
+				birthday: data.birthday ?? "",
+				status: 1
+			};
+		} else {
+			// 已经是前端 UserInfo 结构（例如 setToken 中构造的对象）
+			info = parse<UserInfo>(data)!;
+		}
+
+		// 设置
+		this.info.value = info;
+
+		// 持久化到本地存储（使用归一化后的结构）
+		storage.set("userInfo", info, 0);
 	}
 
 	/**
@@ -133,43 +170,32 @@ export class User {
 
 	/**
 	 * 设置token并存储到本地
-	 * @param data Token对象
+	 * @param data 登录返回的认证信息
 	 */
 	setToken(data: Token) {
-		this.token = data.token;
+		// 直接保存 access_token 作为当前 token（不再使用刷新 token 机制）
+		this.token = data.access_token;
+		// token 永不过期，由服务端在 401 时判定失效
+		storage.set("token", data.access_token, 0);
 
-		// 访问token，提前5秒过期，防止边界问题
-		storage.set("token", data.token, data.expire - 5);
-		// 刷新token，提前5秒过期
-		storage.set("refreshToken", data.refreshToken, data.refreshExpire - 5);
-	}
-
-	/**
-	 * 刷新token（调用服务端接口，自动更新本地token）
-	 * @returns Promise<string> 新的token
-	 */
-	refreshToken(): Promise<string> {
-		return new Promise((resolve, reject) => {
-			request({
-				url: "/app/user/login/refreshToken",
-				method: "POST",
-				data: {
-					refreshToken: storage.get("refreshToken")
-				}
-			})
-				.then((res) => {
-					if (res != null) {
-						const token = parse<Token>(res);
-
-						if (token != null) {
-							this.setToken(token);
-							resolve(token.token);
-						}
-					}
-				})
-				.catch((err) => {
-					reject(err);
-				});
+		// 同步一份基础用户信息，便于前端展示昵称、手机号等
+		// 其余字段留给后续 /user/profile 等接口覆盖
+		this.set({
+			unionid: "",
+			id: 0,
+			nickName: data.username,
+			avatarUrl: "",
+			phone: data.phone,
+			gender: 0,
+			status: 1,
+			description: "",
+			loginType: data.userType,
+			province: "",
+			city: "",
+			district: "",
+			birthday: "",
+			createTime: "",
+			updateTime: ""
 		});
 	}
 }
