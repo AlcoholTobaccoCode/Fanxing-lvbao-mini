@@ -95,7 +95,7 @@ async function toLogin() {
 					v-model="form.code"
 					:placeholder="t('请输入密码')"
 					:border="false"
-					:type="(showPassword ? 'text' : 'password') as any"
+					:password="!showPassword"
 					:pt="{
 						className: parseClass([
 							'!h-[90rpx] flex-1 !rounded-xl !px-0',
@@ -103,13 +103,6 @@ async function toLogin() {
 						])
 					}"
 				></cl-input>
-				<cl-icon
-					class="ml-2"
-					:name="showPassword ? 'eye-off-line' : 'eye-line'"
-					:size="36"
-					color="rgba(0,0,0,0.4)"
-					@tap.stop="showPassword = !showPassword"
-				></cl-icon>
 			</view>
 		</view>
 

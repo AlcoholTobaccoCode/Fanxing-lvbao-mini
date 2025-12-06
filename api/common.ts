@@ -1,4 +1,5 @@
 import { config } from "@/config";
+import { request } from "@/cool";
 
 export interface OssStsData {
 	AccessKeyId: string;
@@ -40,5 +41,24 @@ export const GetOssSts = async (): Promise<OssStsData> => {
 				reject(err);
 			}
 		});
+	});
+};
+
+// 短信发送场景
+export type SmsScene = "login" | "lawyer";
+
+export interface SendSmsPayload {
+	phone: string;
+	scene: SmsScene;
+}
+
+/**
+ * 发送短信验证码
+ */
+export const SendSms = (data: SendSmsPayload): Promise<any | null> => {
+	return request({
+		url: "/user/sendSms",
+		method: "POST",
+		data
 	});
 };

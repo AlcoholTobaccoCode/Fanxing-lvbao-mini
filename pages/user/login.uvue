@@ -126,7 +126,7 @@ provide("isAgree", isAgree);
 			<!-- <login-wx :ref="refs.set('loginWx')"></login-wx> -->
 
 			<!-- 协议 -->
-			<view class="mt-6 flex flex-row flex-wrap items-center justify-center">
+			<view class="mt-6 flex flex-row flex-wrap items-center justify-center gap-2">
 				<cl-checkbox
 					v-model="agree"
 					:pt="{ icon: { size: 28 } }"
@@ -134,22 +134,24 @@ provide("isAgree", isAgree);
 					inactive-icon="checkbox-blank-circle-line"
 				>
 				</cl-checkbox>
-				<cl-text color="info" :pt="{ className: 'text-xs' }">{{
-					t("已阅读并同意")
-				}}</cl-text>
-				<cl-text
-					:pt="{ className: 'text-xs' }"
-					@tap.stop="toDoc(t('用户协议'), 'userAgreement')"
-				>
-					《{{ t("用户协议") }}》
-				</cl-text>
-				<cl-text color="info" :pt="{ className: 'text-xs' }">、</cl-text>
-				<cl-text
-					:pt="{ className: 'text-xs' }"
-					@tap.stop="toDoc(t('隐私政策'), 'privacyPolicy')"
-				>
-					《{{ t("隐私政策") }}》
-				</cl-text>
+				<view class="flex flex-row flex-wrap items-center" @click="agree = !agree">
+					<cl-text color="info" :pt="{ className: 'text-xs' }">{{
+						t("已阅读并同意")
+					}}</cl-text>
+					<cl-text
+						:pt="{ className: 'text-xs' }"
+						@tap.stop="toDoc(t('用户协议'), 'userAgreement')"
+					>
+						《{{ t("用户协议") }}》
+					</cl-text>
+					<cl-text color="info" :pt="{ className: 'text-xs' }">、</cl-text>
+					<cl-text
+						:pt="{ className: 'text-xs' }"
+						@tap.stop="toDoc(t('隐私政策'), 'privacyPolicy')"
+					>
+						《{{ t("隐私政策") }}》
+					</cl-text>
+				</view>
 			</view>
 
 			<!-- 第三方登录 -->
