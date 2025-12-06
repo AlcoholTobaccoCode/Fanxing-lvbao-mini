@@ -143,8 +143,8 @@ const iconVisible = ref(false);
 			</view>
 		</cl-float-view>
 		<cl-popup v-model="iconVisible" title="RemixIcon">
-			<view class="h-[400px]">
-				<remix-icon></remix-icon>
+			<view class="h-[500px]">
+				<remix-icon v-model:icon-visible="iconVisible"></remix-icon>
 			</view>
 		</cl-popup>
 	</cl-page>

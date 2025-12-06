@@ -2,7 +2,7 @@
 @description: 历史记录
 -->
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { remixicon } from "@/icons/remixicon/index";
 import { useUi } from "@/uni_modules/cool-ui";
 
@@ -11,13 +11,13 @@ const allIcons = ref<string[]>([]);
 
 const ui = useUi();
 
+const iconVisibleModal = defineModel("iconVisible", {
+	type: Boolean,
+	default: () => false
+});
+
 // 搜索关键字
 const searchText = ref("");
-
-onLoad(() => {
-	allIcons.value = Object.keys(remixicon || {});
-	console.info("remixicon total => ", allIcons.value.length);
-});
 
 // 根据关键字过滤图标
 const filteredIcons = computed(() => {
@@ -37,6 +37,16 @@ const handleClickIcon = (name: string) => {
 		}
 	});
 };
+
+watch(
+	() => iconVisibleModal.value,
+	(val) => {
+		if (val) {
+			allIcons.value = Object.keys(remixicon || {});
+			console.info("remixicon total => ", allIcons.value.length);
+		}
+	}
+);
 </script>
 
 <template>

@@ -1,15 +1,12 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
 import { router, useStore, userInfo } from "@/cool";
-import type { ClTabsItem } from "@/uni_modules/cool-ui";
 import HistoryList from "./history.uvue";
-import { useUi } from "@/uni_modules/cool-ui";
 
 const emit = defineEmits<{
 	(e: "close"): void;
 }>();
 
-const ui = useUi();
 const { user } = useStore();
 
 //#region login 验证
@@ -26,27 +23,6 @@ const handleLogin = () => {
 };
 
 //#endregion
-
-//#region tab 切换
-const tabValue = ref("ai");
-const tabs = ref<ClTabsItem[]>([
-	{ label: "AI对话", value: "ai" },
-	{ label: "律师对话", value: "lawyer" }
-]);
-//#endregion
-
-//#region 历史记录
-const isEditMode = ref<boolean>(false);
-const handleChangeEditMode = () => {
-	isEditMode.value = !isEditMode.value;
-};
-
-const historyClearAll = () => {
-	ui.showToast({
-		message: "功能开发中，敬请期待"
-	});
-};
-//#endregion
 </script>
 
 <template>
@@ -62,30 +38,8 @@ const historyClearAll = () => {
 		</view>
 
 		<view class="flex-1">
-			<!-- 顶部标签栏：AI 对话 / 律师对话 + 编辑 -->
-			<view class="app-setting-tabs">
-				<view class="app-setting-tabs__left">
-					<cl-tabs
-						v-model="tabValue"
-						:list="tabs"
-						show-slider
-						:pt="{ className: '!px-0' }"
-					></cl-tabs>
-				</view>
-				<view class="app-setting-tabs__right">
-					<template v-if="!isEditMode">
-						<cl-button text @click="handleChangeEditMode"> 编辑 </cl-button>
-					</template>
-					<template v-else>
-						<cl-button text type="info" @click="historyClearAll"> 清空 </cl-button>
-						<cl-button @click="handleChangeEditMode"> 完成 </cl-button>
-					</template>
-				</view>
-			</view>
-
-			<!-- 中间：历史对话列表（静态示意） -->
 			<view class="flex-1">
-				<history-list v-model:is-edit-mode="isEditMode"></history-list>
+				<history-list></history-list>
 			</view>
 
 			<!-- 底部账号信息 + 设置入口 -->
@@ -121,58 +75,6 @@ const historyClearAll = () => {
 
 .app-setting-header {
 	@apply flex flex-row items-center justify-start pt-1 pb-1 px-4;
-}
-
-.app-setting-tabs {
-	@apply flex flex-row items-center justify-between mt-2 mb-3 px-4;
-}
-
-.app-setting-tabs__left {
-	@apply flex-1 flex flex-row items-center;
-}
-
-.app-setting-tabs__right {
-	@apply flex flex-row items-center;
-}
-
-.app-setting-list {
-	@apply flex-1 rounded-2xl bg-white shadow-sm overflow-hidden;
-}
-
-.app-setting-list__scroll {
-	@apply w-full h-full py-3 pl-4;
-}
-
-.app-setting-section {
-	@apply mb-4 mr-4;
-}
-
-.app-setting-section__title {
-	@apply text-xs text-surface-400 mb-2;
-}
-
-.app-setting-item {
-	@apply rounded-xl bg-surface-50 px-3 py-2 mb-2 flex flex-row items-center justify-between;
-}
-
-.app-setting-item__main {
-	@apply flex flex-col;
-}
-
-.app-setting-item__title {
-	@apply text-sm text-surface-900 mb-1;
-}
-
-.app-setting-item__status {
-	@apply text-xs text-surface-400;
-}
-
-.app-setting-item__meta {
-	@apply flex flex-col items-end;
-}
-
-.app-setting-item__time {
-	@apply text-xs text-surface-400;
 }
 
 .app-setting-footer {

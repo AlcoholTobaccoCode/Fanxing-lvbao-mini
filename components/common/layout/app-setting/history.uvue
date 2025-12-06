@@ -3,44 +3,111 @@
 -->
 <script setup lang="ts">
 import { ref } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import type { ClTabsItem } from "@/uni_modules/cool-ui";
+const ui = useUi();
 
-const isEditModeModal = defineModel("isEditMode", {
-	type: Boolean,
-	default: () => false
-});
+//#region tab 切换
+const tabValue = ref("ai");
+const tabs = ref<ClTabsItem[]>([
+	{ label: "AI对话", value: "ai" },
+	{ label: "律师对话", value: "lawyer" }
+]);
+//#endregion
+
+//#region 历史记录
+const isEditMode = ref<boolean>(false);
+const handleChangeEditMode = () => {
+	isEditMode.value = !isEditMode.value;
+};
+
+const historyClearAll = () => {
+	ui.showToast({
+		message: "功能开发中，敬请期待"
+	});
+};
+//#endregion
+const handleItemEdit = () => {};
+
+const handleItemDel = () => {};
 </script>
 
 <template>
 	<view class="app-setting-list">
-		<scroll-view scroll-y class="app-setting-list__scroll" show-scrollbar="false">
-			<view class="app-setting-section">
-				<text class="app-setting-section__title">今天 {{ isEditModeModal }} </text>
-				<template v-for="i in 100" :key="i">
-					<view class="app-setting-item" hover-class="block-hover-class">
-						<view class="app-setting-item__main">
-							<text class="app-setting-item__title">苹果掉落的原因</text>
-							<text class="app-setting-item__status">模块</text>
-						</view>
-						<view class="app-setting-item__meta">
-							<template v-if="!isEditMode">
-								<text class="app-setting-item__time">19:12</text>
-							</template>
-							<template v-else>
-								<cl-button icon="send-plane-fill"></cl-button>
-								<cl-button icon="arrow-up-line"></cl-button>
-								<cl-button icon="send-plane-fill"></cl-button>
-							</template>
-						</view>
-					</view>
+		<!-- 顶部标签栏：AI 对话 / 律师对话 + 编辑 -->
+		<view class="app-setting-tabs">
+			<view class="app-setting-tabs__left">
+				<cl-tabs
+					v-model="tabValue"
+					:list="tabs"
+					show-slider
+					:pt="{ className: '!px-0' }"
+				></cl-tabs>
+			</view>
+			<view class="app-setting-tabs__right">
+				<template v-if="!isEditMode">
+					<cl-button text @click="handleChangeEditMode"> 编辑 </cl-button>
+				</template>
+				<template v-else>
+					<cl-button text type="info" @click="historyClearAll"> 清空 </cl-button>
+					<cl-button @click="handleChangeEditMode"> 完成 </cl-button>
 				</template>
 			</view>
-		</scroll-view>
+		</view>
+
+		<!-- 中间：历史对话列表 -->
+		<view class="flex-1">
+			<scroll-view scroll-y class="app-setting-list__scroll" show-scrollbar="false">
+				<view class="app-setting-section">
+					<text class="app-setting-section__title">今天 {{ isEditMode }} </text>
+					<template v-for="i in 30" :key="i">
+						<view class="app-setting-item" hover-class="block-hover-class">
+							<view class="app-setting-item__main">
+								<text class="app-setting-item__title">苹果掉落的原因</text>
+								<text class="app-setting-item__status">模块</text>
+							</view>
+							<view class="flex flex-row gap-2 items-center">
+								<template v-if="!isEditMode">
+									<text class="app-setting-item__time">19:12</text>
+								</template>
+								<template v-else>
+									<cl-icon
+										color="primary"
+										size="36rpx"
+										name="edit-line"
+										@click="handleItemEdit"
+									></cl-icon>
+									<cl-icon
+										color="error"
+										size="36rpx"
+										name="delete-bin-line"
+										@click="handleItemDel"
+									></cl-icon>
+								</template>
+							</view>
+						</view>
+					</template>
+				</view>
+			</scroll-view>
+		</view>
 	</view>
 </template>
 
 <style lang="scss" scoped>
 .app-setting-list {
 	@apply flex-1 rounded-2xl bg-white shadow-sm overflow-hidden;
+}
+
+.app-setting-tabs {
+	@apply flex flex-row items-center justify-between mt-2 mb-3 px-4;
+}
+
+.app-setting-tabs__left {
+	@apply flex-1 flex flex-row items-center;
+}
+
+.app-setting-tabs__right {
+	@apply flex flex-row items-center;
 }
 
 .app-setting-list__scroll {
@@ -69,10 +136,6 @@ const isEditModeModal = defineModel("isEditMode", {
 
 .app-setting-item__status {
 	@apply text-xs text-surface-400;
-}
-
-.app-setting-item__meta {
-	@apply flex flex-col items-end;
 }
 
 .app-setting-item__time {
