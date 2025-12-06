@@ -22,6 +22,10 @@ const handleLogin = () => {
 	router.login();
 };
 
+const openSettingPage = () => {
+	router.to("/setting/index");
+};
+
 //#endregion
 </script>
 
@@ -53,19 +57,15 @@ const handleLogin = () => {
 						<text class="app-setting-footer__name">{{ displayName }}</text>
 					</template>
 					<template v-else>
-						<cl-button
-							class="!rounded-full;"
-							size="small"
-							type="primary"
-							plain
-							@tap="handleLogin"
-						>
+						<cl-button size="small" type="primary" plain @tap="handleLogin">
 							登录
 						</cl-button>
 					</template>
 				</view>
-				<view v-if="isLogin" class="app-setting-footer__right">
-					<cl-icon name="settings-3-line" :size="32" color="currentColor"></cl-icon>
+				<view class="app-setting-footer__right">
+					<view @click="openSettingPage">
+						<cl-icon name="settings-line" :size="32"></cl-icon>
+					</view>
 				</view>
 			</view>
 		</view>

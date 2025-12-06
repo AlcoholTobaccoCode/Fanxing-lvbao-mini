@@ -1,20 +1,67 @@
 {
 	"entryPagePath": "pages/home/index",
 	"pages": [
+		//#region ---------------- TEST PAGE ----------------
 		// {
 		// 	"path": "pages/test-pages/general",
 		// 	"style": {
 		// 		"navigationBarTitleText": "全局配置"
 		// 	}
 		// },
-		// ---------------- TEST END ----------------
+		//#endregion
 		{
 			"path": "pages/home/index",
 			"style": {
 				"navigationBarTitleText": "律先锋",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/user/login",
+			"style": {
+				"navigationBarTitleText": "登录",
+				"navigationStyle": "custom"
+			}
 		}
+	],
+	"subPackages": [
+		//#region ---------------- 设置 ----------------
+		{
+			"root": "setting",
+			"pages": [
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "设置"
+					}
+				},
+				{
+					"path": "general",
+					"style": {
+						"navigationBarTitleText": "通用设置"
+					}
+				},
+				{
+					"path": "notice",
+					"style": {
+						"navigationBarTitleText": "通知设置"
+					}
+				},
+				{
+					"path": "about",
+					"style": {
+						"navigationBarTitleText": ""
+					}
+				},
+				{
+					"path": "cs",
+					"style": {
+						"navigationBarTitleText": "联系客服"
+					}
+				}
+			]
+		}
+		//#endregion
 	],
 	"globalStyle": {
 		"navigationBarTitleText": "律先锋",

@@ -1,0 +1,44 @@
+<template>
+	<cl-page>
+		<view class="p-3">
+			<view class="flex flex-col items-center justify-center py-10">
+				<view class="p-3 bg-primary-500 rounded-xl">
+					<cl-image src="/static/logo.png" :height="80" :width="80"></cl-image>
+				</view>
+				<cl-text :pt="{ className: 'mt-3 mb-1' }">{{ config.name }}</cl-text>
+				<cl-text
+					color="info"
+					:pt="{
+						className: '!text-xs'
+					}"
+					>version {{ config.version }}</cl-text
+				>
+			</view>
+
+			<cl-list>
+				<cl-list-item
+					:label="t('访问官网')"
+					arrow
+					hoverable
+					@tap="toWebSite"
+				></cl-list-item>
+			</cl-list>
+		</view>
+	</cl-page>
+</template>
+
+<script setup lang="ts">
+import { config } from "@/config";
+import { $t, t } from "@/locale";
+import { openWeb } from "@/uni_modules/cool-open-web";
+
+onReady(() => {
+	uni.setNavigationBarTitle({
+		title: $t("关于{name}", { name: config.name })
+	});
+});
+
+function toWebSite() {
+	openWeb(config.website);
+}
+</script>

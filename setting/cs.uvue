@@ -1,0 +1,43 @@
+<template>
+	<cl-page>
+		<view class="p-10 flex flex-col items-center justify-center gap-2 mb-10">
+			<cl-text>我们期待与您并肩，</cl-text>
+			<cl-text>在规则中寻求公正，</cl-text>
+			<cl-text>在信任中成就彼此。</cl-text>
+
+			<view class="p-2 bg-white mb-5 rounded-xl">
+				<!-- <cl-image src="" :height="320" :width="320" show-menu-by-longpress>
+					<template #placeholder>
+						<text> - </text>
+					</template>
+				</cl-image> -->
+				<view
+					class="w-[320rpx] h-[320rpx] bg-gray-300 flex items-center justify-center text-xl rounded-xl"
+				>
+					<cl-text color="primary">占位图</cl-text>
+				</view>
+			</view>
+
+			<!-- #ifndef H5 -->
+			<!-- <cl-button type="light" icon="download-line" @tap="saveImage">保存图片</cl-button> -->
+			<!-- #endif -->
+		</view>
+	</cl-page>
+</template>
+
+<script setup lang="ts">
+import { useUi } from "@/uni_modules/cool-ui";
+
+const ui = useUi();
+
+function saveImage() {
+	uni.saveImageToPhotosAlbum({
+		filePath: "/static/cs.png",
+		success: () => {
+			ui.showToast({
+				message: "保存成功"
+			});
+		}
+	});
+}
+</script>
