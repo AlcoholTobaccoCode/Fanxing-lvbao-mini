@@ -1,0 +1,81 @@
+<!--
+@description: 历史记录
+-->
+<script setup lang="ts">
+import { ref } from "vue";
+
+const isEditModeModal = defineModel("isEditMode", {
+	type: Boolean,
+	default: () => false
+});
+</script>
+
+<template>
+	<view class="app-setting-list">
+		<scroll-view scroll-y class="app-setting-list__scroll" show-scrollbar="false">
+			<view class="app-setting-section">
+				<text class="app-setting-section__title">今天 {{ isEditModeModal }} </text>
+				<template v-for="i in 100" :key="i">
+					<view class="app-setting-item" hover-class="block-hover-class">
+						<view class="app-setting-item__main">
+							<text class="app-setting-item__title">苹果掉落的原因</text>
+							<text class="app-setting-item__status">模块</text>
+						</view>
+						<view class="app-setting-item__meta">
+							<template v-if="!isEditMode">
+								<text class="app-setting-item__time">19:12</text>
+							</template>
+							<template v-else>
+								<cl-button icon="send-plane-fill"></cl-button>
+								<cl-button icon="arrow-up-line"></cl-button>
+								<cl-button icon="send-plane-fill"></cl-button>
+							</template>
+						</view>
+					</view>
+				</template>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.app-setting-list {
+	@apply flex-1 rounded-2xl bg-white shadow-sm overflow-hidden;
+}
+
+.app-setting-list__scroll {
+	@apply w-full h-full py-3 pl-4;
+}
+
+.app-setting-section {
+	@apply mb-4 mr-4;
+}
+
+.app-setting-section__title {
+	@apply text-xs text-surface-400 mb-2;
+}
+
+.app-setting-item {
+	@apply rounded-xl bg-surface-50 px-3 py-2 mb-2 flex flex-row items-center justify-between;
+}
+
+.app-setting-item__main {
+	@apply flex flex-col;
+}
+
+.app-setting-item__title {
+	@apply text-sm text-surface-900 mb-1;
+}
+
+.app-setting-item__status {
+	@apply text-xs text-surface-400;
+}
+
+.app-setting-item__meta {
+	@apply flex flex-col items-end;
+}
+
+.app-setting-item__time {
+	@apply text-xs text-surface-400;
+}
+</style>
