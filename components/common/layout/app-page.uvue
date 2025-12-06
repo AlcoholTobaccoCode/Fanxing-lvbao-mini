@@ -2,6 +2,7 @@
 import { computed, ref, useSlots } from "vue";
 import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
+import RemixIcon from "../icon-all/remixicon.uvue";
 
 const props = withDefaults(
 	defineProps<{
@@ -67,6 +68,10 @@ const handleHeaderClickRecord = () => {
 };
 
 //#endregion
+
+//#region 测试区域
+const iconVisible = ref(false);
+//#endregion
 </script>
 
 <template>
@@ -74,10 +79,10 @@ const handleHeaderClickRecord = () => {
 		<view class="app-page-root">
 			<view class="app-page-history">
 				<cl-safe-area type="top"></cl-safe-area>
-				<view class="app-page-history__scroll">
+				<view class="app-page-history__scroll flex-1">
 					<view class="w-full h-full overflow-auto">
 						<slot name="history">
-							<app-setting></app-setting>
+							<app-setting @close="isHistoryOpen = false"></app-setting>
 						</slot>
 					</view>
 				</view>
@@ -128,6 +133,20 @@ const handleHeaderClickRecord = () => {
 			</view>
 			<!-- E 主体展示区域 -->
 		</view>
+
+		<cl-float-view :bottom="300">
+			<view
+				class="w-[40px] h-[40px] bg-primary-500 flex flex-row items-center justify-center rounded"
+				@click="iconVisible = true"
+			>
+				<cl-icon name="heart-fill" color="white"></cl-icon>
+			</view>
+		</cl-float-view>
+		<cl-popup v-model="iconVisible" title="RemixIcon">
+			<view class="h-[200px]">
+				<remix-icon></remix-icon>
+			</view>
+		</cl-popup>
 	</cl-page>
 </template>
 
@@ -144,7 +163,7 @@ const handleHeaderClickRecord = () => {
 }
 
 .app-page-main {
-	@apply absolute left-0 right-0 top-0 bottom-0 rounded-none shadow-none flex flex-col;
+	@apply absolute left-0 right-0 top-0 bottom-0 rounded-none shadow-none flex flex-col z-10;
 	transform: translateX(0) scale(1);
 	transition:
 		transform 0.5s ease,
