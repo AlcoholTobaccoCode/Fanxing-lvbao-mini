@@ -95,8 +95,8 @@ export function request(options: RequestOptions): Promise<any | null> {
 						reject({ message: t("无权限") } as Response);
 					}
 
-					// 502 服务异常
-					else if (res.statusCode == 502) {
+					// 5xx 服务异常
+					else if (res.statusCode >= 500 && res.statusCode < 600) {
 						reject({
 							message: t("服务异常")
 						} as Response);
@@ -113,7 +113,7 @@ export function request(options: RequestOptions): Promise<any | null> {
 						}
 					}
 
-					// 200 正常响应
+					// 200 正常响应（业务 code 再细分）
 					else if (res.statusCode == 200) {
 						if (res.data == null) {
 							resolve(null);
@@ -137,7 +137,23 @@ export function request(options: RequestOptions): Promise<any | null> {
 							const finalMessage = message && message !== "" ? message : fallback;
 							reject({ message: finalMessage, code, error } as Response);
 						}
-					} else {
+					}
+					// 其他 4xx：有结构化 body 时尽量解析错误码
+					else if (res.statusCode >= 400 && res.statusCode < 500) {
+						if (res.data && isObject(res.data as any)) {
+							const { code, message, error } = parse<Response>(res.data) ?? {};
+							const fallback =
+								(error && ERROR_DEFAULT_MESSAGE[error]) ||
+								(error && ERROR_DEFAULT_MESSAGE[error.trim?.() || error]) ||
+								t("服务异常");
+							const finalMessage = message && message !== "" ? message : fallback;
+							reject({ message: finalMessage, code, error } as Response);
+						} else {
+							reject({ message: t("服务异常") } as Response);
+						}
+					}
+					// 其他情况统一兜底
+					else {
 						reject({ message: t("服务异常") } as Response);
 					}
 				},
