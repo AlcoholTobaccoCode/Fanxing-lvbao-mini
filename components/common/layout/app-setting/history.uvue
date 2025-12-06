@@ -23,13 +23,21 @@ const handleChangeEditMode = () => {
 
 const historyClearAll = () => {
 	ui.showToast({
-		message: "功能开发中，敬请期待"
+		message: "  清空功能开发中，敬请期待"
 	});
 };
 //#endregion
-const handleItemEdit = () => {};
+const handleItemEdit = () => {
+	ui.showToast({
+		message: "编辑功能开发中，敬请期待"
+	});
+};
 
-const handleItemDel = () => {};
+const handleItemDel = () => {
+	ui.showToast({
+		message: "删除功能开发中，敬请期待"
+	});
+};
 </script>
 
 <template>
@@ -71,18 +79,20 @@ const handleItemDel = () => {};
 									<text class="app-setting-item__time">19:12</text>
 								</template>
 								<template v-else>
-									<cl-icon
-										color="primary"
-										size="36rpx"
-										name="edit-line"
-										@click="handleItemEdit"
-									></cl-icon>
-									<cl-icon
-										color="error"
-										size="36rpx"
-										name="delete-bin-line"
-										@click="handleItemDel"
-									></cl-icon>
+									<view @click.stop="handleItemEdit">
+										<cl-icon
+											color="primary"
+											size="36rpx"
+											name="edit-line"
+										></cl-icon>
+									</view>
+									<view @click.stop="handleItemDel">
+										<cl-icon
+											color="error"
+											size="36rpx"
+											name="delete-bin-line"
+										></cl-icon>
+									</view>
 								</template>
 							</view>
 						</view>
