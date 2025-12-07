@@ -9,7 +9,6 @@
 		// 	}
 		// },
 		//#endregion
-		//#endregion
 		{
 			"path": "pages/home/index",
 			"style": {
@@ -17,6 +16,13 @@
 				"navigationStyle": "custom"
 			}
 		},
+		// {
+		// 	"path": "pages/consult/index",
+		// 	"style": {
+		// 		"navigationBarTitleText": "咨询",
+		// 		"navigationStyle": "custom"
+		// 	}
+		// },
 		//#region ---------------- 登录 ----------------
 		{
 			"path": "pages/user/login",
@@ -24,34 +30,34 @@
 				"navigationBarTitleText": "登录",
 				"navigationStyle": "custom"
 			}
-		},
-		{
-			"path": "pages/user/edit",
-			"style": {
-				"navigationBarTitleText": "编辑资料"
-			},
-			"meta": {
-				"isAuth": true
-			}
-		},
-		{
-			"path": "pages/user/edit-name",
-			"style": {
-				"navigationStyle": "custom"
-			},
-			"meta": {
-				"isAuth": true
-			}
-		},
-		{
-			"path": "pages/user/edit-description",
-			"style": {
-				"navigationStyle": "custom"
-			},
-			"meta": {
-				"isAuth": true
-			}
 		}
+		// {
+		// 	"path": "pages/user/edit",
+		// 	"style": {
+		// 		"navigationBarTitleText": "编辑资料"
+		// 	},
+		// 	"meta": {
+		// 		"isAuth": true
+		// 	}
+		// },
+		// {
+		// 	"path": "pages/user/edit-name",
+		// 	"style": {
+		// 		"navigationStyle": "custom"
+		// 	},
+		// 	"meta": {
+		// 		"isAuth": true
+		// 	}
+		// },
+		// {
+		// 	"path": "pages/user/edit-description",
+		// 	"style": {
+		// 		"navigationStyle": "custom"
+		// 	},
+		// 	"meta": {
+		// 		"isAuth": true
+		// 	}
+		// }
 		//#endregion
 	],
 	"subPackages": [
