@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { config } from "@/config";
-import { isDark, parse, router, useRefs, useStore, type Token } from "@/cool";
+import { parse, router, useRefs, useStore, storage, type Token } from "@/cool";
 import { t } from "@/locale";
 import { provide, reactive, ref } from "vue";
 import type { LoginByCode, LoginByPassword, Register as RegisterForm } from "./types";
@@ -55,6 +55,12 @@ const formRegister = reactive<RegisterForm>({
 
 // 登录成功
 const toLogin = async (res: any) => {
+	// 存储本次登录类型
+	storage.set("login-form-type", loginTypeTab.value, 0);
+	// 存储本次登录手机号
+	if (["code-login", "psw-login"].includes(loginTypeTab.value)) {
+		storage.set("login-form-phone", formCode.phone || formPassword.phone, 0);
+	}
 	user.setToken(parse<Token>(res)!);
 	user.get();
 	router.nextLogin();
@@ -87,6 +93,19 @@ const isAgree = () => {
 
 provide("isAgree", isAgree);
 //#endregion
+
+onLoad(() => {
+	const beforeLoginFormType = storage.get("login-form-type");
+	const typeList = loginTypeList.value.map((e) => e.value);
+	if (beforeLoginFormType && typeList.includes(beforeLoginFormType)) {
+		loginTypeTab.value = beforeLoginFormType;
+	}
+	const beforeLoginFormPhone = storage.get("login-form-phone");
+	if (beforeLoginFormPhone) {
+		formCode.phone = beforeLoginFormPhone;
+		formPassword.phone = beforeLoginFormPhone;
+	}
+});
 </script>
 
 <template>
@@ -106,6 +125,7 @@ provide("isAgree", isAgree);
 				</view>
 
 				<cl-text :pt="{ className: 'text-xl font-bold mt-3' }">{{ config.name }}</cl-text>
+				{{ loginTypeTab }}
 			</view>
 
 			<!-- 登录选项 - 登录 / 注册 -->
