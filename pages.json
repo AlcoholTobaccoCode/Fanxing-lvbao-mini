@@ -16,13 +16,13 @@
 				"navigationStyle": "custom"
 			}
 		},
-		// {
-		// 	"path": "pages/consult/index",
-		// 	"style": {
-		// 		"navigationBarTitleText": "咨询",
-		// 		"navigationStyle": "custom"
-		// 	}
-		// },
+		{
+			"path": "pages/consult/chat",
+			"style": {
+				"navigationBarTitleText": "咨询",
+				"navigationStyle": "custom"
+			}
+		},
 		//#region ---------------- 登录 ----------------
 		{
 			"path": "pages/user/login",
