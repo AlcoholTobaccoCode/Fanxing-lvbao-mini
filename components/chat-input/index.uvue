@@ -76,17 +76,17 @@ const createDefaultTools = (): Tools => {
 			enable: false
 		});
 	}
-	if (props.showDefaultKnowledge) {
-		list.push({
-			icon: "fxzh-zhishiku",
-			text: "知识库",
-			enable: false
-		});
-	}
 	if (props.showDefaultNetwork) {
 		list.push({
 			icon: "fxzh-hulianwang",
 			text: "联网搜索",
+			enable: false
+		});
+	}
+	if (props.showDefaultKnowledge) {
+		list.push({
+			icon: "fxzh-zhishiku",
+			text: "知识库",
 			enable: false
 		});
 	}
@@ -232,7 +232,8 @@ watch(
 		<!-- 主输入区域 -->
 		<view class="chat-main">
 			<view class="chat-main__inner">
-				<view class="chat-main__left">
+				<!-- 默认输入交互区域 -->
+				<view v-if="!modelValue" class="chat-main__left">
 					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 						<cl-icon
 							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
@@ -243,18 +244,18 @@ watch(
 				</view>
 
 				<view class="chat-main__center">
-					<cl-input
+					<cl-textarea
 						v-if="inputModeVal === 'text'"
 						v-model="modelValue"
-						:placeholder="placeholder"
-						:disabled="disabled"
-						:pt="{
-							className: 'w-full !h-[40px] !border-none bg-transparent',
-							input: { className: 'text-[15px]' }
-						}"
 						clearable
+						auto-height
+						:border="false"
+						:maxlength="Infinity"
+						:showWordLimit="false"
+						:disabled="disabled"
+						:placeholder="placeholder"
 						@confirm="handleConfirm"
-					></cl-input>
+					></cl-textarea>
 
 					<view v-else class="chat-main__voice">
 						<view
@@ -270,12 +271,26 @@ watch(
 					</view>
 				</view>
 
-				<view v-if="false" class="chat-main__right">
-					<view class="chat-main__icon-btn">
+				<view class="chat-main__right">
+					<!-- <view class="chat-main__icon-btn">
 						<cl-icon name="camera-line" :size="38" color="currentColor"></cl-icon>
-					</view>
-					<view class="chat-main__icon-btn" @tap.stop="showMoreAction = true">
+					</view> -->
+					<!-- <view class="chat-main__icon-btn" @tap.stop="showMoreAction = true">
 						<cl-icon name="add-line" :size="38" color="currentColor"></cl-icon>
+					</view> -->
+					<view class="chat-main__icon-btn">
+						<cl-icon
+							v-if="!modelValue"
+							name="arrow-up-circle-line"
+							:size="38"
+						></cl-icon>
+						<cl-icon
+							v-else
+							name="arrow-up-circle-fill"
+							:size="38"
+							color="primary"
+							@tap.stop="handleConfirm"
+						></cl-icon>
 					</view>
 				</view>
 			</view>
@@ -335,7 +350,7 @@ watch(
 }
 
 .chat-main__left {
-	@apply flex flex-row items-center;
+	@apply flex flex-row items-center opacity-100 transition-all;
 }
 
 .chat-main__center {
