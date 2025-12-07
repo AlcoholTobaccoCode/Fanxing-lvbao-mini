@@ -1,0 +1,127 @@
+<script lang="ts" setup>
+import { computed } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
+import { useStore } from "@/cool";
+import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store/chatInput-store";
+import type { SendData } from "@/components/chat-input/types";
+
+import AppPage from "@/components/common/layout/app-page.uvue";
+import ChatInput from "@/components/chat-input/index.uvue";
+
+const log = new Logger("ConsultChatPage");
+const ui = useUi();
+const { user } = useStore();
+
+const messages = computed(() => consultSessionStore.messages.value);
+const hasValidLaunch = computed(() => {
+	const launch = chatFlowStore.launchPayload.value;
+	const cfg = chatFlowStore.currentConfig.value;
+	return !!launch && !!cfg && launch.moduleKey === "consult";
+});
+
+onLoad(() => {
+	const launch = chatFlowStore.launchPayload.value;
+	const cfg = chatFlowStore.currentConfig.value;
+
+	log.info("[consult/chat] onLoad launch =>", launch, "cfg =>", cfg);
+
+	if (!launch || !cfg || launch.moduleKey !== "consult") {
+		log.warn("[consult/chat] 无有效启动参数，停留在空状态");
+		return;
+	}
+
+	// 初始化本次咨询会话
+	consultSessionStore.initFromLaunch(launch);
+
+	// 按模块配置同步输入组件配置
+	chatInputStore.setConfig({
+		placeholder: cfg.placeholder,
+		showDefaultDeepThink: cfg.enableDeepThink,
+		showDefaultKnowledge: cfg.enableKnowledge,
+		showDefaultNetwork: cfg.enableNetwork
+	});
+});
+
+onUnload(() => {
+	consultSessionStore.clear();
+	chatFlowStore.clear();
+});
+
+// 详情页内发送咨询问题（集成 /law/consult 流式接口）
+const handleSend = async (data: SendData) => {
+	log.group("consult detail send");
+	log.info("payload ==> ", data);
+	log.groupEnd();
+
+	if (!user.token) {
+		ui.showToast({ message: "请先登录后再发起咨询" });
+		return;
+	}
+
+	if (data.mode === "voice") {
+		ui.showToast({ message: "语音提问暂未接入流式咨询" });
+		return;
+	}
+
+	if (!data.text || !data.text.trim()) return;
+
+	// #ifndef H5
+	ui.showToast({ message: "当前端暂未接入流式咨询，请在 H5 端体验" });
+	return;
+	// #endif
+
+	try {
+		await consultSessionStore.sendTextQuestion(data.text, chatInputStore.tools.value);
+	} catch (err) {
+		console.error("consult send error", err);
+		ui.showToast({ message: "咨询失败，请稍后重试" });
+	}
+};
+</script>
+
+<template>
+	<app-page title="法律咨询" :back-top="true" :use-history-layout="false">
+		<template #content>
+			<view class="h-full flex flex-col">
+				<view class="px-4 py-2 text-gray-500 text-sm">
+					<text>咨询对话页调试：如果你能看到这一段，说明页面本身渲染正常。</text>
+				</view>
+
+				<view
+					v-if="!hasValidLaunch"
+					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
+				>
+					暂未检测到会话启动参数，请从首页发起新的咨询。
+				</view>
+				<view v-else class="flex-1 flex flex-col">
+					<scroll-view scroll-y class="flex-1 px-4 py-3" :enable-flex="true">
+						<view class="flex flex-col gap-3">
+							<view
+								v-for="(item, index) in messages"
+								:key="index"
+								class="flex"
+								:class="item.role === 'user' ? 'justify-end' : 'justify-start'"
+							>
+								<view
+									class="px-3 py-2 rounded-2xl text-sm leading-relaxed"
+									:class="
+										item.role === 'user'
+											? 'bg-primary text-white rounded-br-sm'
+											: 'bg-surface-100 text-surface-900 rounded-bl-sm'
+									"
+								>
+									{{ item.content }}
+								</view>
+							</view>
+						</view>
+					</scroll-view>
+
+					<view class="px-4 pb-4">
+						<chat-input @send="handleSend" />
+					</view>
+				</view>
+			</view>
+		</template>
+	</app-page>
+</template>

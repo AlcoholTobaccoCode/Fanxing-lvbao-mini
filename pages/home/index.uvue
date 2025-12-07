@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
+import { router } from "@/cool";
 
 import type { SendData } from "@/components/chat-input/types";
 
@@ -10,6 +11,7 @@ import ChatInput from "@/components/chat-input/index.uvue";
 import SimpleCard from "@/components/card/simple-card.uvue";
 import Consult from "./components/consult.vue";
 import CallControls from "@/components/call-controls/index.uvue";
+import { chatFlowStore, chatInputStore } from "@/cool/store/chatInput-store";
 
 const log = new Logger("HomePage"); // 或 createLogger("Home")
 const ui = useUi();
@@ -23,14 +25,30 @@ onLoad(() => {
 
 //#region 交互区域
 
-// 发送当前对话输入
-const handleSend = (data: SendData) => {
+// 发送当前对话输入：发起咨询模块并跳转到咨询对话页
+const handleSend = async (data: SendData) => {
 	log.group("handleSend");
-	log.info("text ==> ", data);
+	log.info("send payload ==> ", data);
 	log.groupEnd();
 
-	// TODO
+	// 记录本次从首页发起的咨询会话（作为 demo，先固定模块 consult）
+	chatFlowStore.startModule("consult", {
+		text: data.mode === "text" ? data.text : "",
+		voice: data.mode === "voice" ? data.voice : null,
+		tools: chatInputStore.tools.value,
+		inputMode: chatInputStore.inputMode.value
+	});
+
+	// 清空首页输入框
 	inputValue.value = "";
+
+	// 使用框架内置 router 跳转到当前模块配置的详情路由
+	const cfg = chatFlowStore.currentConfig.value;
+	if (cfg?.detailRoute) {
+		router.to(cfg.detailRoute);
+	} else {
+		ui.showToast({ message: "暂未配置咨询详情页" });
+	}
 };
 
 // 点击预设问题
