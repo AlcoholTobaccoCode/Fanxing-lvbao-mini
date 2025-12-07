@@ -83,4 +83,19 @@ export default {
 	}
 }
 // E 自定义进度条
+
+.no-border-button {
+	/* 移除默认边框 */
+	border: none !important;
+	/* 针对微信小程序等，覆盖 ::after 伪元素边框 */
+	&::after {
+		border: none !important;
+		/* 或者 border-color: transparent !important; */
+	}
+	/* 可选：设置背景透明 */
+	background-color: transparent;
+	/* 可选：移除小程序中的阴影和点击效果（如需要）*/
+	box-shadow: none;
+	padding: 0; /* 移除内边距 */
+}
 </style>

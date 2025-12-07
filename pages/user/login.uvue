@@ -90,13 +90,8 @@ provide("isAgree", isAgree);
 </script>
 
 <template>
-	<cl-page>
-		<cl-topbar
-			fixed
-			:show-back="false"
-			safe-area-top
-			background-color="transparent"
-		></cl-topbar>
+	<cl-page back-top>
+		<cl-topbar fixed :show-back="true" safe-area-top background-color="transparent"></cl-topbar>
 
 		<view class="px-10">
 			<!-- Logo -->
