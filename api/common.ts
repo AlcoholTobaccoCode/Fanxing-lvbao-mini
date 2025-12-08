@@ -1,17 +1,12 @@
 import { config } from "@/config";
 import { request } from "@/cool";
+import { type ApiResponse } from "./types";
 
 export interface OssStsData {
 	AccessKeyId: string;
 	AccessKeySecret: string;
 	SecurityToken: string;
 	Expiration: string;
-}
-
-export interface OssStsResponse {
-	code: number;
-	msg: string;
-	data: OssStsData | null;
 }
 
 /**
@@ -26,7 +21,7 @@ export const GetOssSts = async (): Promise<OssStsData> => {
 			url: `${config.baseUrl}/utils/sts`,
 			method: "GET",
 			success(res) {
-				const body = res.data as OssStsResponse;
+				const body = res.data as ApiResponse<OssStsData>;
 				if (res.statusCode === 200 && body && body.code === 200 && body.data) {
 					resolve(body.data);
 				} else {
@@ -62,5 +57,35 @@ export const SendSms = (data: SendSmsPayload): Promise<any | null> => {
 		url: "/user/sendSms",
 		method: "POST",
 		data
+	});
+};
+
+// /utils/voice/token
+
+export interface VoiceTokenData {
+	token: string;
+	expire_time: number;
+	region: string;
+	domain: string;
+	version: string;
+	action: string;
+	raw: {
+		ErrMsg: string;
+		Token: {
+			UserId: string;
+			Id: string;
+			ExpireTime: number;
+		};
+	};
+}
+/**
+ *
+ * @param data
+ * @returns
+ */
+export const GetVoiceToken = (): Promise<VoiceTokenData> => {
+	return request({
+		url: "/utils/voice/token",
+		method: "POST"
 	});
 };
