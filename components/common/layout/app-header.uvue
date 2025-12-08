@@ -2,6 +2,14 @@
 import { ref, computed, onMounted, useSlots } from "vue";
 import { router } from "@/cool";
 
+// #ifdef MP-WEIXIN
+defineOptions({
+	options: {
+		styleIsolation: "shared"
+	}
+});
+// #endif
+
 const props = withDefaults(
 	defineProps<{
 		title?: string;
@@ -100,7 +108,7 @@ const handleClickRecord = () => {
 			}"
 		>
 			<template #prepend>
-				<view class="flex flex-row items-center h-full pl-3">
+				<view class="flex flex-row items-center pl-3">
 					<slot v-if="hasLeftSlot" name="left"></slot>
 
 					<cl-icon
@@ -190,4 +198,8 @@ const handleClickRecord = () => {
 	</view>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+:deep(.cl-topbar__inner) {
+	position: relative;
+}
+</style>
