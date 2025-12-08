@@ -1,5 +1,34 @@
+import { generateUUID, generateRandomString } from "./util";
+
 // 用户默认头像
 export const USER_DEFAULT_AVATAR = "/static/user/avatar.png";
+
+export const MODULE_SESSION_NAME = {
+	// 咨询
+	consult: "ai_consult_",
+	// 合同
+	contract: "ai_contract_",
+	// 文书
+	doc: "ai_doc_",
+	// 检索
+	retrieve: "ai_retrieve_",
+	// 律师对话
+	lawyerChat: ""
+};
+
+export const createModelSessionId = (module: string): string => {
+	if (!module) {
+		throw new Error("需要指定模块");
+	}
+
+	const moduleStr = MODULE_SESSION_NAME[module] || null;
+	if (!moduleStr) {
+		console.warn(`未找到该模块预设 「${module}」,随机生成`);
+		return generateUUID();
+	}
+
+	return `${moduleStr}${generateRandomString(8)}`;
+};
 
 // 咨询模块默认问题
 export const LEGAL_QUICK_QUESTIONS: string[] = [
