@@ -46,6 +46,13 @@ const formPassword = reactive<LoginByPassword>({
 	password: ""
 });
 
+// 临时
+const setLoginInfo = () => {
+	formCode.phone = "17857593090";
+	formPassword.phone = "17857593090";
+	formPassword.password = "123456";
+};
+
 const formRegister = reactive<RegisterForm>({
 	phone: "",
 	code: "",
@@ -115,7 +122,7 @@ onLoad(() => {
 		<view class="px-10">
 			<!-- Logo -->
 			<view class="flex flex-col items-center justify-center pt-10 pb-6">
-				<view class="p-3 rounded-2xl">
+				<view class="p-3 rounded-2xl" @click="setLoginInfo">
 					<cl-image
 						src="/static/logo.png"
 						mode="widthFix"
@@ -125,7 +132,6 @@ onLoad(() => {
 				</view>
 
 				<cl-text :pt="{ className: 'text-xl font-bold mt-3' }">{{ config.name }}</cl-text>
-				{{ loginTypeTab }}
 			</view>
 
 			<!-- 登录选项 - 登录 / 注册 -->

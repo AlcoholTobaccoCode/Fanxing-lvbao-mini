@@ -51,7 +51,8 @@ export class Router {
 	// 获取默认路径，支持 home 和 login
 	defaultPath(name: "home" | "login") {
 		const paths = {
-			home: PAGES[0].path, // 首页为第一个页面
+			// home: PAGES[0].path, // 首页为第一个页面
+			home: "/pages/home/index",
 			login: "/pages/user/login"
 		};
 

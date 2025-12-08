@@ -85,7 +85,7 @@ const handleSend = async (data: SendData) => {
 <template>
 	<app-page title="法律咨询" back-top :use-history-layout="false">
 		<template #content>
-			<view class="flex-1 flex flex-col">
+			<view class="w-full h-full flex flex-col overflow-hidden">
 				<!-- 临时测试 -->
 				<view
 					v-if="!!hasValidLaunch"
@@ -93,12 +93,12 @@ const handleSend = async (data: SendData) => {
 				>
 					暂未检测到会话启动参数，请从首页发起新的咨询。
 				</view>
-				<scroll-view v-else scroll-y class="ai-repeat-list__scroll" :enable-flex="true">
-					<view class="flex-1 flex flex-col gap-3">
+				<view class="flex-1 px-2 pt-2 pb-4" v-else>
+					<scroll-view scroll-y class="ai-repeat-list__scroll" :enable-flex="true">
 						<view
 							v-for="(item, index) in messages"
 							:key="index"
-							class="flex"
+							class="flex px-4"
 							:class="item.role === 'user' ? 'items-end' : 'justify-start'"
 						>
 							<view
@@ -120,12 +120,10 @@ const handleSend = async (data: SendData) => {
 								></zero-markdown-view>
 							</template>
 						</view>
-					</view>
-				</scroll-view>
-
-				<view class="px-4 pb-4">
-					<chat-input @send="handleSend" />
+					</scroll-view>
 				</view>
+
+				<chat-input @send="handleSend" />
 			</view>
 		</template>
 	</app-page>
@@ -133,7 +131,7 @@ const handleSend = async (data: SendData) => {
 
 <style lang="scss" scoped>
 .ai-repeat-list__scroll {
-	@apply w-full h-full px-4 py-3;
+	@apply w-full h-full flex-1 flex flex-col gap-3;
 }
 
 .chat-user-main {
