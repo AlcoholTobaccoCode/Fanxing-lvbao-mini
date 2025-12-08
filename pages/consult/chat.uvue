@@ -13,7 +13,7 @@ const log = new Logger("ConsultChatPage");
 const ui = useUi();
 const { user } = useStore();
 
-const messages = computed(() => consultSessionStore.messages.value);
+const messages = consultSessionStore.messages;
 const hasValidLaunch = computed(() => {
 	const launch = chatFlowStore.launchPayload.value;
 	const cfg = chatFlowStore.currentConfig.value;
@@ -36,11 +36,18 @@ onLoad(() => {
 
 	// 按模块配置同步输入组件配置
 	chatInputStore.setConfig({
+		tools: launch.tools,
+		inputMode: launch.inputMode,
 		placeholder: cfg.placeholder,
 		showDefaultDeepThink: cfg.enableDeepThink,
 		showDefaultKnowledge: cfg.enableKnowledge,
 		showDefaultNetwork: cfg.enableNetwork
 	});
+
+	// 自动以首页首问发起一次流式咨询
+	if (launch.text) {
+		consultSessionStore.sendTextQuestion(launch.text, launch.tools);
+	}
 });
 
 onUnload(() => {
@@ -66,11 +73,6 @@ const handleSend = async (data: SendData) => {
 
 	if (!data.text || !data.text.trim()) return;
 
-	// #ifndef H5
-	ui.showToast({ message: "当前端暂未接入流式咨询，请在 H5 端体验" });
-	return;
-	// #endif
-
 	try {
 		await consultSessionStore.sendTextQuestion(data.text, chatInputStore.tools.value);
 	} catch (err) {
@@ -81,13 +83,9 @@ const handleSend = async (data: SendData) => {
 </script>
 
 <template>
-	<app-page title="法律咨询" :back-top="true" :use-history-layout="false">
+	<app-page title="法律咨询" back-top :use-history-layout="false">
 		<template #content>
-			<view class="h-full flex flex-col">
-				<view class="px-4 py-2 text-gray-500 text-sm">
-					<text>咨询对话页调试：如果你能看到这一段，说明页面本身渲染正常。</text>
-				</view>
-
+			<view class="flex-1 flex flex-col">
 				<view
 					v-if="!hasValidLaunch"
 					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
@@ -96,23 +94,25 @@ const handleSend = async (data: SendData) => {
 				</view>
 				<view v-else class="flex-1 flex flex-col">
 					<scroll-view scroll-y class="flex-1 px-4 py-3" :enable-flex="true">
-						<view class="flex flex-col gap-3">
+						<view class="flex-1 flex flex-col gap-3">
 							<view
 								v-for="(item, index) in messages"
 								:key="index"
 								class="flex"
-								:class="item.role === 'user' ? 'justify-end' : 'justify-start'"
+								:class="item.role === 'user' ? 'items-end' : 'justify-start'"
 							>
-								<view
-									class="px-3 py-2 rounded-2xl text-sm leading-relaxed"
-									:class="
-										item.role === 'user'
-											? 'bg-primary text-white rounded-br-sm'
-											: 'bg-surface-100 text-surface-900 rounded-bl-sm'
-									"
+								<cl-tag
+									v-if="item.role === 'user'"
+									type="primary"
+									class="!w-fit px-2 py-4"
+									>{{ item.content }}</cl-tag
 								>
-									{{ item.content }}
-								</view>
+								<template v-else>
+									<zero-markdown-view
+										:markdown="item.content"
+										:aiMode="true"
+									></zero-markdown-view>
+								</template>
 							</view>
 						</view>
 					</scroll-view>

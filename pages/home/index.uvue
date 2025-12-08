@@ -31,7 +31,7 @@ const handleSend = async (data: SendData) => {
 	log.info("send payload ==> ", data);
 	log.groupEnd();
 
-	// 记录本次从首页发起的咨询会话（作为 demo，先固定模块 consult）
+	// 记录本次从首页发起的咨询会话（先固定模块 consult）
 	chatFlowStore.startModule("consult", {
 		text: data.mode === "text" ? data.text : "",
 		voice: data.mode === "voice" ? data.voice : null,

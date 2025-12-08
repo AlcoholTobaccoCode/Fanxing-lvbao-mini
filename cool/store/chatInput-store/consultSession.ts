@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { config } from "@/config";
+import { useStore } from "@/cool";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/components/chat-input/types";
 
@@ -16,23 +17,20 @@ export class ConsultSessionStore {
 	initFromLaunch(launch: ChatLaunchPayload) {
 		this.messages.value = [];
 		this.sessionId.value = null;
-
-		if (launch.text) {
-			this.messages.value.push({ role: "user", content: launch.text });
-		}
 	}
 
 	async sendTextQuestion(text: string, tools: Tools) {
 		const content = text.trim();
 		if (!content || this.loading.value) return;
 
+		// 先追加一条用户消息
 		this.messages.value.push({ role: "user", content });
 
-		const aiMsg: ConsultMessage = { role: "system", content: "" };
-		this.messages.value.push(aiMsg);
+		this.messages.value.push({ role: "system", content: "" });
+		const aiMsg = this.messages.value[this.messages.value.length - 1];
 
-		const deepThink = tools?.some((t) => t.text === "深度思考" && t.enable);
 		const onlineSearch = tools?.some((t) => t.text === "联网搜索" && t.enable);
+		const deepThink = tools?.some((t) => t.text === "深度思考" && t.enable);
 
 		const payload = {
 			deepThink: !!deepThink,
@@ -46,57 +44,121 @@ export class ConsultSessionStore {
 		this.loading.value = true;
 
 		try {
-			// #ifdef H5
-			const resp = await fetch(config.baseUrl + "/law/consult", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json"
-				},
-				body: JSON.stringify(payload)
-			});
+			const { user } = useStore();
 
-			if (!resp.body) {
-				throw new Error("响应不支持流式 body");
-			}
+			const processSseLine = (rawLine: string) => {
+				const line = rawLine.trim();
+				if (!line) {
+					return;
+				}
 
-			const reader = resp.body.getReader();
-			const decoder = new TextDecoder("utf-8");
-			let buffer = "";
+				let jsonStr: string | null = null;
 
-			while (true) {
-				const { done, value } = await reader.read();
-				if (done) break;
+				if (line.startsWith("data:")) {
+					const payload = line.slice(5).trim();
+					if (!payload || payload === "[DONE]") {
+						return;
+					}
+					jsonStr = payload;
+				} else if (line.startsWith("{") || line.startsWith("[")) {
+					jsonStr = line;
+				} else {
+					return;
+				}
 
-				buffer += decoder.decode(value, { stream: true });
+				try {
+					const evt = JSON.parse(jsonStr) as {
+						contents?: { contentType: string; content: string }[];
+					};
+					const textChunk = (evt.contents || [])
+						.filter((c) => c.contentType === "text")
+						.map((c) => c.content)
+						.join("");
 
-				const parts = buffer.split("\n\n");
-				buffer = parts.pop() || "";
+					if (textChunk) {
+						aiMsg.content = textChunk;
+					}
+				} catch (err) {
+					console.error("解析咨询响应失败", err);
+				}
+			};
 
-				for (const part of parts) {
-					const line = part.trim();
-					if (!line.startsWith("data:")) continue;
+			await new Promise<void>((resolve, reject) => {
+				let buffer = "";
 
-					const jsonStr = line.slice(5).trim();
-					if (!jsonStr) continue;
-
+				const handleChunk = (data: ArrayBuffer) => {
 					try {
-						const evt = JSON.parse(jsonStr) as {
-							contents?: { contentType: string; content: string }[];
-						};
-						const textChunk = (evt.contents || [])
-							.filter((c) => c.contentType === "text")
-							.map((c) => c.content)
-							.join("");
+						let chunkStr = "";
+						if (typeof TextDecoder !== "undefined") {
+							chunkStr = new TextDecoder("utf-8").decode(data);
+						} else {
+							const uint8 = new Uint8Array(data);
+							let str = "";
+							for (let i = 0; i < uint8.length; i++) {
+								str += String.fromCharCode(uint8[i]);
+							}
+							try {
+								chunkStr = decodeURIComponent(escape(str));
+							} catch {
+								chunkStr = str;
+							}
+						}
 
-						if (textChunk) {
-							aiMsg.content += textChunk;
+						if (!chunkStr) {
+							return;
+						}
+
+						buffer += chunkStr;
+						const lines = buffer.split(/\r?\n/);
+						buffer = lines.pop() ?? "";
+
+						for (const raw of lines) {
+							processSseLine(raw);
 						}
 					} catch (err) {
-						console.error("解析流式响应失败", err);
+						console.error("处理咨询流式数据失败", err);
 					}
+				};
+
+				const requestTask: any = uni.request({
+					url: config.baseUrl + "/law/consult",
+					method: "POST",
+					data: payload as any,
+					header: {
+						"Content-Type": "application/json",
+						Authorization: user.token || ""
+					},
+					enableChunked: true,
+					responseType: "arraybuffer",
+					success: (res: any) => {
+						try {
+							if (res.data) {
+								handleChunk(res.data as ArrayBuffer);
+								if (buffer) {
+									const lastLines = buffer.split(/\r?\n/);
+									buffer = "";
+									for (const raw of lastLines) {
+										processSseLine(raw);
+									}
+								}
+							}
+							resolve();
+						} catch (err) {
+							reject(err);
+						}
+					},
+					fail: (err: any) => {
+						console.error("[ConsultStream] wx.request fail:", err);
+						reject(err);
+					}
+				} as any);
+
+				if (requestTask && typeof requestTask.onChunkReceived === "function") {
+					requestTask.onChunkReceived((res: any) => {
+						handleChunk(res.data as ArrayBuffer);
+					});
 				}
-			}
-			// #endif
+			});
 		} finally {
 			this.loading.value = false;
 		}
