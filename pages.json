@@ -1,13 +1,15 @@
 {
+	"entryPagePath": "pages/home/index",
 	// "entryPagePath": "pages/test-pages/index",
 	"pages": [
 		//#region ---------------- TEST PAGE ----------------
-		// {
-		// 	"path": "pages/test-pages/index",
-		// 	"style": {
-		// 		"navigationBarTitleText": "静态测试页面"
-		// 	}
-		// },
+		{
+			"path": "pages/test-pages/index",
+			"style": {
+				"navigationBarTitleText": "静态测试页面",
+				"navigationStyle": "custom"
+			}
+		},
 		//#endregion
 		{
 			"path": "pages/home/index",

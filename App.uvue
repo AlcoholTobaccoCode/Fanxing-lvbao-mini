@@ -33,6 +33,10 @@ export default {
 @import url("static/index.scss");
 @import url("icons/index.scss");
 
+page {
+	background-color: #fff;
+}
+
 .safe-area-top {
 	margin-top: env(safe-area-inset-top);
 }

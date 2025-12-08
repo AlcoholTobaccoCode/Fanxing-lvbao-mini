@@ -2,9 +2,9 @@
 	<cl-page>
 		<view class="p-3">
 			<cl-list>
-				<cl-list-item :label="t('深色模式')">
+				<!-- <cl-list-item :label="t('深色模式')">
 					<cl-switch :model-value="isDark" @change="onThemeChange"></cl-switch>
-				</cl-list-item>
+				</cl-list-item> -->
 
 				<cl-list-item :label="t('多语言')" arrow hoverable @tap="setLocale"> </cl-list-item>
 
