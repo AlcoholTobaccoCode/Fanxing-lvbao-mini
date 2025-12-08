@@ -231,13 +231,13 @@ watch(
 
 		<!-- 主输入区域 -->
 		<view class="chat-main">
-			<view class="chat-main__inner">
+			<view :class="['chat-main__inner', modelValue ? '!pl-0' : '']">
 				<!-- 默认输入交互区域 -->
 				<view v-if="!modelValue" class="chat-main__left">
 					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 						<cl-icon
 							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
-							:size="38"
+							:size="48"
 							color="currentColor"
 						></cl-icon>
 					</view>
@@ -246,6 +246,7 @@ watch(
 				<view class="chat-main__center">
 					<cl-textarea
 						v-if="inputModeVal === 'text'"
+						class="max-h-[200px]"
 						v-model="modelValue"
 						clearable
 						auto-height
@@ -282,12 +283,12 @@ watch(
 						<cl-icon
 							v-if="!modelValue"
 							name="arrow-up-circle-line"
-							:size="38"
+							:size="48"
 						></cl-icon>
 						<cl-icon
 							v-else
 							name="arrow-up-circle-fill"
-							:size="38"
+							:size="48"
 							color="primary"
 							@tap.stop="handleConfirm"
 						></cl-icon>
@@ -346,7 +347,7 @@ watch(
 }
 
 .chat-main__inner {
-	@apply flex flex-row items-center bg-white rounded-full px-3 py-2 shadow-md;
+	@apply flex flex-row items-center bg-white px-3 py-2 shadow-md;
 }
 
 .chat-main__left {

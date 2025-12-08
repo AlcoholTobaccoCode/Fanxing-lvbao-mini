@@ -13,7 +13,7 @@ import Consult from "@/pages/home/components/consult.vue";
 import CallControls from "@/components/call-controls/index.uvue";
 import { chatFlowStore, chatInputStore } from "@/cool/store/chatInput-store";
 
-const log = new Logger("HomePage"); // 或 createLogger("Home")
+const log = new Logger("HomePage");
 const ui = useUi();
 
 // 对话输入内容
