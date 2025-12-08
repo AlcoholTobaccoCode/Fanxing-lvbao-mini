@@ -86,13 +86,14 @@ const handleSend = async (data: SendData) => {
 	<app-page title="法律咨询" back-top :use-history-layout="false">
 		<template #content>
 			<view class="flex-1 flex flex-col">
-				<!-- <view
+				<!-- 临时测试 -->
+				<view
 					v-if="!!hasValidLaunch"
 					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
 				>
 					暂未检测到会话启动参数，请从首页发起新的咨询。
-				</view> -->
-				<scroll-view scroll-y class="ai-repeat-list__scroll" :enable-flex="true">
+				</view>
+				<scroll-view v-else scroll-y class="ai-repeat-list__scroll" :enable-flex="true">
 					<view class="flex-1 flex flex-col gap-3">
 						<view
 							v-for="(item, index) in messages"
@@ -100,12 +101,18 @@ const handleSend = async (data: SendData) => {
 							class="flex"
 							:class="item.role === 'user' ? 'items-end' : 'justify-start'"
 						>
-							<cl-tag
+							<view
 								v-if="item.role === 'user'"
-								type="primary"
-								class="!w-fit px-2 py-4"
-								>{{ item.content }}</cl-tag
+								class="chat-user-main !w-fit p-2 pl-4 rounded-xl rounded-tr-none text-lg"
 							>
+								<cl-text
+									:pt="{
+										className: 'text-white'
+									}"
+									>{{ item.content }}</cl-text
+								>
+							</view>
+
 							<template v-else>
 								<zero-markdown-view
 									:markdown="item.content"
@@ -127,5 +134,9 @@ const handleSend = async (data: SendData) => {
 <style lang="scss" scoped>
 .ai-repeat-list__scroll {
 	@apply w-full h-full px-4 py-3;
+}
+
+.chat-user-main {
+	background-color: #22c57d;
 }
 </style>
