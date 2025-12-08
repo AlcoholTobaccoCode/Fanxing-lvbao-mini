@@ -68,7 +68,7 @@ const handleItemDel = () => {
 			<scroll-view scroll-y class="app-setting-list__scroll" show-scrollbar="false">
 				<view class="app-setting-section">
 					<text class="app-setting-section__title">今天 </text>
-					<template v-for="i in 3" :key="i">
+					<template v-for="i in 30" :key="i">
 						<view class="app-setting-item" hover-class="block-hover-class">
 							<view class="app-setting-item__main">
 								<text class="app-setting-item__title">苹果掉落的原因</text>

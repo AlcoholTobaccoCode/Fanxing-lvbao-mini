@@ -75,67 +75,63 @@ const iconVisible = ref(false);
 </script>
 
 <template>
-	<cl-page :back-top="false">
-		<!-- 带历史侧栏的复杂布局（首页等场景） -->
-		<view class="app-page-root">
-			<view :class="`app-page-history ${isHistoryOpen ? 'opacity-100' : 'opacity-0'}}`">
-				<cl-safe-area type="top"></cl-safe-area>
-				<view class="app-page-history__scroll flex-1">
-					<view class="w-full h-full overflow-auto">
-						<slot name="history">
-							<app-setting @close="isHistoryOpen = false"></app-setting>
-						</slot>
-					</view>
-				</view>
-				<cl-safe-area type="bottom"></cl-safe-area>
-			</view>
-			<!-- E 左侧历史列表区域 -->
-
-			<view class="app-page-main" :class="{ 'app-page-main--history-open': isHistoryOpen }">
-				<view
-					v-if="isHistoryOpen"
-					class="app-page-main__shadow"
-					@tap.stop="isHistoryOpen = false"
-				></view>
-				<!-- E 用来点击关闭历史列表 -->
-
-				<app-header
-					:title="props.title"
-					:initial-voice-play="voicePlay"
-					:voice-name="props.voiceName"
-					:back-top="props.backTop"
-					@new-chat="handleOpenNewChat"
-					@voice-play-change="handleHeaderVoiceChange"
-					@voice-select="handleHeaderVoiceSelect"
-					@click-left="handleHeaderClickLeft"
-					@click-record="handleHeaderClickRecord"
-				>
-					<template #left>
-						<slot name="header-left">
-							<cl-icon
-								name="menu-line"
-								:size="40"
-								color="currentColor"
-								@tap.stop="handleDefaultLeftTap"
-							></cl-icon>
-						</slot>
-					</template>
-
-					<template #right>
-						<slot name="header-right"></slot>
-					</template>
-				</app-header>
-				<!-- E 自定义头部 -->
-
-				<view class="app-page-content flex-1 flex flex-col overflow-hidden">
-					<slot name="content"></slot>
-				</view>
-				<!-- E 自定义内容区域 -->
-			</view>
-			<!-- E 主体展示区域 -->
+	<view class="app-page-root">
+		<!-- <cl-page :back-top="false"> -->
+		<!-- 左侧历史列表区域 -->
+		<view
+			class="app-page-history"
+			:class="[isHistoryOpen ? 'opacity-100' : 'opacity-0']"
+			:style="`transition: opacity ease-in-out ${isHistoryOpen ? '0.8s' : '0.4s'}`"
+		>
+			<cl-safe-area type="top"></cl-safe-area>
+			<slot name="history">
+				<app-setting @close="isHistoryOpen = false"></app-setting>
+			</slot>
+			<cl-safe-area type="bottom"></cl-safe-area>
 		</view>
 
-		<cl-float-view :bottom="300">
+		<view class="app-page-main" :class="{ 'app-page-main--history-open': isHistoryOpen }">
+			<!-- 用来点击关闭历史列表 -->
+			<view
+				v-if="isHistoryOpen"
+				class="app-page-main__shadow"
+				@tap.stop="isHistoryOpen = false"
+			></view>
+
+			<!-- 自定义头部 -->
+			<app-header
+				:title="props.title"
+				:initial-voice-play="voicePlay"
+				:voice-name="props.voiceName"
+				:back-top="props.backTop"
+				@new-chat="handleOpenNewChat"
+				@voice-play-change="handleHeaderVoiceChange"
+				@voice-select="handleHeaderVoiceSelect"
+				@click-left="handleHeaderClickLeft"
+				@click-record="handleHeaderClickRecord"
+			>
+				<template #left>
+					<slot name="header-left">
+						<cl-icon
+							name="menu-line"
+							:size="40"
+							color="currentColor"
+							@tap.stop="handleDefaultLeftTap"
+						></cl-icon>
+					</slot>
+				</template>
+
+				<template #right>
+					<slot name="header-right"></slot>
+				</template>
+			</app-header>
+
+			<view class="app-page-content">
+				<slot name="content"></slot>
+			</view>
+		</view>
+
+		<cl-float-view v-if="false" :bottom="300">
 			<view
 				class="w-[40px] h-[40px] bg-primary-500 flex flex-row items-center justify-center rounded"
 				@click="iconVisible = true"
@@ -148,21 +144,23 @@ const iconVisible = ref(false);
 				<remix-icon v-model:icon-visible="iconVisible"></remix-icon>
 			</view>
 		</cl-popup>
-	</cl-page>
+		<!-- </cl-page> -->
+	</view>
 </template>
 
 <style lang="scss" scoped>
 .app-page-root {
 	position: relative;
 	min-height: 100vh;
-	height: 100%;
+	max-height: 100vh;
+	height: 100vh;
 	overflow: hidden;
 }
 
 .app-page-history {
-	@apply absolute left-0 top-0 bottom-0 w-full;
-	transition: opacity ease-in-out 0.5s;
+	@apply absolute left-0 top-0 bottom-0 w-full h-full;
 	padding-right: 12%;
+	box-sizing: border-box;
 }
 
 .app-page-main {
@@ -184,7 +182,7 @@ const iconVisible = ref(false);
 	box-shadow: -6px 5px 10px #e6e6e6;
 }
 
-.app-page-simple-root {
-	min-height: 100vh;
+.app-page-content {
+	@apply w-full h-full flex-1 flex flex-col overflow-auto;
 }
 </style>

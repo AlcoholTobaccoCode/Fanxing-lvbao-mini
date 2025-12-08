@@ -86,42 +86,46 @@ const handleSend = async (data: SendData) => {
 	<app-page title="法律咨询" back-top :use-history-layout="false">
 		<template #content>
 			<view class="flex-1 flex flex-col">
-				<view
-					v-if="!hasValidLaunch"
+				<!-- <view
+					v-if="!!hasValidLaunch"
 					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
 				>
 					暂未检测到会话启动参数，请从首页发起新的咨询。
-				</view>
-				<view v-else class="flex-1 flex flex-col">
-					<scroll-view scroll-y class="flex-1 px-4 py-3" :enable-flex="true">
-						<view class="flex-1 flex flex-col gap-3">
-							<view
-								v-for="(item, index) in messages"
-								:key="index"
-								class="flex"
-								:class="item.role === 'user' ? 'items-end' : 'justify-start'"
+				</view> -->
+				<scroll-view scroll-y class="ai-repeat-list__scroll" :enable-flex="true">
+					<view class="flex-1 flex flex-col gap-3">
+						<view
+							v-for="(item, index) in messages"
+							:key="index"
+							class="flex"
+							:class="item.role === 'user' ? 'items-end' : 'justify-start'"
+						>
+							<cl-tag
+								v-if="item.role === 'user'"
+								type="primary"
+								class="!w-fit px-2 py-4"
+								>{{ item.content }}</cl-tag
 							>
-								<cl-tag
-									v-if="item.role === 'user'"
-									type="primary"
-									class="!w-fit px-2 py-4"
-									>{{ item.content }}</cl-tag
-								>
-								<template v-else>
-									<zero-markdown-view
-										:markdown="item.content"
-										:aiMode="true"
-									></zero-markdown-view>
-								</template>
-							</view>
+							<template v-else>
+								<zero-markdown-view
+									:markdown="item.content"
+									:aiMode="true"
+								></zero-markdown-view>
+							</template>
 						</view>
-					</scroll-view>
-
-					<view class="px-4 pb-4">
-						<chat-input @send="handleSend" />
 					</view>
+				</scroll-view>
+
+				<view class="px-4 pb-4">
+					<chat-input @send="handleSend" />
 				</view>
 			</view>
 		</template>
 	</app-page>
 </template>
+
+<style lang="scss" scoped>
+.ai-repeat-list__scroll {
+	@apply w-full h-full px-4 py-3;
+}
+</style>

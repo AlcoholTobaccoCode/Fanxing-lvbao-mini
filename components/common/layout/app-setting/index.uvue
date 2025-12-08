@@ -1,7 +1,15 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { router, useStore, userInfo } from "@/cool";
 import HistoryList from "./history.uvue";
+
+// #ifdef MP-WEIXIN
+defineOptions({
+	options: {
+		styleIsolation: "shared"
+	}
+});
+// #endif
 
 const emit = defineEmits<{
 	(e: "close"): void;
@@ -29,26 +37,46 @@ const openSettingPage = () => {
 const openCSChat = () => {};
 
 //#endregion
+
+const pageMainHeight = ref("");
+onMounted(() => {
+	// #ifdef MP-WEIXIN
+	try {
+		const sysInfo = uni.getSystemInfoSync();
+		const menuButtonInfo = uni.getMenuButtonBoundingClientRect();
+		pageMainHeight.value = `${sysInfo.windowHeight - menuButtonInfo.top - 44}px`;
+	} catch (e) {
+		pageMainHeight.value = "";
+	}
+	// #endif
+});
 </script>
 
 <template>
 	<view class="app-setting-root">
 		<!-- 顶部关闭按钮 -->
-		<cl-topbar :show-back="false">
-			<template #prepend>
-				<view class="app-setting-header">
-					<cl-icon
-						name="close-line"
-						:size="48"
-						color="currentColor"
-						@tap.stop="handleClose"
-					></cl-icon>
-				</view>
-			</template>
-		</cl-topbar>
+		<view>
+			<cl-topbar :show-back="false" :backable="false">
+				<template #prepend>
+					<view class="app-setting-header">
+						<cl-icon
+							name="close-line"
+							:size="48"
+							color="currentColor"
+							@tap.stop="handleClose"
+						></cl-icon>
+					</view>
+				</template>
+			</cl-topbar>
+		</view>
 
-		<view class="flex-1">
-			<view class="flex-1">
+		<view
+			class="app-setting-main"
+			:style="{
+				height: pageMainHeight
+			}"
+		>
+			<view class="flex-1 overflow-auto">
 				<history-list> </history-list>
 			</view>
 
@@ -59,9 +87,7 @@ const openCSChat = () => {};
 						<text class="app-setting-footer__name">{{ displayName }}</text>
 					</template>
 					<template v-else>
-						<cl-button size="small" type="primary" plain @tap="handleLogin">
-							登录
-						</cl-button>
+						<cl-button type="primary" plain @tap="handleLogin"> 登录 </cl-button>
 					</template>
 				</view>
 				<view class="app-setting-footer__right">
@@ -88,12 +114,19 @@ const openCSChat = () => {};
 </template>
 
 <style lang="scss" scoped>
+:deep(.cl-topbar__inner) {
+	position: relative;
+}
+
 .app-setting-root {
-	@apply w-full h-full flex flex-col;
+	@apply w-full h-full flex flex-col overflow-hidden;
 }
 
 .app-setting-header {
-	@apply flex flex-row items-center justify-start pt-1 pb-1 px-4;
+	@apply relative flex flex-row items-center justify-start pt-1 pb-1 px-4;
+}
+
+.app-setting-main {
 }
 
 .app-setting-footer {
