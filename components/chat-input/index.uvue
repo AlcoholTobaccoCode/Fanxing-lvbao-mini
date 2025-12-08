@@ -120,6 +120,7 @@ const handleVoiceRecordFinish = (result: VoiceResult) => {
 		voice: result
 	};
 	emit("send", data);
+	modelValue.value = "";
 };
 
 //#endregion

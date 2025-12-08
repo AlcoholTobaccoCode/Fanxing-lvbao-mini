@@ -158,7 +158,7 @@ const iconVisible = ref(false);
 }
 
 .app-page-history {
-	@apply absolute left-0 top-0 bottom-0 w-full h-full;
+	@apply absolute left-0 top-0 bottom-0 w-full h-full opacity-0;
 	padding-right: 12%;
 	box-sizing: border-box;
 }
