@@ -165,7 +165,6 @@ export const ensureGlobalIMForUser = async (userId: string) => {
 	}
 
 	const tokenData = await getValidUserChatToken();
-	debugger;
 	initEasemob({
 		appKey: IM_APP_KEY
 	});

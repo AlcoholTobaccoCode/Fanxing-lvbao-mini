@@ -121,7 +121,6 @@ export function request(options: RequestOptions): Promise<any | null> {
 					}
 					// 200 正常响应（业务 code 再细分）
 					else if (res.statusCode == 200) {
-						debugger;
 						if (res.data == null) {
 							resolve(null);
 						} else if (!isObject(res.data as any)) {
