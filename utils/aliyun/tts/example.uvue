@@ -1,0 +1,257 @@
+<script lang="ts" setup>
+import { ref, computed } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+
+import { APP_KEY, getValidVoiceToken, synthesizeTTS } from "@/utils/aliyun/tts";
+
+import AppPage from "@/components/common/layout/app-page.uvue";
+
+const ui = useUi();
+
+// 可用音色列表（仅列出部分常用与多情感音色）
+const voiceOptions = [
+	{
+		label: "小云 · 标准女声 (xiaoyun)",
+		value: "xiaoyun"
+	},
+	{
+		label: "艾夏 · 客服女声 (aixia)",
+		value: "aixia"
+	},
+	{
+		label: "知锋_多情感 · 男声 (zhifeng_emo)",
+		value: "zhifeng_emo",
+		emotions: ["neutral", "happy", "angry", "sad", "fear", "surprise"]
+	},
+	{
+		label: "知冰_多情感 · 男声 (zhibing_emo)",
+		value: "zhibing_emo",
+		emotions: ["neutral", "happy", "angry", "sad", "fear", "surprise"]
+	},
+	{
+		label: "知妙_多情感 · 女声 (zhimiao_emo)",
+		value: "zhimiao_emo",
+		emotions: [
+			"serious",
+			"sad",
+			"disgust",
+			"jealousy",
+			"embarrassed",
+			"happy",
+			"fear",
+			"surprise",
+			"neutral",
+			"frustrated",
+			"affectionate",
+			"gentle",
+			"angry",
+			"newscast",
+			"customer-service",
+			"story",
+			"living"
+		]
+	},
+	{
+		label: "知米_多情感 · 女声 (zhimi_emo)",
+		value: "zhimi_emo",
+		emotions: ["angry", "fear", "happy", "hate", "neutral", "sad", "surprise"]
+	},
+	{
+		label: "知燕_多情感 · 女声 (zhiyan_emo)",
+		value: "zhiyan_emo",
+		emotions: ["neutral", "happy", "angry", "sad", "fear", "hate", "surprise", "arousal"]
+	},
+	{
+		label: "知贝_多情感 · 童声 (zhibei_emo)",
+		value: "zhibei_emo",
+		emotions: ["neutral", "happy", "angry", "sad", "fear", "hate", "surprise"]
+	},
+	{
+		label: "知甜_多情感 · 女声 (zhitian_emo)",
+		value: "zhitian_emo",
+		emotions: ["neutral", "happy", "angry", "sad", "fear", "hate", "surprise"]
+	}
+];
+
+const voiceIndex = ref(0);
+const emotionIndex = ref(0);
+
+const isSpeaking = ref(false);
+const playbackRate = ref(1);
+const currentAudio = ref<any>(null);
+
+const documentText = ref(`
+人生行路，常有浓雾弥漫之时。前路隐没于混沌，方向感如沙漏中的细沙悄然流尽，心便如悬在半空，无处落脚。这迷茫并非软弱，恰是灵魂在暗夜中睁大了眼睛，在无声叩问着存在的意义。
+然而，我渐渐明白，迷途本身亦是一种路径。正如种子深埋于黑暗泥土，并非停滞，而是在默默积蓄破土之力。此时不必强求立刻拨云见日，不妨允许自己停驻片刻，像溪流暂时汇入深潭，静水之下自有潜流涌动。那些看似无解的困惑，或许正是生命在重新校准航向的罗盘——它提醒我们，有些答案不在远方，而在俯身倾听内心回响的寂静里。
+于是，我学着在不确定中安顿身心：读一页书，走一段路，或只是凝望一片云的游移。微小行动如星火，足以刺破迷障。原来所谓出路，并非总在奋力奔跑之后才显现；有时它就藏于你停下脚步、坦然接纳“不知”的谦卑之中。
+迷茫不是深渊，而是大地深处酝酿新芽的温床。当人不再恐惧这暂时的晦暗，反而能于其中辨认出自己最真实的轮廓——那轮廓，终将引你走向属于自己的晨光。
+`);
+
+const currentVoice = computed(() => voiceOptions[voiceIndex.value] || voiceOptions[0]);
+const emotionOptions = computed(() => (currentVoice.value as any).emotions || []);
+const currentEmotion = computed(() => emotionOptions.value[emotionIndex.value] || "");
+
+const applyPlaybackRate = () => {
+	if (currentAudio.value && typeof currentAudio.value.playbackRate === "number") {
+		currentAudio.value.playbackRate = playbackRate.value;
+	}
+};
+
+const handleVoiceChange = (e: any) => {
+	const idx = Number(e?.detail?.value ?? 0) || 0;
+	voiceIndex.value = idx;
+	emotionIndex.value = 0;
+};
+
+const handleEmotionChange = (e: any) => {
+	const idx = Number(e?.detail?.value ?? 0) || 0;
+	emotionIndex.value = idx;
+};
+
+const handleRateChange = (e: any) => {
+	const val = e?.detail?.value;
+	if (typeof val === "number" && val > 0) {
+		playbackRate.value = val;
+		applyPlaybackRate();
+	}
+};
+
+const handleStop = () => {
+	if (currentAudio.value) {
+		try {
+			currentAudio.value.stop();
+		} catch (err) {
+			console.warn("[TTS] 停止播放失败", err);
+		}
+	}
+};
+
+const handleSpeak = async () => {
+	// #ifdef MP-WEIXIN
+	if (isSpeaking.value) {
+		ui.showToast({ message: "正在合成，请稍候" });
+		return;
+	}
+
+	try {
+		isSpeaking.value = true;
+		uni.showLoading({ title: "合成中..." });
+
+		const vToken = await getValidVoiceToken(); // 老项目里的 getToken + 缓存
+		console.info("[TTS] token => ", vToken);
+
+		const voiceConf = currentVoice.value as any;
+		const emotionList: string[] = emotionOptions.value;
+		const emotion = emotionList.length ? (currentEmotion.value as string) : "";
+
+		const tempPath = await synthesizeTTS({
+			text: documentText.value,
+			token: vToken.token,
+			appKey: APP_KEY,
+			region: vToken.region || "cn-shanghai",
+			voice: voiceConf.value,
+			format: "mp3",
+			...(emotion ? { emotion } : {})
+		} as any);
+
+		uni.hideLoading();
+
+		if (currentAudio.value) {
+			try {
+				currentAudio.value.stop();
+				currentAudio.value.destroy && currentAudio.value.destroy();
+			} catch (err) {
+				console.warn("[TTS] 释放旧音频失败", err);
+			}
+		}
+
+		const audio = uni.createInnerAudioContext();
+		currentAudio.value = audio;
+		audio.src = tempPath;
+		applyPlaybackRate();
+		audio.play();
+
+		audio.onError((err) => {
+			console.error("[TTS] 播放失败", err);
+			ui.showToast({ message: "播放失败" });
+		});
+	} catch (err: any) {
+		uni.hideLoading();
+		console.error("[TTS] 合成失败:", err);
+		ui.showToast({ message: err?.message || "合成失败" });
+	} finally {
+		isSpeaking.value = false;
+	}
+	// #endif
+
+	// #ifndef MP-WEIXIN
+	ui.showToast({ message: "当前仅支持在微信小程序中测试 TTS" });
+	// #endif
+};
+
+const getVoiceToken = async () => {
+	const vToken = await getValidVoiceToken();
+	console.info("vToken => ", vToken);
+};
+
+onLoad(() => {
+	getVoiceToken();
+});
+</script>
+
+<template>
+	<app-page title="静态测试页面" :back-top="false">
+		<template #content>
+			<cl-textarea
+				v-model="documentText"
+				clearable
+				auto-height
+				:border="false"
+				:maxlength="Infinity"
+				class="max-h-[300px]"
+			></cl-textarea>
+			<view class="mt-3 text-xs text-gray-500">
+				当前音色：{{ (currentVoice as any).label }}
+			</view>
+			<picker
+				mode="selector"
+				:range="voiceOptions"
+				range-key="label"
+				:value="voiceIndex"
+				@change="handleVoiceChange"
+			>
+				<view class="py-2 text-sm text-primary">点击选择音色</view>
+			</picker>
+			<view v-if="emotionOptions.length" class="mt-2 text-xs text-gray-500">
+				当前情感：{{ currentEmotion }}
+			</view>
+			<picker
+				v-if="emotionOptions.length"
+				mode="selector"
+				:range="emotionOptions"
+				:value="emotionIndex"
+				@change="handleEmotionChange"
+			>
+				<view class="py-2 text-sm text-primary">点击选择情感（多情感音色可用）</view>
+			</picker>
+			<view class="mt-3 text-xs text-gray-500">
+				播放速度：{{ playbackRate.toFixed(2) }}x
+			</view>
+			<slider
+				class="mt-1"
+				min="0.5"
+				max="1.5"
+				step="0.25"
+				:value="playbackRate"
+				@change="handleRateChange"
+			/>
+			<view class="mt-3 flex gap-2">
+				<cl-button type="primary" @click="getVoiceToken">GetVoiceToken</cl-button>
+				<cl-button type="primary" @click="handleSpeak">点击朗读一段话</cl-button>
+				<cl-button plain @click="handleStop">停止播放</cl-button>
+			</view>
+		</template>
+	</app-page>
+</template>
+
+<style lang="scss" scoped></style>

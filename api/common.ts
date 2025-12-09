@@ -69,6 +69,7 @@ export interface VoiceTokenData {
 	domain: string;
 	version: string;
 	action: string;
+	appKey: string;
 	raw: {
 		ErrMsg: string;
 		Token: {
