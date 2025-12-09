@@ -11,6 +11,9 @@ export const ignoreTokens: string[] = [];
 // 404 白名单：这些路径返回 404 时不当成错误（支持 * 通配符）
 export const ignore404s: string[] = ["/lawyer/info"];
 
+// 过滤解析逻辑接口名单：这些路径返回数据时，直接返回，不走 200 parse
+export const ignoreParseData: string[] = ["/chat/getUserToken"];
+
 // 微信配置
 type WxConfig = {
 	debug: boolean;

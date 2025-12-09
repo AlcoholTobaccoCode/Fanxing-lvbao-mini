@@ -2,42 +2,7 @@ import { config } from "@/config";
 import { request } from "@/cool";
 import { type ApiResponse } from "./types";
 
-export interface OssStsData {
-	AccessKeyId: string;
-	AccessKeySecret: string;
-	SecurityToken: string;
-	Expiration: string;
-}
-
-/**
- * 获取阿里云 OSS 的 STS 临时凭证
- *
- * 注意：/utils/sts 接口返回 code=200，而不是通用业务 code=1000，
- * 所以这里直接用 uni.request，而不是 cool/service.request。
- */
-export const GetOssSts = async (): Promise<OssStsData> => {
-	return new Promise((resolve, reject) => {
-		uni.request({
-			url: `${config.baseUrl}/utils/sts`,
-			method: "GET",
-			success(res) {
-				const body = res.data as ApiResponse<OssStsData>;
-				if (res.statusCode === 200 && body && body.code === 200 && body.data) {
-					resolve(body.data);
-				} else {
-					reject(
-						new Error(
-							`获取 OSS STS 失败: status=${res.statusCode}, code=${(body && body.code) || ""}`
-						)
-					);
-				}
-			},
-			fail(err) {
-				reject(err);
-			}
-		});
-	});
-};
+//#region SMS 相关
 
 // 短信发送场景
 export type SmsScene = "login" | "lawyer";
@@ -60,8 +25,13 @@ export const SendSms = (data: SendSmsPayload): Promise<any | null> => {
 	});
 };
 
-// /utils/voice/token
+//#endregion
 
+//#region 阿里云服务相关
+
+/**
+ * 获取阿里云 TTS 鉴权
+ */
 export interface VoiceTokenData {
 	token: string;
 	expire_time: number;
@@ -79,14 +49,37 @@ export interface VoiceTokenData {
 		};
 	};
 }
-/**
- *
- * @param data
- * @returns
- */
+
 export const GetVoiceToken = (): Promise<VoiceTokenData> => {
 	return request({
 		url: "/utils/voice/token",
 		method: "POST"
+	});
+};
+
+//#region 环信 IM 相关
+
+export interface UserChatInfo {
+	uuid: string;
+	type: string;
+	created: number;
+	modified: number;
+	username: string;
+	activated: boolean;
+}
+
+export interface UserChatTokenData {
+	access_token: string;
+	expires_in: number;
+	user: UserChatInfo;
+}
+
+/**
+ * 获取 User Token
+ */
+export const GetUserChatToken = (): Promise<UserChatTokenData> => {
+	return request({
+		url: "/chat/getUserToken",
+		method: "GET"
 	});
 };

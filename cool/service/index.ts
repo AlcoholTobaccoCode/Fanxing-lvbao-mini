@@ -1,4 +1,4 @@
-import { isDev, ignoreTokens, ignore404s, config } from "@/config";
+import { isDev, ignoreTokens, ignore404s, ignoreParseData, config } from "@/config";
 import { locale, t } from "@/locale";
 import { isNull, isObject, parse } from "../utils";
 import { useStore } from "../store";
@@ -41,6 +41,13 @@ const isIgnoreToken = (url: string) => {
 
 const isIgnore404 = (url: string) => {
 	return ignore404s.some((e) => {
+		const pattern = e.replace(/\*/g, ".*");
+		return new RegExp(pattern).test(url);
+	});
+};
+
+const isIgnoreParseData = (url: string) => {
+	return ignoreParseData.some((e) => {
 		const pattern = e.replace(/\*/g, ".*");
 		return new RegExp(pattern).test(url);
 	});
@@ -112,14 +119,19 @@ export function request(options: RequestOptions): Promise<any | null> {
 							} as Response);
 						}
 					}
-
 					// 200 正常响应（业务 code 再细分）
 					else if (res.statusCode == 200) {
+						debugger;
 						if (res.data == null) {
 							resolve(null);
 						} else if (!isObject(res.data as any)) {
 							resolve(res.data);
 						} else {
+							// 取消解析
+							if (isIgnoreParseData(url)) {
+								resolve(res.data);
+								return;
+							}
 							// 解析响应数据
 							const { code, message, data, error } = parse<Response>(
 								res.data ?? { code: 0 }

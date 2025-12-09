@@ -64,7 +64,7 @@ export const RegisterUser = (data: RegisterPayload): Promise<UserAuthToken> => {
 };
 
 /**
- * 用户注册
+ * 获取用户信息
  */
 export const GetUserProfile = (): Promise<UserInfo> => {
 	return request({
