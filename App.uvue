@@ -1,6 +1,6 @@
 <script lang="ts">
 import { useStore } from "@/cool";
-import { ensureGlobalIMForUser } from "@/utils/easemob";
+import { ensureGlobalIMForUser, logoutEasemob } from "@/utils/easemob";
 
 // #ifdef H5
 import TouchEmulator from "hammer-touchemulator";
@@ -29,10 +29,13 @@ export default {
 		console.log("App Launch");
 	},
 	onShow: function async() {
+		// 登录 IM
 		handleAppShow();
 	},
 	onHide: function () {
 		console.log("App Hide");
+		// 暂时退出
+		logoutEasemob();
 	},
 	onExit: function () {
 		console.log("App Exit");

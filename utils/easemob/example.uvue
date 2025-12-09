@@ -1,0 +1,197 @@
+<script lang="ts" setup>
+import { ref, computed } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
+import { router, useStore } from "@/cool";
+
+import AppPage from "@/components/common/layout/app-page.uvue";
+import {
+	IM_APP_KEY,
+	initEasemob,
+	addEasemobEventHandlers,
+	sendEasemobTextMessage
+} from "@/utils/easemob";
+
+const log = new Logger("TestPage");
+const ui = useUi();
+const { user } = useStore();
+
+const userId = computed(() => user.info.value?.id ?? null);
+const isLoggedIn = computed(() => !user.isNull());
+
+const imUserId = ref("");
+const imPeerId = ref("28");
+const imInputText = ref("");
+
+const isIMInited = ref(false);
+const isConnected = ref(false);
+
+const messages = ref<
+	{
+		id: string;
+		from: string;
+		to: string;
+		text: string;
+		direction: "in" | "out";
+		time: number;
+	}[]
+>([]);
+
+onShow(() => {
+	if (!isLoggedIn.value) {
+		ui.showToast({ message: "请先登录系统" });
+		router.login();
+		return;
+	}
+	if (userId.value != null) {
+		imUserId.value = String(userId.value);
+	}
+	ensureIMInited();
+});
+
+const ensureIMInited = () => {
+	if (isIMInited.value) return;
+
+	initEasemob({
+		appKey: IM_APP_KEY,
+		url: "wss://im-api-wechat.easemob.com/websocket",
+		apiUrl: "https://a1.easemob.com"
+	});
+
+	addEasemobEventHandlers({
+		onOpened: () => {
+			isConnected.value = true;
+			ui.showToast({ message: "IM 已连接" });
+		},
+		onClosed: () => {
+			isConnected.value = false;
+		},
+		onTextMessage: (msg: any) => {
+			const text = msg?.msg || msg?.data || "";
+			messages.value.push({
+				id: msg.id || String(Date.now()),
+				from: msg.from,
+				to: msg.to,
+				text,
+				direction: "in",
+				time: Date.now()
+			});
+		},
+		onError: (err: any) => {
+			log.error("[IM] error", err);
+		}
+	});
+
+	isIMInited.value = true;
+};
+
+const handleSend = async () => {
+	log.info("尝试使用 IM 发送消息");
+	if (!isLoggedIn.value || !userId.value) {
+		ui.showToast({ message: "请先完成系统登录" });
+		router.login();
+		return;
+	}
+
+	const content = imInputText.value.trim();
+	if (!content) return;
+	// if (!isConnected.value) {
+	// 	ui.showToast({ message: "请先登录 IM" });
+	// 	return;
+	// }
+	if (!imPeerId.value) {
+		ui.showToast({ message: "请输入对端用户 ID" });
+		return;
+	}
+
+	log.info(`目标 ID: ${imPeerId.value}`);
+
+	try {
+		await sendEasemobTextMessage({
+			to: imPeerId.value,
+			chatType: "singleChat",
+			msg: content
+		});
+
+		messages.value.push({
+			id: `out_${Date.now()}`,
+			from: imUserId.value,
+			to: imPeerId.value,
+			text: content,
+			direction: "out",
+			time: Date.now()
+		});
+		imInputText.value = "";
+	} catch (err: any) {
+		log.error("[IM] 发送失败", err);
+		ui.showToast({ message: "消息发送失败" });
+	}
+};
+
+//#region 滚动相关
+
+//#endregion
+</script>
+
+<template>
+	<app-page title="IM 文本聊天测试" :back-top="false">
+		<template #content>
+			<view class="p-3 my-3">
+				<view class="text-xs text-gray-500">
+					IM 状态：{{ isConnected ? "已连接" : "未连接" }}
+				</view>
+
+				<view class="flex flex-col gap-2">
+					<input
+						v-model="imUserId"
+						disabled
+						placeholder="IM 用户名（自动使用 user_id）"
+						class="flex-1 px-2 py-1 border rounded text-sm bg-gray-100"
+					/>
+					<view class="text-[11px] text-gray-500">
+						IM 已随系统账号自动登录，无需手动登录。
+					</view>
+				</view>
+
+				<view class="flex flex-col gap-2 mt-2">
+					<input
+						v-model="imPeerId"
+						placeholder="对端用户 ID"
+						class="w-full px-2 py-1 border rounded text-sm"
+					/>
+					<view class="flex gap-2">
+						<input
+							v-model="imInputText"
+							placeholder="输入要发送的文本消息"
+							class="flex-1 px-2 py-1 border rounded text-sm"
+						/>
+						<cl-button class="px-3 py-1" type="success" @click="handleSend">
+							发送
+						</cl-button>
+					</view>
+				</view>
+
+				<scroll-view scroll-y class="mt-3 h-[320px] border rounded p-2 bg-white">
+					<view v-for="m in messages" :key="m.id" class="mb-2 text-sm">
+						<view class="text-gray-500 text-[10px] mb-1">
+							{{ m.direction === "out" ? "我 → " + m.to : m.from + " → 我" }}
+						</view>
+						<view
+							:class="[
+								'inline-block px-2 py-1 rounded',
+								m.direction === 'out'
+									? 'bg-blue-500 text-white self-end'
+									: 'bg-gray-100 text-gray-900'
+							]"
+						>
+							{{ m.text }}
+						</view>
+					</view>
+					<view id="chat-bottom-b"></view>
+				</scroll-view>
+			</view>
+		</template>
+	</app-page>
+</template>
+
+<style lang="scss" scoped></style>
