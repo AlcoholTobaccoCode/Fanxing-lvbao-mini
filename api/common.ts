@@ -57,6 +57,25 @@ export const GetVoiceToken = (): Promise<VoiceTokenData> => {
 	});
 };
 
+/**
+ * 获取阿里云 OSS Signature
+ */
+
+export interface OssSignatureData {
+	policy: string;
+	x_oss_signature_version: string;
+	x_oss_credential: string;
+	x_oss_date: string;
+	signature: string;
+	security_token: string;
+}
+
+export const GetOssSignature = (): Promise<ApiResponse<OssSignatureData>> => {
+	return request({
+		url: "/utils/sts/sign",
+		method: "GET"
+	});
+};
 //#region 环信 IM 相关
 
 export interface UserChatInfo {
@@ -83,3 +102,5 @@ export const GetUserChatToken = (): Promise<UserChatTokenData> => {
 		method: "GET"
 	});
 };
+
+//#endregion

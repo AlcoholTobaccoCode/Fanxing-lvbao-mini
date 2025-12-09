@@ -11,8 +11,11 @@ const props = withDefaults(
 		title?: string;
 		initialVoicePlay?: boolean;
 		voiceName?: string;
+		// 返回按钮
 		backTop?: boolean;
+		// 标题右侧交互按钮
 		titleAction?: boolean;
+		// 右下角底部聊天拖拽按钮
 		chatListBtn?: boolean;
 	}>(),
 	{

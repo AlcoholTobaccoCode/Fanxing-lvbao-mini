@@ -87,4 +87,108 @@ export const getRandomFloat = (min: number = 0, max: number = 1, fixed?: number)
 	return result;
 };
 
+// 空判断
 export const normalize = (v?: string | null) => (v && v !== "null" ? v : undefined);
+
+/**
+ * @description: 图片压缩
+ * @param {string} fileUrl 文件临时地址
+ * @param {object} compress 是否压缩: { openSize: x(m), radio(压缩比): 0 < x <= 1 }
+ * 	- openSize(可选) 压缩触发大小, 权重低于 open
+ * 	- radio(可选) 压缩比率, 默认 0.8, 超过 1 小于 0 使用默认
+ * @return {string} url
+ */
+export interface CompressOptions {
+	fileUrl: string;
+	compress?: {
+		openSize?: number; // 单位：MB，超过此大小才压缩
+		radio?: number; // 压缩质量 1~100，或 0~1（自动归一化为 80）
+	};
+}
+
+export const compressImage = (options: CompressOptions): Promise<string | null> => {
+	return new Promise((resolve, reject) => {
+		if (!options?.fileUrl) {
+			resolve(null);
+			return;
+		}
+
+		let radio = +(options.compress?.radio ?? 80);
+		if (isNaN(radio) || radio > 100 || radio <= 0) {
+			radio = 80;
+		}
+		// 确保 radio 是 1~100 范围（uni.compressImage 要求）
+		radio = Math.min(100, Math.max(1, radio));
+
+		// #ifndef H5
+		uni.getFileInfo({
+			filePath: options.fileUrl,
+			success: (imageInfoRes) => {
+				const sizeInMB = imageInfoRes.size / 1024 / 1024;
+				const openSize = options.compress?.openSize;
+
+				if (!openSize || sizeInMB >= openSize) {
+					// 需要压缩
+					uni.compressImage({
+						src: options.fileUrl,
+						quality: radio, // 1~100
+						success: (compressRes) => {
+							resolve(compressRes.tempFilePath);
+						},
+						fail: () => {
+							resolve(options.fileUrl); // 压缩失败，返回原图
+						}
+					});
+				} else {
+					resolve(options.fileUrl); // 不需要压缩
+				}
+			},
+			fail: () => {
+				resolve(options.fileUrl); // 获取文件信息失败，返回原图
+			}
+		});
+		// #endif
+
+		// #ifdef H5
+		const img = new Image();
+		img.src = options.fileUrl;
+
+		img.onload = () => {
+			const canvas = document.createElement("canvas");
+			const ctx = canvas.getContext("2d");
+			if (!ctx) {
+				resolve(options.fileUrl);
+				return;
+			}
+
+			let { width: cw, height: ch } = img;
+			let w = cw;
+			let h = ch;
+
+			// 最大边不超过 600px
+			if (cw > 600 || ch > 600) {
+				if (cw > ch) {
+					w = 600;
+					h = (600 * ch) / cw;
+				} else {
+					h = 600;
+					w = (600 * cw) / ch;
+				}
+			}
+
+			canvas.width = w;
+			canvas.height = h;
+			ctx.clearRect(0, 0, w, h);
+			ctx.drawImage(img, 0, 0, w, h);
+
+			// 注意：radio 是 1~100，toDataURL 第二个参数是 0~1
+			const base64 = canvas.toDataURL("image/jpeg", radio / 100);
+			resolve(base64);
+		};
+
+		img.onerror = () => {
+			resolve(options.fileUrl);
+		};
+		// #endif
+	});
+};
