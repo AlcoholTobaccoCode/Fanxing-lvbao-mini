@@ -3,6 +3,7 @@ import { computed, ref, useSlots } from "vue";
 import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
 import RemixIcon from "../icon-all/remixicon.uvue";
+import DragButton from "@/components/dragon-dragButton/index.vue";
 
 const props = withDefaults(
 	defineProps<{
@@ -131,6 +132,7 @@ const iconVisible = ref(false);
 				</view>
 			</view>
 
+			<!-- 测试阶段使用 - icon  -->
 			<cl-float-view v-if="false" :bottom="300">
 				<view
 					class="w-[40px] h-[40px] bg-primary-500 flex flex-row items-center justify-center rounded"
@@ -145,6 +147,32 @@ const iconVisible = ref(false);
 				</view>
 			</cl-popup>
 		</cl-page>
+
+		<!-- 律师对话入口 -->
+		<DragButton>
+			<view class="layer-chat-drag__btn">
+				<cl-button
+					size="large"
+					rounded
+					icon="pinglun"
+					:pt="{
+						icon: {
+							size: 56
+						}
+					}"
+				>
+				</cl-button>
+				<cl-badge
+					type="error"
+					:value="1"
+					position
+					:pt="{
+						className: '!top-[4rpx] !right-[4rpx] text-2xl p-4'
+					}"
+				>
+				</cl-badge>
+			</view>
+		</DragButton>
 	</view>
 </template>
 
@@ -184,5 +212,9 @@ const iconVisible = ref(false);
 
 .app-page-content {
 	@apply w-full h-full flex-1 flex flex-col overflow-auto;
+}
+
+.layer-chat-drag__btn {
+	@apply relative w-[40px] h-[40px] flex items-center justify-center overflow-visible;
 }
 </style>
