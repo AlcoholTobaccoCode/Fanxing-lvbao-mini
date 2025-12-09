@@ -109,7 +109,7 @@ const handleClickRecord = () => {
 		>
 			<template #prepend>
 				<view class="flex flex-row items-center pl-3">
-					<slot v-if="hasLeftSlot" name="left"></slot>
+					<slot v-if="hasLeftSlot && !backTop" name="left"></slot>
 
 					<cl-icon
 						v-else-if="backTop"
