@@ -1,5 +1,6 @@
 <script lang="ts">
 import { useStore } from "@/cool";
+import { ensureGlobalIMForUser } from "@/utils/easemob";
 
 // #ifdef H5
 import TouchEmulator from "hammer-touchemulator";
@@ -7,18 +8,28 @@ import TouchEmulator from "hammer-touchemulator";
 TouchEmulator();
 // #endif
 
+const handleAppShow = async () => {
+	console.log("App Show");
+
+	// 根据业务情况判断是否要预先调用
+	const { user } = useStore();
+
+	// 获取用户信息，未登录不执行
+	await user.get();
+	if (!user.isNull() && user.info.value?.id != null) {
+		const uid = String(user.info.value.id);
+		ensureGlobalIMForUser(uid).catch((err) => {
+			console.error("[IM] 全局初始化失败", err);
+		});
+	}
+};
+
 export default {
 	onLaunch: function () {
 		console.log("App Launch");
 	},
-	onShow: function () {
-		console.log("App Show");
-
-		// 根据业务情况判断是否要预先调用
-		const { user } = useStore();
-
-		// 获取用户信息，未登录不执行
-		user.get();
+	onShow: function async() {
+		handleAppShow();
 	},
 	onHide: function () {
 		console.log("App Hide");

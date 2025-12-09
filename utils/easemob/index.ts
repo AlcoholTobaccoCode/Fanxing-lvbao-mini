@@ -1,6 +1,10 @@
 declare const wx: any;
 
 import EasemobSDK from "easemob-websdk/uniApp/Easemob-chat";
+import { storage } from "@/cool";
+import { GetUserChatToken, type UserChatTokenData } from "@/api/common";
+
+export const IM_APP_KEY = "1168250507209322#demo";
 
 export type ChatType = "singleChat" | "groupChat";
 
@@ -32,9 +36,49 @@ export interface EasemobEventHandlers {
 	onError?: (error: any) => void;
 }
 
+const USER_CHAT_TOKEN_STORAGE_KEY = "easemob_user_chat_token";
+const TOKEN_EXPIRE_GUARD_SECONDS = 120;
+
+const loadCachedUserChatToken = (): UserChatTokenData | null => {
+	try {
+		if (storage.isExpired(USER_CHAT_TOKEN_STORAGE_KEY)) {
+			return null;
+		}
+		const value = storage.get(USER_CHAT_TOKEN_STORAGE_KEY) as UserChatTokenData | null;
+		return value ?? null;
+	} catch {
+		return null;
+	}
+};
+
+const saveCachedUserChatToken = (data: UserChatTokenData) => {
+	try {
+		const rawExpiresIn = Number((data as any).expires_in ?? 0);
+		let ttl = rawExpiresIn - TOKEN_EXPIRE_GUARD_SECONDS;
+		if (!Number.isFinite(ttl) || ttl < 0) {
+			ttl = 0;
+		}
+		storage.set(USER_CHAT_TOKEN_STORAGE_KEY, data, ttl);
+	} catch {
+		// ignore
+	}
+};
+
+export const getValidUserChatToken = async (): Promise<UserChatTokenData> => {
+	const cached = loadCachedUserChatToken();
+	if (cached) return cached;
+
+	const fresh = await GetUserChatToken();
+	if (fresh) {
+		saveCachedUserChatToken(fresh);
+	}
+	return fresh;
+};
+
 let sdk: any = null;
 let conn: any = null;
 let hasInit = false;
+let hasGlobalIMInited = false;
 
 export function initEasemob(config: EasemobInitConfig) {
 	if (hasInit && conn) return conn;
@@ -62,7 +106,8 @@ export function getEasemobConnection() {
 
 export function addEasemobEventHandlers(handlers: EasemobEventHandlers) {
 	if (!conn) {
-		throw new Error("Easemob has not been initialized. Call initEasemob first.");
+		// TODO - 重试
+		throw new Error("[IM] 尚未初始化获初始化失败.");
 	}
 
 	if (typeof conn.addEventHandler === "function") {
@@ -112,3 +157,23 @@ export async function sendEasemobTextMessage(params: EasemobTextMessageParams): 
 
 	return conn.send(message);
 }
+
+export const ensureGlobalIMForUser = async (userId: string) => {
+	if (!userId) return;
+	if (hasGlobalIMInited && conn) {
+		return;
+	}
+
+	const tokenData = await getValidUserChatToken();
+	debugger;
+	initEasemob({
+		appKey: IM_APP_KEY
+	});
+
+	await loginEasemob({
+		user: userId,
+		accessToken: tokenData.access_token
+	});
+
+	hasGlobalIMInited = true;
+};
