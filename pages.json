@@ -1,6 +1,6 @@
 {
-	"entryPagePath": "pages/home/index",
-	// "entryPagePath": "pages/test-pages/index",
+	// "entryPagePath": "pages/consult/chat",
+	"entryPagePath": "pages/test-pages/index",
 	"pages": [
 		//#region ---------------- TEST PAGE ----------------
 		{
@@ -60,6 +60,15 @@
 		// 		"isAuth": true
 		// 	}
 		// }
+		//#endregion
+		//#region ---------------- 环信 IM ----------------
+		{
+			"path": "pages/ease-im/index",
+			"style": {
+				"navigationBarTitleText": "环信 IM 对话列表",
+				"navigationStyle": "custom"
+			}
+		}
 		//#endregion
 	],
 	"subPackages": [

@@ -1,0 +1,57 @@
+<script lang="ts" setup>
+import { computed } from "vue";
+
+type TabKey = "chat" | "contacts";
+
+const props = defineProps<{
+	active: TabKey;
+}>();
+
+const emit = defineEmits<{
+	(e: "update:active", value: TabKey): void;
+}>();
+
+const items = computed(() => [
+	{ key: "chat" as TabKey, label: "会话" },
+	{ key: "contacts" as TabKey, label: "联系人" }
+]);
+
+const handleClick = (key: TabKey) => {
+	if (key === props.active) return;
+	emit("update:active", key);
+};
+</script>
+
+<template>
+	<view class="easeim-tabbar-root">
+		<view class="easeim-tabbar-inner">
+			<view
+				v-for="item in items"
+				:key="item.key"
+				class="easeim-tabbar-item"
+				:class="{ 'easeim-tabbar-item--active': item.key === props.active }"
+				@tap="handleClick(item.key)"
+			>
+				<view class="text-xs">{{ item.label }}</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.easeim-tabbar-root {
+	@apply w-full;
+}
+
+.easeim-tabbar-inner {
+	@apply flex flex-row items-center justify-around border-t bg-white px-4 py-2;
+}
+
+.easeim-tabbar-item {
+	@apply flex-1 flex items-center justify-center py-1 rounded;
+}
+
+.easeim-tabbar-item--active {
+	@apply bg-primary-50 text-primary-500;
+}
+</style>

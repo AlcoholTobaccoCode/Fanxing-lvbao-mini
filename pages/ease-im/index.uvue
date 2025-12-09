@@ -1,0 +1,56 @@
+<script lang="ts" setup>
+import { ref } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+
+import AppPage from "@/components/common/layout/app-page.uvue";
+import ChatHistory from "./components/chat-history.uvue";
+import ChatLinks from "./components/chat-links.uvue";
+import EaseImTabbar from "./components/tabbar.uvue";
+
+const ui = useUi();
+
+type TabKey = "chat" | "contacts";
+
+const activeTab = ref<TabKey>("chat");
+
+const handleSelectConversation = (item: any) => {
+	ui.showToast({ message: `打开会话 ${item.conversationId}` });
+};
+</script>
+
+<template>
+	<cl-page>
+		<cl-topbar
+			:title="'历史对话'"
+			:safe-area-top="true"
+			:show-back="false"
+			:backable="false"
+			:pt="{
+				className: 'bg-surface flex-row items-center',
+				title: { className: 'text-surface-900' }
+			}"
+		>
+		</cl-topbar>
+
+		<view class="easeim-page-root">
+			<view class="easeim-page-body">
+				<chat-history
+					v-if="activeTab === 'chat'"
+					@select="handleSelectConversation"
+				></chat-history>
+				<chat-links v-else></chat-links>
+			</view>
+			<ease-im-tabbar v-model:active="activeTab"></ease-im-tabbar>
+		</view>
+	</cl-page>
+</template>
+
+<style lang="scss" scoped>
+.easeim-page-root {
+	@apply flex flex-col h-full;
+}
+
+.easeim-page-body {
+	@apply flex-1 overflow-hidden;
+}
+</style>
