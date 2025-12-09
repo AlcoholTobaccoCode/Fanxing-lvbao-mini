@@ -2,11 +2,15 @@
 import { ref, watch } from "vue";
 import type { PropType } from "vue";
 import { isDark } from "@/cool";
+import { useUi } from "@/uni_modules/cool-ui";
+import { uploadToOss } from "@/utils/aliyun/oss";
 import type { ToolItem, Tools, ActionItem, Actions, SendData, VoiceResult } from "./types";
 
 import SimpleCard from "@/components/card/simple-card.uvue";
 import VoiceRecord from "./voice-record.uvue";
 import ActionsPopup from "./actions-popup.uvue";
+
+const ui = useUi();
 
 const props = defineProps({
 	placeholder: {
@@ -30,7 +34,11 @@ const props = defineProps({
 		type: String,
 		default: () => "text"
 	},
-	// 顶部工具栏：额外传入的工具项
+	// 使用的模块，用来分类保存语音 OSS 文件
+	useModule: {
+		type: String,
+		default: () => "ai-chat-voice"
+	}, // 顶部工具栏：额外传入的工具项
 	tools: {
 		type: Array as PropType<Tools>,
 		default: () => []
@@ -114,10 +122,23 @@ const handlePressEnd = () => {
 };
 
 const handleVoiceRecordFinish = async (result: VoiceResult) => {
+	if (!result.tempFilePath) {
+		return ui.showToast({ message: "语音丢失，请重试" });
+	}
+	// 上传 OSS
+	const res = await uploadToOss({
+		filePath: result.tempFilePath,
+		dirPrefix: `${props.useModule}/voice`
+	});
+	result.onlineUrl = res.url;
+	// TODO 录音文件识别
+	// result.text = res.url;
 	const data: SendData = {
 		text: "",
 		mode: "voice",
-		voice: result
+		voice: {
+			...result
+		}
 	};
 	emit("send", data);
 	modelValue.value = "";

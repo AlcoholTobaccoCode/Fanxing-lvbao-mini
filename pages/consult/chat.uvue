@@ -153,7 +153,7 @@ const handleSend = async (data: SendData) => {
 						class="ai-repeat-list__scroll"
 						:enable-flex="true"
 						:scroll-into-view="scrollIntoViewId"
-						scroll-with-animation="true"
+						:scroll-with-animation="true"
 						@scroll="handleScroll"
 						@scrolltolower="handleScrollToLower"
 					>

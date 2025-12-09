@@ -27,7 +27,7 @@ export type VoiceResult = {
 	// 线上地址
 	onlineUrl?: string;
 	// 语音文本
-	text: string;
+	text?: string;
 };
 
 export type SendData = {

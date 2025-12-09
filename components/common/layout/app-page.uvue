@@ -161,7 +161,7 @@ const iconVisible = ref(false);
 		</cl-page>
 
 		<!-- 律师对话入口 -->
-		<DragButton v-if="!isHistoryOpen && chatListBtn">
+		<DragButton v-if="!isHistoryOpen && chatListBtn" :yEdge="100">
 			<view class="layer-chat-drag__btn">
 				<cl-button
 					size="large"
