@@ -80,7 +80,7 @@ const iconVisible = ref(false);
 		<!-- 左侧历史列表区域 -->
 		<view
 			class="app-page-history"
-			:class="[isHistoryOpen ? 'opacity-100' : 'opacity-0']"
+			:class="[isHistoryOpen ? '!opacity-100' : 'opacity-0']"
 			:style="`transition: opacity ease-in-out ${isHistoryOpen ? '0.8s' : '0.4s'}`"
 		>
 			<cl-safe-area type="top"></cl-safe-area>

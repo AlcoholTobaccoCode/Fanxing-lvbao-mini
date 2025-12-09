@@ -1,3 +1,19 @@
+<!-- 
+注意配置小程序合法域名
+request合法域名
+https://nls-gateway-cn-shanghai.aliyuncs.com
+https://nls-gateway.aliyuncs.com
+https://nls-meta.cn-shanghai.aliyuncs.com
+
+socket合法域名	
+wss://nls-gateway.aliyuncs.com
+wss://nls-gateway.cn-shanghai.aliyuncs.com
+
+downloadFile合法域名
+https://nls-gateway.aliyuncs.com
+https://nls-gateway.cn-shanghai.aliyuncs.com
+-->
+
 <script lang="ts" setup>
 import { ref, computed } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
