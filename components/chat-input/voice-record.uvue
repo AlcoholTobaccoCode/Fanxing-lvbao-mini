@@ -185,14 +185,24 @@ const stopRecordInner = (discard: boolean, options?: { translate?: boolean }) =>
 	RecordApp.Stop(
 		(arrayBuffer: ArrayBuffer, duration: number, mime: string) => {
 			if (discard) return;
-			// if (duration < 1000) return;
-			const result: VoiceResult = {
-				buffer: arrayBuffer,
-				duration,
-				mime,
-				translate: !!options?.translate
-			};
-			emit("finish", result);
+
+			RecordApp.UniSaveLocalFile(
+				"recorder.mp3",
+				arrayBuffer,
+				async (savePath) => {
+					const result: VoiceResult = {
+						buffer: arrayBuffer,
+						duration,
+						mime,
+						translate: !!options?.translate,
+						tempFilePath: savePath
+					};
+					emit("finish", result);
+				},
+				(errMsg) => {
+					console.error(errMsg);
+				}
+			);
 		},
 		(msg: string) => {
 			console.error("结束录音失败", msg);

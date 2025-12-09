@@ -22,7 +22,12 @@ export type VoiceResult = {
 	duration: number;
 	mime: string;
 	translate?: boolean;
-	tempFilePath: string;
+	// 临时地址
+	tempFilePath?: string;
+	// 线上地址
+	onlineUrl?: string;
+	// 语音文本
+	text: string;
 };
 
 export type SendData = {

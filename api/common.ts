@@ -70,7 +70,7 @@ export interface OssSignatureData {
 	security_token: string;
 }
 
-export const GetOssSignature = (): Promise<ApiResponse<OssSignatureData>> => {
+export const GetOssSignature = (): Promise<OssSignatureData> => {
 	return request({
 		url: "/utils/sts/sign",
 		method: "GET"

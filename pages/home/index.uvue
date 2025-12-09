@@ -93,6 +93,7 @@ const handleHangup = () => {
 					</view>
 					<chat-input
 						v-model="inputValue"
+						use-module="consult"
 						@send="handleSend"
 						@open-call="handleOpenCall"
 					/>

@@ -113,7 +113,7 @@ const handlePressEnd = () => {
 	isShowVoiceRecord.value = false;
 };
 
-const handleVoiceRecordFinish = (result: VoiceResult) => {
+const handleVoiceRecordFinish = async (result: VoiceResult) => {
 	const data: SendData = {
 		text: "",
 		mode: "voice",
