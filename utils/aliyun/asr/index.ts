@@ -200,7 +200,6 @@ export const recognizeOnceFromBuffer = async (
 	return new Promise<string>(async (resolve, reject) => {
 		let recognizer: AsrRecognizer | null = null;
 		try {
-			debugger;
 			recognizer = await createAsrRecognizer(
 				{
 					onChanged: (msg) => {
@@ -239,7 +238,6 @@ export const recognizeOnceFromBuffer = async (
 				resolve("");
 			}
 		} catch (err: any) {
-			debugger;
 			if (recognizer) {
 				recognizer.shutdown();
 			}
