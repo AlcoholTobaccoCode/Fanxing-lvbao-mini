@@ -247,3 +247,55 @@ export const recognizeOnceFromBuffer = async (
 		}
 	});
 };
+
+const readFileAsArrayBuffer = (filePath: string): Promise<ArrayBuffer> => {
+	return new Promise((resolve, reject) => {
+		const fs = (uni as any).getFileSystemManager?.();
+		if (!fs) {
+			reject(new Error("当前环境不支持文件读取"));
+			return;
+		}
+		fs.readFile({
+			filePath,
+			success: (res: any) => {
+				resolve(res.data as ArrayBuffer);
+			},
+			fail: (err: any) => {
+				reject(err);
+			}
+		});
+	});
+};
+
+export const recognizeOnceFromFile = async (
+	filePath: string,
+	options: AsrOnceOptions = {}
+): Promise<string> => {
+	if (!filePath) return "";
+	const buffer = await readFileAsArrayBuffer(filePath);
+	return recognizeOnceFromBuffer(buffer, options);
+};
+
+export const recognizeOnceFromUrl = async (
+	url: string,
+	options: AsrOnceOptions = {}
+): Promise<string> => {
+	if (!url) return "";
+	const tempFile = await new Promise<string>((resolve, reject) => {
+		uni.downloadFile({
+			url,
+			success: (res) => {
+				const anyRes = res as any;
+				if (anyRes.statusCode === 200 && anyRes.tempFilePath) {
+					resolve(anyRes.tempFilePath as string);
+				} else {
+					reject(new Error("下载音频失败"));
+				}
+			},
+			fail: (err) => {
+				reject(err as any);
+			}
+		});
+	});
+	return recognizeOnceFromFile(tempFile, options);
+};
