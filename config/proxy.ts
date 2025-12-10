@@ -1,8 +1,8 @@
 export const proxy = {
 	// 开发环境配置
 	dev: {
-		target: "http://127.0.0.1:8000",
-		// target: "https://lawapi-test.fanxingzhihui.com",
+		// target: "http://127.0.0.1:8000",
+		target: "https://lawapi-test.fanxingzhihui.com",
 		changeOrigin: true,
 		rewrite: (path: string) => path.replace("/dev", "")
 	},

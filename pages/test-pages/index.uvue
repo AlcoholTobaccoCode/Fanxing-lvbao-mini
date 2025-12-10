@@ -1,215 +1,200 @@
 <script lang="ts" setup>
-import { ref } from "vue";
+import { ref, onUnmounted } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import {
-	initEasemob,
-	addEasemobEventHandlers,
-	loginEasemob,
-	logoutEasemob,
-	sendEasemobTextMessage
-} from "@/utils/easemob";
+import ChatInput from "@/components/chat-input/index.uvue";
+import type { SendData, VoiceResult } from "@/components/chat-input/types";
 
 const ui = useUi();
 
-// 请将此处替换为你自己的环信 AppKey，例如 "yourOrg#yourApp"
-const IM_APP_KEY = "<your-appkey>";
+type DemoMessage = {
+	id: string;
+	mode: "text" | "voice";
+	text?: string;
+	voice?: VoiceResult;
+	time: number;
+};
 
-const imUserId = ref("");
-const imPassword = ref("");
-const imPeerId = ref("");
-const imInputText = ref("");
+const inputValue = ref("");
+const messages = ref<DemoMessage[]>([]);
 
-const isIMInited = ref(false);
-const isConnecting = ref(false);
-const isConnected = ref(false);
+const handleSend = (payload: SendData) => {
+	const mode = (payload.mode ?? "text") as "text" | "voice";
+	if (mode === "text" && !payload.text.trim()) {
+		return;
+	}
 
-const messages = ref<
-	{
-		id: string;
-		from: string;
-		to: string;
-		text: string;
-		direction: "in" | "out";
-		time: number;
-	}[]
->([]);
+	const msg: DemoMessage = {
+		id: `${Date.now()}_${messages.value.length}`,
+		mode,
+		text: payload.text,
+		voice: payload.voice,
+		time: Date.now()
+	};
 
-const ensureIMInited = () => {
-	if (isIMInited.value) return;
+	messages.value.push(msg);
+	inputValue.value = "";
+};
 
-	initEasemob({
-		appKey: IM_APP_KEY,
-		url: "wss://im-api-wechat.easemob.com/websocket",
-		apiUrl: "https://a1.easemob.com"
+//#region 语音播放相关
+// 当前播放中的语音消息 ID
+const playingId = ref<string | null>(null);
+const innerAudio = ref<UniApp.InnerAudioContext | null>(null);
+
+const ensureAudio = () => {
+	if (innerAudio.value) return innerAudio.value;
+	// #ifdef MP-WEIXIN || H5 || APP
+	const audio = uni.createInnerAudioContext();
+	innerAudio.value = audio;
+	audio.onEnded(() => {
+		playingId.value = null;
 	});
+	audio.onError((err) => {
+		console.error("[VoicePlay] 播放失败", err);
+		ui.showToast({ message: "播放失败" });
+		playingId.value = null;
+	});
+	return audio;
+	// #endif
+	// #ifndef MP-WEIXIN
+	return null as any;
+	// #endif
+};
 
-	addEasemobEventHandlers({
-		onOpened: () => {
-			isConnected.value = true;
-			ui.showToast({ message: "IM 已连接" });
-		},
-		onClosed: () => {
-			isConnected.value = false;
-		},
-		onTextMessage: (msg: any) => {
-			const text = msg?.msg || msg?.data || "";
-			messages.value.push({
-				id: msg.id || String(Date.now()),
-				from: msg.from,
-				to: msg.to,
-				text,
-				direction: "in",
-				time: Date.now()
-			});
-		},
-		onError: (err: any) => {
-			console.error("[IM] error", err);
+const stopPlay = () => {
+	if (innerAudio.value) {
+		try {
+			innerAudio.value.stop();
+		} catch (err) {
+			console.warn("[VoicePlay] 停止失败", err);
 		}
-	});
-
-	isIMInited.value = true;
+	}
+	playingId.value = null;
 };
 
-const handleLogin = async () => {
-	if (!imUserId.value || !imPassword.value) {
-		ui.showToast({ message: "请输入 IM 用户名和密码" });
+const handlePlayVoice = (item: DemoMessage) => {
+	if (!item.voice) {
+		ui.showToast({ message: "没有可播放的语音" });
 		return;
 	}
 
-	try {
-		ensureIMInited();
-		isConnecting.value = true;
-		await loginEasemob({
-			user: imUserId.value,
-			pwd: imPassword.value
-		} as any);
-	} catch (err: any) {
-		console.error("[IM] 登录失败", err);
-		ui.showToast({ message: "IM 登录失败" });
-	} finally {
-		isConnecting.value = false;
-	}
-};
-
-const handleLogout = () => {
-	logoutEasemob();
-	isConnected.value = false;
-};
-
-const handleSend = async () => {
-	const content = imInputText.value.trim();
-	if (!content) return;
-	if (!isConnected.value) {
-		ui.showToast({ message: "请先登录 IM" });
-		return;
-	}
-	if (!imPeerId.value) {
-		ui.showToast({ message: "请输入对端用户 ID" });
+	const src = item.voice.onlineUrl || item.voice.tempFilePath;
+	if (!src) {
+		ui.showToast({ message: "语音文件不存在或未上传" });
 		return;
 	}
 
-	try {
-		await sendEasemobTextMessage({
-			to: imPeerId.value,
-			chatType: "singleChat",
-			msg: content
-		});
-
-		messages.value.push({
-			id: `out_${Date.now()}`,
-			from: imUserId.value,
-			to: imPeerId.value,
-			text: content,
-			direction: "out",
-			time: Date.now()
-		});
-		imInputText.value = "";
-	} catch (err: any) {
-		console.error("[IM] 发送失败", err);
-		ui.showToast({ message: "消息发送失败" });
+	// 再次点击同一条则停止播放
+	if (playingId.value === item.id) {
+		stopPlay();
+		return;
 	}
+
+	const audio = ensureAudio();
+	if (!audio) {
+		ui.showToast({ message: "当前环境不支持播放音频" });
+		return;
+	}
+
+	stopPlay();
+	playingId.value = item.id;
+	audio.src = src;
+	audio.play();
+};
+//#endregion
+
+const formatTime = (time: number) => {
+	const d = new Date(time);
+	const h = String(d.getHours()).padStart(2, "0");
+	const m = String(d.getMinutes()).padStart(2, "0");
+	return `${h}:${m}`;
 };
 </script>
 
 <template>
-	<app-page title="IM 文本聊天测试" :back-top="false">
+	<app-page title="ChatInput 示例" :back-top="false">
 		<template #content>
-			<view class="p-3 my-3">
-				<view class="text-xs text-gray-500">
-					IM 状态：{{ isConnected ? "已连接" : "未连接" }}
-				</view>
-
-				<view class="flex flex-col gap-2">
-					<view class="flex gap-2">
-						<input
-							v-model="imUserId"
-							placeholder="IM 用户名"
-							class="flex-1 px-2 py-1 border rounded text-sm"
-						/>
-						<input
-							v-model="imPassword"
-							placeholder="密码 / Token"
-							password
-							class="flex-1 px-2 py-1 border rounded text-sm"
-						/>
+			<view class="demo-chat-page">
+				<scroll-view scroll-y class="demo-chat-list">
+					<view v-if="!messages.length" class="demo-chat-empty">
+						暂无消息，试着发送一条吧～
 					</view>
-					<view class="flex gap-2">
-						<button
-							class="px-3 py-1 bg-blue-500 text-white text-xs rounded"
-							@click="handleLogin"
-							:disabled="isConnecting"
-						>
-							{{ isConnecting ? "登录中..." : "登录 IM" }}
-						</button>
-						<button class="px-3 py-1 bg-gray-200 text-xs rounded" @click="handleLogout">
-							退出
-						</button>
-					</view>
-				</view>
 
-				<view class="flex flex-col gap-2 mt-2">
-					<input
-						v-model="imPeerId"
-						placeholder="对端用户 ID"
-						class="w-full px-2 py-1 border rounded text-sm"
-					/>
-					<view class="flex gap-2">
-						<input
-							v-model="imInputText"
-							placeholder="输入要发送的文本消息"
-							class="flex-1 px-2 py-1 border rounded text-sm"
-						/>
-						<button
-							class="px-3 py-1 bg-green-500 text-white text-xs rounded"
-							@click="handleSend"
-						>
-							发送
-						</button>
-					</view>
-				</view>
-
-				<scroll-view scroll-y class="mt-3 h-[320px] border rounded p-2 bg-white">
-					<view v-for="m in messages" :key="m.id" class="mb-2 text-sm">
-						<view class="text-gray-500 text-[10px] mb-1">
-							{{ m.direction === "out" ? "我 → " + m.to : m.from + " → 我" }}
-						</view>
-						<view
-							:class="[
-								'inline-block px-2 py-1 rounded',
-								m.direction === 'out'
-									? 'bg-blue-500 text-white self-end'
-									: 'bg-gray-100 text-gray-900'
-							]"
-						>
-							{{ m.text }}
+					<view v-for="item in messages" :key="item.id" class="demo-chat-item-row">
+						<view class="demo-chat-item">
+							<view class="demo-chat-item__time">{{ formatTime(item.time) }}</view>
+							<view
+								v-if="item.mode === 'text'"
+								class="demo-chat-bubble demo-chat-bubble--text"
+							>
+								{{ item.text }}
+							</view>
+							<view
+								v-else
+								class="demo-chat-bubble demo-chat-bubble--voice"
+								:class="{
+									'demo-chat-bubble--voice-playing': playingId === item.id
+								}"
+								@tap="handlePlayVoice(item)"
+							>
+								语音消息 · {{ ((item.voice?.duration || 0) / 1000).toFixed(1) }}s
+							</view>
 						</view>
 					</view>
 				</scroll-view>
+
+				<chat-input
+					v-model="inputValue"
+					:show-default-deep-think="false"
+					:show-default-knowledge="false"
+					:show-default-network="false"
+					placeholder="在这里输入你的问题，或切换语音长按说话"
+					@send="handleSend"
+				></chat-input>
 			</view>
 		</template>
 	</app-page>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.demo-chat-page {
+	@apply flex flex-col h-full;
+}
+
+.demo-chat-list {
+	@apply flex-1 px-3 pt-3 pb-2 bg-gray-50;
+}
+
+.demo-chat-empty {
+	@apply mt-4 text-center text-xs text-gray-400;
+}
+
+.demo-chat-item-row {
+	@apply flex flex-row justify-end mb-3;
+}
+
+.demo-chat-item {
+	max-width: 80%;
+}
+
+.demo-chat-item__time {
+	@apply text-[10px] text-gray-400 mb-1 text-right;
+}
+
+.demo-chat-bubble {
+	@apply px-3 py-2 rounded-lg text-sm;
+}
+
+.demo-chat-bubble--text {
+	@apply bg-primary-500 text-white;
+}
+
+.demo-chat-bubble--voice {
+	@apply bg-primary-50 text-primary-700;
+}
+
+.demo-chat-bubble--voice-playing {
+	@apply bg-primary-500 text-white;
+}
+</style>
