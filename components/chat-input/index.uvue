@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { nextTick, ref, watch } from "vue";
 import type { PropType } from "vue";
 import { isDark } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { uploadToOss } from "@/utils/aliyun/oss";
+import { recognizeOnceFromBuffer } from "@/utils/aliyun/asr";
 import type { ToolItem, Tools, ActionItem, Actions, SendData, VoiceResult } from "./types";
 
 import SimpleCard from "@/components/card/simple-card.uvue";
@@ -132,9 +133,27 @@ const handleVoiceRecordFinish = async (result: VoiceResult) => {
 	});
 	result.onlineUrl = res.url;
 	// TODO 录音文件识别
-	// result.text = res.url;
+	try {
+		uni.showLoading({ title: "识别中..." });
+		const text = await recognizeOnceFromBuffer(result.buffer, {
+			startParams: {
+				format: "mp3",
+				sample_rate: 16000
+			}
+		});
+		if (text) {
+			result.text = text;
+		}
+	} catch (err: any) {
+		console.error("[chat-input] 语音识别失败", err);
+		ui.showToast({ message: err?.message || "语音识别失败" });
+	} finally {
+		nextTick(() => {
+			uni.hideLoading();
+		});
+	}
 	const data: SendData = {
-		text: "",
+		text: result.text || "",
 		mode: "voice",
 		voice: {
 			...result
