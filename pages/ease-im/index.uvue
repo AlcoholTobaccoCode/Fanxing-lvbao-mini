@@ -19,30 +19,20 @@ const handleSelectConversation = (item: any) => {
 </script>
 
 <template>
-	<cl-page>
-		<cl-topbar
-			:title="'历史对话'"
-			:safe-area-top="true"
-			:show-back="false"
-			:backable="false"
-			:pt="{
-				className: 'bg-surface flex-row items-center',
-				title: { className: 'text-surface-900' }
-			}"
-		>
-		</cl-topbar>
-
-		<view class="easeim-page-root">
-			<view class="easeim-page-body">
-				<chat-history
-					v-if="activeTab === 'chat'"
-					@select="handleSelectConversation"
-				></chat-history>
-				<chat-links v-else></chat-links>
+	<app-page title="历史对话" back-top :chat-list-btn="false" :title-action="false" openIconPicker>
+		<template #content>
+			<view class="easeim-page-root">
+				<view class="easeim-page-body">
+					<chat-history
+						v-if="activeTab === 'chat'"
+						@select="handleSelectConversation"
+					></chat-history>
+					<chat-links v-else></chat-links>
+				</view>
+				<ease-im-tabbar v-model:active="activeTab"></ease-im-tabbar>
 			</view>
-			<ease-im-tabbar v-model:active="activeTab"></ease-im-tabbar>
-		</view>
-	</cl-page>
+		</template>
+	</app-page>
 </template>
 
 <style lang="scss" scoped>

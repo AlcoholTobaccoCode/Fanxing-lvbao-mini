@@ -1,7 +1,9 @@
 <script lang="ts" setup>
-import { computed } from "vue";
+import { computed, ref } from "vue";
+import { t } from "@/locale";
+import { isDark, parseClass, router } from "@/cool";
 
-type TabKey = "chat" | "contacts";
+type TabKey = "chat" | "contacts" | "testpage";
 
 const props = defineProps<{
 	active: TabKey;
@@ -11,47 +13,67 @@ const emit = defineEmits<{
 	(e: "update:active", value: TabKey): void;
 }>();
 
-const items = computed(() => [
-	{ key: "chat" as TabKey, label: "会话" },
-	{ key: "contacts" as TabKey, label: "联系人" }
+// const items = computed(() => [
+// 	{ key: "chat" as TabKey, label: "会话", icon: "pinglun" },
+// 	{ key: "contacts" as TabKey, label: "联系人", icon: "user-3-line" },
+// 	{ key: "testpage" as TabKey, label: "测试页面", icon: "shijian" }
+// ]);
+
+const items = ref([
+	{ key: "chat" as TabKey, label: "会话", icon: "pinglun" },
+	{ key: "contacts" as TabKey, label: "联系人", icon: "user-3-line" },
+	{ key: "testpage" as TabKey, label: "测试页面", icon: "shijian" }
 ]);
 
 const handleClick = (key: TabKey) => {
 	if (key === props.active) return;
+	if (key === "testpage") {
+		return router.to("/utils/easemob/example");
+	}
 	emit("update:active", key);
 };
 </script>
 
 <template>
-	<view class="easeim-tabbar-root">
-		<view class="easeim-tabbar-inner">
+	<cl-footer
+		:pt="{
+			content: {
+				className: '!p-0 h-[60px]'
+			}
+		}"
+	>
+		<view class="custom-tabbar" :class="{ 'is-dark': isDark }">
 			<view
+				class="custom-tabbar-item"
 				v-for="item in items"
 				:key="item.key"
-				class="easeim-tabbar-item"
 				:class="{ 'easeim-tabbar-item--active': item.key === props.active }"
 				@tap="handleClick(item.key)"
 			>
-				<view class="text-xs">{{ item.label }}</view>
+				<cl-icon
+					:name="item.icon"
+					:size="48"
+					:color="item.key === props.active ? 'primary' : 'info'"
+				></cl-icon>
+				<cl-text
+					v-if="item.label != null"
+					:color="item.key === props.active ? 'primary' : 'info'"
+					:pt="{
+						className: parseClass(['text-md mt-1'])
+					}"
+					>{{ t(item.label!) }}</cl-text
+				>
 			</view>
 		</view>
-	</view>
+	</cl-footer>
 </template>
 
 <style lang="scss" scoped>
-.easeim-tabbar-root {
-	@apply w-full;
-}
+.custom-tabbar {
+	@apply flex flex-row items-center flex-1;
 
-.easeim-tabbar-inner {
-	@apply flex flex-row items-center justify-around border-t bg-white px-4 py-2;
-}
-
-.easeim-tabbar-item {
-	@apply flex-1 flex items-center justify-center py-1 rounded;
-}
-
-.easeim-tabbar-item--active {
-	@apply bg-primary-50 text-primary-500;
+	&-item {
+		@apply flex flex-col items-center justify-center flex-1;
+	}
 }
 </style>

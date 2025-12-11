@@ -1,200 +1,20 @@
 <script lang="ts" setup>
-import { ref, onUnmounted } from "vue";
+import { ref, computed } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/components/chat-input/index.uvue";
-import type { SendData, VoiceResult } from "@/components/chat-input/types";
 
+const log = new Logger("TestPage");
 const ui = useUi();
-
-type DemoMessage = {
-	id: string;
-	mode: "text" | "voice";
-	text?: string;
-	voice?: VoiceResult;
-	time: number;
-};
-
-const inputValue = ref("");
-const messages = ref<DemoMessage[]>([]);
-
-const handleSend = (payload: SendData) => {
-	const mode = (payload.mode ?? "text") as "text" | "voice";
-	if (mode === "text" && !payload.text.trim()) {
-		return;
-	}
-
-	const msg: DemoMessage = {
-		id: `${Date.now()}_${messages.value.length}`,
-		mode,
-		text: payload.text,
-		voice: payload.voice,
-		time: Date.now()
-	};
-
-	messages.value.push(msg);
-	inputValue.value = "";
-};
-
-//#region 语音播放相关
-// 当前播放中的语音消息 ID
-const playingId = ref<string | null>(null);
-const innerAudio = ref<UniApp.InnerAudioContext | null>(null);
-
-const ensureAudio = () => {
-	if (innerAudio.value) return innerAudio.value;
-	// #ifdef MP-WEIXIN || H5 || APP
-	const audio = uni.createInnerAudioContext();
-	innerAudio.value = audio;
-	audio.onEnded(() => {
-		playingId.value = null;
-	});
-	audio.onError((err) => {
-		console.error("[VoicePlay] 播放失败", err);
-		ui.showToast({ message: "播放失败" });
-		playingId.value = null;
-	});
-	return audio;
-	// #endif
-	// #ifndef MP-WEIXIN
-	return null as any;
-	// #endif
-};
-
-const stopPlay = () => {
-	if (innerAudio.value) {
-		try {
-			innerAudio.value.stop();
-		} catch (err) {
-			console.warn("[VoicePlay] 停止失败", err);
-		}
-	}
-	playingId.value = null;
-};
-
-const handlePlayVoice = (item: DemoMessage) => {
-	if (!item.voice) {
-		ui.showToast({ message: "没有可播放的语音" });
-		return;
-	}
-
-	const src = item.voice.onlineUrl || item.voice.tempFilePath;
-	if (!src) {
-		ui.showToast({ message: "语音文件不存在或未上传" });
-		return;
-	}
-
-	// 再次点击同一条则停止播放
-	if (playingId.value === item.id) {
-		stopPlay();
-		return;
-	}
-
-	const audio = ensureAudio();
-	if (!audio) {
-		ui.showToast({ message: "当前环境不支持播放音频" });
-		return;
-	}
-
-	stopPlay();
-	playingId.value = item.id;
-	audio.src = src;
-	audio.play();
-};
-//#endregion
-
-const formatTime = (time: number) => {
-	const d = new Date(time);
-	const h = String(d.getHours()).padStart(2, "0");
-	const m = String(d.getMinutes()).padStart(2, "0");
-	return `${h}:${m}`;
-};
 </script>
 
 <template>
-	<app-page title="ChatInput 示例" :back-top="false">
+	<app-page title="静态测试页面" :back-top="false">
 		<template #content>
-			<view class="demo-chat-page">
-				<scroll-view scroll-y class="demo-chat-list">
-					<view v-if="!messages.length" class="demo-chat-empty">
-						暂无消息，试着发送一条吧～
-					</view>
-
-					<view v-for="item in messages" :key="item.id" class="demo-chat-item-row">
-						<view class="demo-chat-item">
-							<view class="demo-chat-item__time">{{ formatTime(item.time) }}</view>
-							<view
-								v-if="item.mode === 'text'"
-								class="demo-chat-bubble demo-chat-bubble--text"
-							>
-								{{ item.text }}
-							</view>
-							<view
-								v-else
-								class="demo-chat-bubble demo-chat-bubble--voice"
-								:class="{
-									'demo-chat-bubble--voice-playing': playingId === item.id
-								}"
-								@tap="handlePlayVoice(item)"
-							>
-								语音消息 · {{ ((item.voice?.duration || 0) / 1000).toFixed(1) }}s
-							</view>
-						</view>
-					</view>
-				</scroll-view>
-
-				<chat-input
-					v-model="inputValue"
-					:show-default-deep-think="false"
-					:show-default-knowledge="false"
-					:show-default-network="false"
-					placeholder="在这里输入你的问题，或切换语音长按说话"
-					@send="handleSend"
-				></chat-input>
-			</view>
+			<view class="mt-3 flex gap-2"> duqings </view>
 		</template>
 	</app-page>
 </template>
 
-<style lang="scss" scoped>
-.demo-chat-page {
-	@apply flex flex-col h-full;
-}
-
-.demo-chat-list {
-	@apply flex-1 px-3 pt-3 pb-2 bg-gray-50;
-}
-
-.demo-chat-empty {
-	@apply mt-4 text-center text-xs text-gray-400;
-}
-
-.demo-chat-item-row {
-	@apply flex flex-row justify-end mb-3;
-}
-
-.demo-chat-item {
-	max-width: 80%;
-}
-
-.demo-chat-item__time {
-	@apply text-[10px] text-gray-400 mb-1 text-right;
-}
-
-.demo-chat-bubble {
-	@apply px-3 py-2 rounded-lg text-sm;
-}
-
-.demo-chat-bubble--text {
-	@apply bg-primary-500 text-white;
-}
-
-.demo-chat-bubble--voice {
-	@apply bg-primary-50 text-primary-700;
-}
-
-.demo-chat-bubble--voice-playing {
-	@apply bg-primary-500 text-white;
-}
-</style>
+<style lang="scss" scoped></style>
