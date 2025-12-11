@@ -20,7 +20,7 @@ const userId = computed(() => user.info.value?.id ?? null);
 const isLoggedIn = computed(() => !user.isNull());
 
 const imUserId = ref("");
-const imPeerId = ref("28");
+const imPeerId = ref([]);
 const imInputText = ref("");
 
 const isIMInited = ref(false);
@@ -85,6 +85,55 @@ const ensureIMInited = () => {
 	isIMInited.value = true;
 };
 
+const peers = ref([
+	{ id: 28, name: "3091", imUserId: "28" },
+	{ id: 30, name: "6490", imUserId: "30" },
+	{ id: 71, name: "3090", imUserId: "71" },
+	{ id: 72, name: "3092", imUserId: "72" },
+	{ id: 73, name: "3093", imUserId: "73" }
+]);
+
+/**
+ * 随机生成一句自然的真人聊天语句
+ * @returns 随机生成的日常对话句子
+ */
+const getRandomChatMessage = (): string => {
+	const messages = [
+		"今天天气真不错呀～",
+		"刚喝完咖啡，感觉超有精神！",
+		"你最近在忙什么？",
+		"哈哈，这个消息太好笑了！",
+		"刚吃完饭，感觉有点撑～",
+		"今天看到一只超可爱的猫，想分享给你！",
+		"在吗？想跟你聊聊最近的电影",
+		"突然想你了，你今天过得咋样？",
+		"这个周末有什么计划吗？",
+		"刚在楼下买了杯奶茶，好喝到想哭！",
+		"最近压力有点大，但看到你消息心情好多了",
+		"你猜我刚才看到什么了？",
+		"今天下班路上看到彩虹，好梦幻啊",
+		"在吗？想跟你吐槽一下今天的工作",
+		"刚刚在听歌，突然想到你了",
+		"最近在学做菜，失败了好多次😂",
+		"你今天吃饭了吗？",
+		"这个消息发得有点突然，但就是想你了",
+		"刚刷到一个超搞笑的视频，必须分享给你",
+		"最近在追剧，看到第几集了？",
+		"今天心情超好，想跟你分享点开心事",
+		"忙完这阵子，咱们约个饭吧？",
+		"突然想吃火锅了，你呢？",
+		"你最近有看什么好书吗？",
+		"今天被同事夸了，开心到飞起！",
+		"刚睡醒，脑子还有点懵",
+		"在吗？想跟你聊聊昨天那件事",
+		"这个天气最适合出去走走了～",
+		"刚刚在想你，就发个消息给你",
+		"今天运气超好，连外卖都准时到了！"
+	];
+
+	return messages[Math.floor(Math.random() * messages.length)];
+};
+
 const handleSend = async () => {
 	log.info("尝试使用 IM 发送消息");
 	if (!isLoggedIn.value || !userId.value) {
@@ -93,8 +142,10 @@ const handleSend = async () => {
 		return;
 	}
 
-	const content = imInputText.value.trim();
-	if (!content) return;
+	let content = imInputText.value.trim();
+	if (!content) {
+		content = getRandomChatMessage();
+	}
 	// if (!isConnected.value) {
 	// 	ui.showToast({ message: "请先登录 IM" });
 	// 	return;
@@ -107,20 +158,23 @@ const handleSend = async () => {
 	log.info(`目标 ID: ${imPeerId.value}`);
 
 	try {
-		await sendEasemobTextMessage({
-			to: imPeerId.value,
-			chatType: "singleChat",
-			msg: content
+		imPeerId.value.map(async (item) => {
+			await sendEasemobTextMessage({
+				to: item,
+				chatType: "singleChat",
+				msg: content
+			});
+
+			messages.value.push({
+				id: `out_${Date.now()}`,
+				from: imUserId.value,
+				to: item,
+				text: content,
+				direction: "out",
+				time: Date.now()
+			});
 		});
 
-		messages.value.push({
-			id: `out_${Date.now()}`,
-			from: imUserId.value,
-			to: imPeerId.value,
-			text: content,
-			direction: "out",
-			time: Date.now()
-		});
 		imInputText.value = "";
 	} catch (err: any) {
 		log.error("[IM] 发送失败", err);
@@ -134,7 +188,7 @@ const handleSend = async () => {
 </script>
 
 <template>
-	<app-page title="IM 文本聊天测试" :back-top="false">
+	<app-page title="IM 文本聊天测试" back-top>
 		<template #content>
 			<view class="p-3 my-3">
 				<view class="text-xs text-gray-500">
@@ -154,11 +208,18 @@ const handleSend = async () => {
 				</view>
 
 				<view class="flex flex-col gap-2 mt-2">
-					<input
-						v-model="imPeerId"
-						placeholder="对端用户 ID"
-						class="w-full px-2 py-1 border rounded text-sm"
-					/>
+					<view class="flex flex-warp gap-4">
+						<template v-for="item in peers" :key="item.id">
+							<cl-checkbox
+								v-model="imPeerId"
+								:value="item.imUserId"
+								:show-icon="false"
+							>
+								{{ `${item.id}-${item.name}` }}
+							</cl-checkbox>
+						</template>
+					</view>
+
 					<view class="flex gap-2">
 						<input
 							v-model="imInputText"

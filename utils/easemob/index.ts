@@ -2,7 +2,10 @@ declare const wx: any;
 
 import EasemobSDK from "easemob-websdk/uniApp/Easemob-chat";
 import { storage } from "@/cool";
+import { config as globalConfig } from "@/config";
 import { GetUserChatToken, type UserChatTokenData } from "@/api/common";
+import { useStore } from "@/cool";
+import { sdkEvents } from "./events";
 
 export const IM_APP_KEY = "1168250507209322#demo";
 
@@ -36,8 +39,67 @@ export interface EasemobEventHandlers {
 	onError?: (error: any) => void;
 }
 
+export type HistorySearchDirection = "up" | "down";
+
+export interface EasemobHistoryOptions {
+	targetId: string;
+	pageSize?: number;
+	cursor?: string | number | null;
+	chatType?: ChatType | "chatRoom";
+	searchDirection?: HistorySearchDirection;
+	searchOptions?: {
+		from?: string;
+		msgTypes?: string[];
+		startTime?: number;
+		endTime?: number;
+	};
+}
+
+export interface EasemobConversationItem {
+	conversationId: string;
+	conversationType: ChatType | "chatRoom";
+	isPinned?: boolean;
+	pinnedTime?: number;
+	lastMessage?: any;
+	unReadCount?: number;
+	marks?: string[];
+}
+
+export interface EasemobServerConversationsParams {
+	pageSize?: number;
+	cursor?: string;
+	includeEmptyConversations?: boolean;
+}
+
+export interface EasemobServerConversationsResultData {
+	conversations: EasemobConversationItem[];
+	cursor: string;
+}
+export interface EasemobServerConversationsResult {
+	type: number;
+	data: EasemobServerConversationsResultData;
+}
+
 const USER_CHAT_TOKEN_STORAGE_KEY = "easemob_user_chat_token";
 const TOKEN_EXPIRE_GUARD_SECONDS = 120;
+
+// 获取当前登录用户信息
+let reloadInit = 0;
+const getUserInfoAndInit = async () => {
+	// 重试超过 3 次停止
+	if (reloadInit >= 3) return;
+	const { user } = useStore();
+
+	// 获取用户信息，未登录不执行
+	await user.get();
+
+	if (!user.isNull() && user.info.value?.id != null) {
+		const uid = String(user.info.value.id);
+		ensureGlobalIMForUser(uid).finally(() => (reloadInit += 1));
+	} else {
+		// TODO 跳转登录页面
+	}
+};
 
 const loadCachedUserChatToken = (): UserChatTokenData | null => {
 	try {
@@ -88,15 +150,24 @@ export function initEasemob(config: EasemobInitConfig) {
 		(wx as any).WebIM = sdk;
 	}
 
-	conn = new sdk.connection({
-		appKey: config.appKey,
-		url: config.url || "wss://im-api-wechat.easemob.com/websocket",
-		apiUrl: config.apiUrl || "https://a1.easemob.com",
-		useOwnUploadFun: config.useOwnUploadFun ?? true,
-		isHttpDNS: config.isHttpDNS ?? false
-	});
+	try {
+		conn = new sdk.connection({
+			appKey: config.appKey,
+			url: config.url || "wss://im-api-wechat.easemob.com/websocket",
+			apiUrl: config.apiUrl || "https://a1.easemob.com",
+			useOwnUploadFun: config.useOwnUploadFun ?? true,
+			isHttpDNS: config.isHttpDNS ?? false,
+			enableReportLogs: true,
+			autoReconnectNumMax: 5
+		});
+		hasInit = true;
+		// 关闭 debug
+		console.info("globalConfig.hxImDebug ====> ", globalConfig.hxImDebug);
+		conn.getInstance().setDebugMode(globalConfig.hxImDebug);
+	} catch (error) {
+		console.error("hx connection error: ", error);
+	}
 
-	hasInit = true;
 	return conn;
 }
 
@@ -104,35 +175,50 @@ export function getEasemobConnection() {
 	return conn;
 }
 
-export function addEasemobEventHandlers(handlers: EasemobEventHandlers) {
+export async function addEasemobEventHandlers(handlers: EasemobEventHandlers) {
 	if (!conn) {
-		// TODO - 重试
-		throw new Error("[IM] 尚未初始化获初始化失败.");
+		await getUserInfoAndInit();
+		throw new Error(`[IM] 尚未初始化或初始化失败. [hasInit] => ${hasInit}`);
 	}
 
+	const mergedHandlers: EasemobEventHandlers = {
+		onOpened: handlers.onOpened,
+		onClosed: handlers.onClosed,
+		onError: handlers.onError,
+		// 文本消息
+		onTextMessage: (msg: any) => {
+			try {
+				sdkEvents.onTextMessage(msg);
+			} catch (e) {
+				console.error("[IM] sdkEvents.onTextMessage error", e);
+			}
+			handlers.onTextMessage && handlers.onTextMessage(msg);
+		}
+	};
+
 	if (typeof conn.addEventHandler === "function") {
-		conn.addEventHandler("app", {
-			onOpened: handlers.onOpened,
-			onClosed: handlers.onClosed,
-			onTextMessage: handlers.onTextMessage,
-			onError: handlers.onError
-		});
+		conn.addEventHandler("app", mergedHandlers as any);
 	} else if (typeof conn.listen === "function") {
-		conn.listen({
-			onOpened: handlers.onOpened,
-			onClosed: handlers.onClosed,
-			onTextMessage: handlers.onTextMessage,
-			onError: handlers.onError
-		});
+		conn.listen(mergedHandlers as any);
 	}
 }
 
-export function loginEasemob(options: EasemobLoginOptions): Promise<any> {
+export async function loginEasemob(options: EasemobLoginOptions): Promise<any> {
 	if (!conn) {
-		throw new Error("Easemob has not been initialized. Call initEasemob first.");
+		await getUserInfoAndInit();
+		throw new Error("[IM] 尚未初始化, 请先 initEasemob.");
 	}
 
-	return conn.open(options);
+	return conn
+		.open(options)
+		.then(() => {
+			console.log("[IM] login success");
+			sdkEvents.onLogin();
+		})
+		.catch((reason) => {
+			console.log("[IM] login fail", reason);
+			sdkEvents.onLoginError(reason);
+		});
 }
 
 export function logoutEasemob() {
@@ -143,7 +229,7 @@ export function logoutEasemob() {
 
 export async function sendEasemobTextMessage(params: EasemobTextMessageParams): Promise<any> {
 	if (!conn || !sdk) {
-		throw new Error("Easemob has not been initialized. Call initEasemob first.");
+		throw new Error("[IM] 尚未初始化, 请先 initEasemob.");
 	}
 
 	const chatType: ChatType = params.chatType || "singleChat";
@@ -155,7 +241,51 @@ export async function sendEasemobTextMessage(params: EasemobTextMessageParams): 
 		ext: params.ext || {}
 	});
 
-	return conn.send(message);
+	return conn
+		.send(message)
+		.then((res) => {
+			console.log("[IM] Send message success", res);
+			sdkEvents.onSendMsg(res);
+		})
+		.catch((e) => {
+			console.log("[IM] Send message fail", e);
+			sdkEvents.onSendMsgError(e);
+		});
+}
+
+export async function getEasemobHistoryMessages(options: EasemobHistoryOptions): Promise<any> {
+	if (!conn) {
+		await getUserInfoAndInit();
+		throw new Error(`[IM] 尚未初始化或初始化失败. [hasInit] => ${hasInit}`);
+	}
+
+	const merged: EasemobHistoryOptions & { [key: string]: any } = {
+		pageSize: 20,
+		searchDirection: "up",
+		...options
+	};
+
+	return conn.getHistoryMessages(merged as any);
+}
+
+export async function getEasemobServerConversations(
+	params: EasemobServerConversationsParams = {}
+): Promise<EasemobServerConversationsResult> {
+	if (!conn) {
+		await getUserInfoAndInit();
+		throw new Error(`[IM] 尚未初始化或初始化失败. [hasInit] => ${hasInit}`);
+	}
+
+	const merged: EasemobServerConversationsParams & { [key: string]: any } = {
+		pageSize: 20,
+		cursor: "",
+		includeEmptyConversations: false,
+		...params
+	};
+
+	const res = await (conn as any).getServerConversations(merged);
+	console.info("conversations origin ====> ", res);
+	return (res || {}) as EasemobServerConversationsResult;
 }
 
 export const ensureGlobalIMForUser = async (userId: string) => {
@@ -173,6 +303,8 @@ export const ensureGlobalIMForUser = async (userId: string) => {
 		user: userId,
 		accessToken: tokenData.access_token
 	});
+
+	addEasemobEventHandlers({});
 
 	hasGlobalIMInited = true;
 };
