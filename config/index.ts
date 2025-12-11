@@ -31,6 +31,7 @@ type Config = {
 	isCustomTabBar: boolean; // 是否自定义 tabBar
 	backTop: boolean; // 是否显示回到顶部按钮
 	wx: WxConfig; // 微信配置
+	hxImDebug: boolean; // 是否开启环信 debug
 };
 
 // 根据环境导出最终配置
@@ -46,6 +47,7 @@ export const config = {
 	wx: {
 		debug: false
 	},
+	hxImDebug: false,
 	...(isDev ? dev() : prod())
 } as Config;
 
