@@ -10,7 +10,6 @@ TouchEmulator();
 
 const handleAppShow = async () => {
 	console.log("App Show");
-
 	// 根据业务情况判断是否要预先调用
 	const { user } = useStore();
 
