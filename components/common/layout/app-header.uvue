@@ -16,9 +16,11 @@ const props = withDefaults(
 		initialVoicePlay?: boolean;
 		voiceName?: string;
 		backTop?: boolean;
+		titleAction?: boolean;
 	}>(),
 	{
-		backTop: false
+		backTop: false,
+		titleAction: true
 	}
 );
 
@@ -126,7 +128,7 @@ const handleClickRecord = () => {
 					{{ title }}
 				</cl-text>
 				<cl-icon
-					v-if="title"
+					v-if="title && titleAction"
 					name="arrow-up-s-fill"
 					:size="32"
 					:pt="{ className: 'ml-1' }"

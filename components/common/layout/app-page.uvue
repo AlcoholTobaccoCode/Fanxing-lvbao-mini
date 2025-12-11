@@ -17,11 +17,15 @@ const props = withDefaults(
 		titleAction?: boolean;
 		// 右下角底部聊天拖拽按钮
 		chatListBtn?: boolean;
+		// 是否打开 icon 选择器
+		openIconPicker?: boolean;
 	}>(),
 	{
 		backTop: false,
 		titleAction: true,
-		chatListBtn: true
+		chatListBtn: true,
+		// TODO - 临时使用
+		openIconPicker: false
 	}
 );
 
@@ -117,6 +121,7 @@ const iconVisible = ref(false);
 					:initial-voice-play="voicePlay"
 					:voice-name="props.voiceName"
 					:back-top="props.backTop"
+					:title-action="props.titleAction"
 					@new-chat="handleOpenNewChat"
 					@voice-play-change="handleHeaderVoiceChange"
 					@voice-select="handleHeaderVoiceSelect"
@@ -145,7 +150,7 @@ const iconVisible = ref(false);
 			</view>
 
 			<!-- 测试阶段使用 - icon  -->
-			<cl-float-view v-if="false" :bottom="300">
+			<cl-float-view v-if="openIconPicker" :bottom="300">
 				<view
 					class="w-[40px] h-[40px] bg-primary-500 flex flex-row items-center justify-center rounded"
 					@click="iconVisible = true"

@@ -75,7 +75,7 @@ watch(
 					class="icon-picker-item"
 					@tap="handleClickIcon(name)"
 				>
-					<cl-icon :size="28" :name="name"></cl-icon>
+					<cl-icon :size="36" :name="name"></cl-icon>
 				</view>
 			</view>
 		</scroll-view>
