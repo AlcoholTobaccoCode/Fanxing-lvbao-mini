@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { nextTick, ref } from "vue";
 import type { PropType } from "vue";
 import { isDark } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
@@ -162,7 +162,7 @@ const handleOpenCall = () => {
 </script>
 
 <template>
-	<simple-card class="chat-input-wrapper" :class="{ 'is-dark': isDark }">
+	<simple-card class="chat-input-wrapper !py-0" :class="{ 'is-dark': isDark }">
 		<!-- 主输入区域 -->
 		<view class="chat-main">
 			<view :class="['chat-main__inner', modelValue ? '!pl-0' : '']">
@@ -176,7 +176,6 @@ const handleOpenCall = () => {
 						></cl-icon>
 					</view>
 				</view>
-
 				<view class="chat-main__center">
 					<cl-textarea
 						v-if="inputModeVal === 'text'"
@@ -185,6 +184,7 @@ const handleOpenCall = () => {
 						clearable
 						auto-height
 						:border="false"
+						:autofocus="true"
 						:maxlength="Infinity"
 						:showWordLimit="false"
 						:disabled="disabled"

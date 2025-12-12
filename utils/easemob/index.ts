@@ -25,11 +25,32 @@ export interface EasemobLoginOptions {
 	accessToken?: string;
 }
 
-export interface EasemobTextMessageParams {
+export interface EasemobTextMsgParams {
 	to: string;
 	chatType?: ChatType;
 	msg: string;
 	ext?: Record<string, any>;
+}
+
+export interface EasemobMediaMsgParamsBase {
+	to: string;
+	chatType?: ChatType;
+	url: string;
+	filename?: string;
+	fileSize?: number;
+	// 媒体宽高（图片 / 视频）
+	width?: number;
+	height?: number;
+	// 媒体时长（音频 / 视频，单位：秒）
+	length?: number;
+	ext?: Record<string, any>;
+}
+
+export interface EasemobImageMsgParams extends EasemobMediaMsgParamsBase {}
+
+export interface EasemobFileMsgParams extends EasemobMediaMsgParamsBase {
+	// 文件 MIME 类型，可选
+	filetype?: string;
 }
 
 export interface EasemobEventHandlers {
@@ -177,7 +198,7 @@ export function initEasemob(config: EasemobInitConfig) {
 		hasInit = true;
 		// 关闭 debug
 		console.info("globalConfig.hxImDebug ====> ", globalConfig.hxImDebug);
-		conn.getInstance().setDebugMode(globalConfig.hxImDebug);
+		conn?.getInstance?.().setDebugMode(globalConfig.hxImDebug);
 	} catch (error) {
 		console.error("hx connection error: ", error);
 	}
@@ -235,17 +256,29 @@ export async function loginEasemob(options: EasemobLoginOptions): Promise<any> {
 		});
 }
 
-export function logoutEasemob() {
-	if (conn && typeof conn.close === "function") {
-		conn.close();
-	}
-}
-
-export async function sendEasemobTextMessage(params: EasemobTextMessageParams): Promise<any> {
+function ensureImReadyForSend() {
 	if (!conn || !sdk) {
 		throw new Error("[IM] 尚未初始化, 请先 initEasemob.");
 	}
+	return { conn, sdk };
+}
 
+function sendEasemobMessageInternal(message: any, logPrefix: string) {
+	const { conn } = ensureImReadyForSend();
+	return conn
+		.send(message)
+		.then((res: any) => {
+			console.log(`[IM] ${logPrefix} success`, res);
+			sdkEvents.onSendMsg(res);
+		})
+		.catch((e: any) => {
+			console.log(`[IM] ${logPrefix} fail`, e);
+			sdkEvents.onSendMsgError(e);
+		});
+}
+
+export async function sendEasemobTextMessage(params: EasemobTextMsgParams): Promise<any> {
+	const { sdk } = ensureImReadyForSend();
 	const chatType: ChatType = params.chatType || "singleChat";
 	const message = sdk.message.create({
 		type: "txt",
@@ -254,17 +287,51 @@ export async function sendEasemobTextMessage(params: EasemobTextMessageParams): 
 		msg: params.msg,
 		ext: params.ext || {}
 	});
+	return sendEasemobMessageInternal(message, "Send text message");
+}
 
-	return conn
-		.send(message)
-		.then((res) => {
-			console.log("[IM] Send message success", res);
-			sdkEvents.onSendMsg(res);
-		})
-		.catch((e) => {
-			console.log("[IM] Send message fail", e);
-			sdkEvents.onSendMsgError(e);
-		});
+export async function sendEasemobImageMessage(params: EasemobImageMsgParams): Promise<any> {
+	const { sdk } = ensureImReadyForSend();
+	const chatType: ChatType = params.chatType || "singleChat";
+	const message = sdk.message.create({
+		type: "img",
+		chatType,
+		to: params.to,
+		file: {
+			url: params.url,
+			filename: params.filename,
+			file_length: params.fileSize,
+			width: params.width,
+			height: params.height
+		},
+		ext: params.ext || {}
+	});
+	return sendEasemobMessageInternal(message, "Send image message");
+}
+
+export async function sendEasemobFileMessage(params: EasemobFileMsgParams): Promise<any> {
+	const { sdk } = ensureImReadyForSend();
+	const chatType: ChatType = params.chatType || "singleChat";
+	const message = sdk.message.create({
+		type: "file",
+		chatType,
+		to: params.to,
+		file: {
+			url: params.url,
+			filename: params.filename,
+			file_length: params.fileSize,
+			filetype: params.filetype,
+			length: params.length
+		},
+		ext: params.ext || {}
+	});
+	return sendEasemobMessageInternal(message, "Send file message");
+}
+
+export function logoutEasemob() {
+	if (conn && typeof conn.close === "function") {
+		conn.close();
+	}
 }
 
 export async function getEasemobHistoryMessages(options: EasemobHistoryOptions): Promise<any> {
@@ -298,7 +365,7 @@ export async function getEasemobServerConversations(
 	};
 
 	const res = await (conn as any).getServerConversations(merged);
-	console.info("conversations origin ====> ", JSON.stringify(res));
+	console.info("conversations origin ====> ", res);
 	return (res || {}) as EasemobServerConversationsResult;
 }
 

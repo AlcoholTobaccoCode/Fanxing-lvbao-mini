@@ -29,37 +29,22 @@ export const imBus = createEventBus<IMEvents>();
 export const sdkEvents = {
 	// 登录成功
 	onLogin: () => {
-		log.group("onLogin");
-		log.info("im:onLogin 登录成功");
-		log.groupEnd();
-		// imBus.emit("im:onLogin", res);
+		imBus.emit("im:onLogin", null);
 	},
 	// 登录失败
 	onLoginError: (reason) => {
-		log.group("onLoginError");
-		log.info("im:onLoginError 登录失败 ===> ", JSON.stringify(reason));
-		log.groupEnd();
-		// imBus.emit("im:onLoginError", reason);
+		imBus.emit("im:onLoginError", reason);
 	},
 	// 发送消息成功
 	onSendMsg: (res) => {
-		log.group("handleSonSendMsgend");
-		log.info("im:onSendMsg 发送消息成功 ===> ", JSON.stringify(res));
-		log.groupEnd();
-		// imBus.emit("im:onSendMsg", res);
+		imBus.emit("im:onSendMsg", res);
 	},
 	// 发送消息失败
 	onSendMsgError: (e) => {
-		log.group("onSendMsgError");
-		log.info("im:onSendMsgError 发送消息失败 ===> ", JSON.stringify(e));
-		log.groupEnd();
-		// imBus.emit("im:onSendMsgError", e);
+		imBus.emit("im:onSendMsgError", e);
 	},
 	// 收到文本消息
 	onTextMessage: (msg: OnTextMsgResult) => {
-		log.group("onTextMessage");
-		// log.info("im:onTextMessage 收到文本消息 ===> ", JSON.stringify(msg));
-		log.groupEnd();
 		// TODO - save
 		imBus.emit("im:onTextMessage", msg);
 	}

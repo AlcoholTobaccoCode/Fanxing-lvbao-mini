@@ -2,12 +2,12 @@
 获取指定用户历史消息
 -->
 <script lang="ts" setup>
-import { nextTick, ref } from "vue";
+import { getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
-import { getEasemobHistoryMessages } from "@/utils/easemob";
+import { getEasemobHistoryMessages, sendEasemobTextMessage } from "@/utils/easemob";
 import type { SendData } from "@/components/chat-input/types";
-import { sleepWait } from "@/utils";
+import { imBus } from "@/utils/easemob/events";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/user-chat/index.uvue";
@@ -29,9 +29,18 @@ const historyMessages = ref<any[]>([]);
 
 const PAGE_SIZE = 20;
 const showFullTime = ref(false);
-// 列表滚动锚点，首次进入页面加载完成后滚动到底部
-const scrollIntoViewId = ref("");
+// 列表滚动位置（px），用于控制滚动到底部
+const scrollTop = ref(0);
 const hasInitialScrollDone = ref(false);
+// 是否显示“跳转最新消息”按钮
+const showJumpToLatest = ref(false);
+// scroll-view 可视高度（px），用于计算与底部的距离
+const scrollViewHeight = ref(0);
+
+// 滚动到底部：每次把 scrollTop 增加一大段，scroll-view 会自动滚到底
+const scrollToBottom = () => {
+	scrollTop.value += 1000;
+};
 
 const loadHistory = async (reset: boolean) => {
 	if (!targetId.value.trim()) {
@@ -55,7 +64,7 @@ const loadHistory = async (reset: boolean) => {
 			searchDirection: "up"
 		});
 
-		console.info("getEasemobHistoryMessages res ===> ", JSON.stringify(res));
+		console.info("getEasemobHistoryMessages res ===> ", res);
 
 		const list = ((res && (res.messages || res.entities)) || []) as any[];
 		// 接口按时间逆序返回（新到旧），这里统一转为时间正序（旧到新）
@@ -63,12 +72,10 @@ const loadHistory = async (reset: boolean) => {
 		if (reset) {
 			// 首次加载：直接用这一页（旧→新）
 			historyMessages.value = pageList;
-			// 首次进入页面时，将滚动锚点设为底部，自动滚动到底部
+			// 首次进入页面时，自动滚动到底部
 			if (!hasInitialScrollDone.value) {
 				hasInitialScrollDone.value = true;
-				nextTick(() => {
-					scrollIntoViewId.value = "chat-bottom-a";
-				});
+				scrollToBottom();
 			}
 		} else {
 			// 加载更多：在当前列表前面拼接更早的一页（更旧→当前旧）
@@ -77,26 +84,12 @@ const loadHistory = async (reset: boolean) => {
 
 		cursor.value = (res && (res.cursor as any)) ?? null;
 		hasMore.value = !!cursor.value && list.length >= PAGE_SIZE;
-
-		console.info("cursor.value =====> ", cursor.value);
 	} catch (err) {
 		console.error("[IM] 获取历史消息失败", err);
 		ui.showToast({ message: "获取历史消息失败" });
 	} finally {
 		loading.value = false;
 	}
-};
-
-const handleLoadLatest = () => {
-	loadHistory(true);
-};
-
-const handleLoadMore = () => {
-	if (!hasMore.value) {
-		ui.showToast({ message: "没有更多消息了" });
-		return;
-	}
-	loadHistory(false);
 };
 
 // 滚动到顶部时加载更多历史消息，类似微信上滑加载
@@ -115,6 +108,19 @@ const handleScrollToUpper = async () => {
 };
 
 //#endregion
+
+// 监听滚动位置，计算与底部的距离
+const handleScroll = (e: any) => {
+	const detail = e?.detail || {};
+	const scrollTop = Number(detail.scrollTop || 0);
+	const scrollHeight = Number(detail.scrollHeight || 0);
+	const viewportHeight = scrollViewHeight.value || uni.getSystemInfoSync().windowHeight || 0;
+	if (!scrollHeight || !viewportHeight) return;
+
+	const distanceFromBottom = scrollHeight - (scrollTop + viewportHeight);
+	// 距离底部超过一定像素则认为用户离开了底部，这里用 50px 作为阈值
+	showJumpToLatest.value = distanceFromBottom > 50;
+};
 
 //#region 消息时间处理
 const toggleTimeMode = () => {
@@ -194,10 +200,26 @@ const shouldShowTime = (index: number) => {
 
 //#endregion
 
+//#region 对话逻辑
+// 是否展示底部扩展面板
+const extraPanelVisible = ref(false);
+
+const handleSend = async (data: SendData) => {
+	log.group("handleSend");
+	log.info("[ChatDetail] send payload ==> ", data);
+	log.groupEnd();
+
+	await sendEasemobTextMessage({
+		to: targetId.value,
+		chatType: "singleChat",
+		msg: data.text
+	});
+};
+//#endregion
+
 // 进入页面时，从路由参数中读取会话信息并自动加载历史记录
 onLoad((options: any) => {
 	const conversationId = (options?.conversationId || "").toString() || "95";
-	console.info("conversationId ====> ", conversationId);
 	if (conversationId) {
 		targetId.value = conversationId;
 		pageTitle.value = conversationId;
@@ -208,16 +230,54 @@ onLoad((options: any) => {
 	}
 });
 
-//#region 对话逻辑
-// 是否展示底部扩展面板
-const extraPanelVisible = ref(false);
+onMounted(() => {
+	// 计算 scroll-view 实际高度，放在 nextTick 里保证节点已渲染
+	nextTick(() => {
+		const instance = getCurrentInstance();
+		if (instance) {
+			uni.createSelectorQuery()
+				.in(instance)
+				.select("#chat-detail-scroll")
+				.boundingClientRect((res: any) => {
+					if (res && res.height) {
+						scrollViewHeight.value = res.height;
+					}
+				})
+				.exec();
+		}
+	});
 
-const handleSend = async (data: SendData) => {
-	log.group("handleSend");
-	log.info("send payload ==> ", data);
-	log.groupEnd();
+	imBus.on("im:onTextMessage", (msg) => {
+		console.group("[ChatDetail] onTextMessage");
+		console.info("[ChatDetail] im:onTextMessage 收到文本消息 ===> ", msg);
+		console.groupEnd();
+
+		historyMessages.value.push({
+			...msg
+		});
+		// 如果当前没有离开底部很远，则自动滚动到底部；否则只更新按钮状态
+		if (!showJumpToLatest.value) {
+			scrollToBottom();
+		}
+	});
+
+	imBus.on("im:onSendMsg", (msg) => {
+		log.group("handleSonSendMsgend");
+		log.info("[ChatDetail] im:onSendMsg 发送消息成功 ===> ", msg);
+		log.groupEnd();
+	});
+});
+
+onBeforeUnmount(() => {
+	imBus.off("im:onTextMessage");
+	imBus.off("im:onSendMsg");
+});
+
+// 点击“跳转最新消息”按钮
+const handleJumpToLatest = () => {
+	showJumpToLatest.value = false;
+	scrollToBottom();
 };
-//#endregion
 </script>
 
 <template>
@@ -226,9 +286,11 @@ const handleSend = async (data: SendData) => {
 			<view class="chat-detail-content">
 				<view class="flex-1 overflow-hidden">
 					<scroll-view
+						id="chat-detail-scroll"
 						scroll-y
 						class="chat-detail-content__scroll"
-						:scroll-into-view="scrollIntoViewId"
+						:scroll-top="scrollTop"
+						@scroll="handleScroll"
 						@scrolltoupper="handleScrollToUpper"
 					>
 						<view
@@ -262,14 +324,25 @@ const handleSend = async (data: SendData) => {
 						<view id="chat-bottom-a"></view>
 					</scroll-view>
 				</view>
-				<chat-input use-module="userChat" @send="handleSend" />
+				<view class="jump-latest-btn" v-if="showJumpToLatest" @tap="handleJumpToLatest">
+					<cl-button
+						icon="arrow-down-s-line"
+						:pt="{
+							className: '!rounded-none !rounded-tl-lg !rounded-bl-lg !px-1 !py-2'
+						}"
+					>
+						跳转最新消息
+					</cl-button>
+				</view>
+				<view class="py-4">
+					<chat-input ref="inputModalRef" use-module="userChat" @send="handleSend" />
+				</view>
 				<!-- 底部扩展交互区域：根据业务需要控制 extraPanelVisible 展示/隐藏 -->
 				<!-- <view
 					v-if="extraPanelVisible"
 					class="w-full bg-white border-t"
 					style="height: 220rpx"
-				></view>
-				<chat-input v-model="inputValue" use-module="userChat" @send="handleSend" /> -->
+				></view> -->
 			</view>
 		</template>
 	</app-page>
@@ -283,5 +356,10 @@ const handleSend = async (data: SendData) => {
 		@apply w-full h-full flex-1 flex flex-col gap-4 box-border py-4;
 		background-color: #f3f3f3;
 	}
+}
+
+.jump-latest-btn {
+	@apply fixed right-0;
+	bottom: 100px;
 }
 </style>
