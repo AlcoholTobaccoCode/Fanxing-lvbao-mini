@@ -1,7 +1,8 @@
 import { createEventBus, type EventMap } from "@/utils/eventBus";
 import { Logger } from "@/cool/utils/log";
+import { type SaveChatMessagePayload, SaveChatMessage } from "@/api/chat-im";
 
-interface OnTextMsgResult<T = any> {
+export interface OnTextMsgResult<T = any> {
 	id: string;
 	type: string;
 	chatType: string;
@@ -13,7 +14,7 @@ interface OnTextMsgResult<T = any> {
 	onlineState: number;
 }
 
-interface IMEvents extends EventMap {
+export interface IMEvents extends EventMap {
 	"im:onLogin": null;
 	"im:onLoginError": any;
 	"im:onSendMsg": any;
@@ -37,7 +38,25 @@ export const sdkEvents = {
 	},
 	// 发送消息成功
 	onSendMsg: (res) => {
+		console.info("res =====> ", res);
 		imBus.emit("im:onSendMsg", res);
+		// const msg = res.message || {};
+		// const payload: SaveChatMessagePayload = {
+		// 	message_id: msg.id,
+		// 	senderId: msg.from,
+		// 	receiverId: msg.to,
+		// 	senderRole: "user",
+		// 	msgType: msg.type,
+		// 	content: msg.msg
+		// };
+		// log.info("onTextMessage Save payload", payload);
+		// SaveChatMessage(payload)
+		// 	.then(() => {
+		// 		log.info("onTextMessage Save Success");
+		// 	})
+		// 	.catch((e) => {
+		// 		log.info("onTextMessage Save Error:", JSON.stringify(e));
+		// 	});
 	},
 	// 发送消息失败
 	onSendMsgError: (e) => {
@@ -45,7 +64,6 @@ export const sdkEvents = {
 	},
 	// 收到文本消息
 	onTextMessage: (msg: OnTextMsgResult) => {
-		// TODO - save
 		imBus.emit("im:onTextMessage", msg);
 	}
 };

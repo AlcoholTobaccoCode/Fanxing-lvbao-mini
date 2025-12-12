@@ -5,20 +5,25 @@
 import { getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
-import { getEasemobHistoryMessages, sendEasemobTextMessage } from "@/utils/easemob";
+import {
+	getEasemobHistoryMessages,
+	sendEasemobAudioMessage,
+	sendEasemobTextMessage
+} from "@/utils/easemob";
 import type { SendData } from "@/components/chat-input/types";
 import { imBus } from "@/utils/easemob/events";
+import { type OnTextMsgResult } from "@/utils/easemob/events";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/user-chat/index.uvue";
 
-const log = new Logger("HomePage");
+const log = new Logger("ChatDetailPage");
 const ui = useUi();
 
 //#region 加载历史对话
 
 // 当前会话 ID（单聊为对端用户 ID，群聊为群组 ID）
-const targetId = ref("");
+const targetId = ref<string>("");
 // 页面标题，默认使用会话 ID
 const pageTitle = ref<string>("IM 历史消息");
 const loading = ref(false);
@@ -201,20 +206,102 @@ const shouldShowTime = (index: number) => {
 //#endregion
 
 //#region 对话逻辑
+const inputModel = ref("");
 // 是否展示底部扩展面板
 const extraPanelVisible = ref(false);
 
 const handleSend = async (data: SendData) => {
 	log.group("handleSend");
-	log.info("[ChatDetail] send payload ==> ", data);
+	log.info("[ChatDetail] send payload ==> ", JSON.stringify(data));
 	log.groupEnd();
 
-	await sendEasemobTextMessage({
-		to: targetId.value,
-		chatType: "singleChat",
-		msg: data.text
-	});
+	try {
+		let res: any = null;
+
+		// 文本消息
+		if (data.mode === "text") {
+			res = await sendEasemobTextMessage({
+				to: targetId.value,
+				chatType: "singleChat",
+				msg: data.text,
+				ext: {}
+			});
+		}
+
+		// 语音消息：使用已经上传到 OSS 的在线地址和时长
+		if (data.mode === "voice" && data.voice) {
+			const v = data.voice;
+			if (!v.onlineUrl) {
+				throw new Error("语音上传失败：缺少 onlineUrl");
+			}
+			res = await sendEasemobAudioMessage({
+				to: targetId.value,
+				chatType: "singleChat",
+				url: v.onlineUrl,
+				filename: v.tempFilePath,
+				fileSize: undefined,
+				length: Math.ceil((v.duration || 0) / 1000),
+				ext: {
+					// 识别出的文本内容可放在 ext 里，后续前端可根据需要展示
+					voiceText: v.text || data.text || ""
+				}
+			});
+		}
+
+		console.info("res ====> ", JSON.stringify(res));
+
+		historyMessages.value.push({
+			...(res?.message || {})
+		});
+		// 如果当前没有离开底部很远，则自动滚动到底部；否则只更新按钮状态
+		if (!showJumpToLatest.value) {
+			scrollToBottom();
+		}
+		inputModel.value = "";
+	} catch (error) {
+		ui.showToast({ message: `发送失败: ${JSON.stringify(error)}` });
+	}
 };
+//#endregion
+
+//#region 语音播放
+
+const currentAudioId = ref<string | null>(null);
+let audioCtx: UniApp.InnerAudioContext | null = null;
+
+const getAudioInfo = (m: any) => {
+	const body = m.body || {};
+	return {
+		id: m.id || m.msgId,
+		url: m.url || body.url,
+		length: m.length || body.length || 0
+	};
+};
+
+const handleToggleAudio = (m: any) => {
+	const info = getAudioInfo(m);
+	if (!info.url) {
+		ui.showToast({ message: "音频资源不存在或已失效" });
+		return;
+	}
+	if (!audioCtx) {
+		audioCtx = uni.createInnerAudioContext();
+		audioCtx.onEnded(() => {
+			currentAudioId.value = null;
+		});
+	}
+	// 如果当前正在播放同一条，则停止
+	if (currentAudioId.value === info.id) {
+		audioCtx.stop();
+		currentAudioId.value = null;
+		return;
+	}
+
+	currentAudioId.value = info.id;
+	audioCtx.src = info.url;
+	audioCtx.play();
+};
+
 //#endregion
 
 // 进入页面时，从路由参数中读取会话信息并自动加载历史记录
@@ -247,17 +334,18 @@ onMounted(() => {
 		}
 	});
 
-	imBus.on("im:onTextMessage", (msg) => {
+	imBus.on("im:onTextMessage", (msg: OnTextMsgResult) => {
 		console.group("[ChatDetail] onTextMessage");
 		console.info("[ChatDetail] im:onTextMessage 收到文本消息 ===> ", msg);
 		console.groupEnd();
-
-		historyMessages.value.push({
-			...msg
-		});
-		// 如果当前没有离开底部很远，则自动滚动到底部；否则只更新按钮状态
-		if (!showJumpToLatest.value) {
-			scrollToBottom();
+		if (targetId.value === msg.from) {
+			historyMessages.value.push({
+				...msg
+			});
+			// 如果当前没有离开底部很远，则自动滚动到底部；否则只更新按钮状态
+			if (!showJumpToLatest.value) {
+				scrollToBottom();
+			}
 		}
 	});
 
@@ -271,6 +359,11 @@ onMounted(() => {
 onBeforeUnmount(() => {
 	imBus.off("im:onTextMessage");
 	imBus.off("im:onSendMsg");
+	if (audioCtx) {
+		audioCtx.stop();
+		audioCtx.destroy();
+		audioCtx = null;
+	}
 });
 
 // 点击“跳转最新消息”按钮
@@ -307,17 +400,44 @@ const handleJumpToLatest = () => {
 							</view>
 							<view
 								class="w-full flex"
-								:class="m.from === targetId ? 'justify-start' : 'justify-end'"
+								:class="[m.from === targetId ? 'justify-start' : 'items-end']"
 							>
 								<view
-									class="px-3 py-2 rounded-lg text-sm"
+									class="px-3 py-2 rounded-lg text-sm w-fit"
 									:style="{
-										maxWidth: '70%',
+										maxWidth: '90%',
 										backgroundColor: m.from === targetId ? '#fff' : '#95ec69',
 										color: '#000'
 									}"
 								>
-									{{ m.msg || (m.body && m.body.msg) || "" }}
+									<!-- 文本消息 -->
+									<view
+										v-if="
+											m.type !== 'audio' &&
+											(!m.body || m.body.type !== 'audio')
+										"
+									>
+										{{ m.msg || (m.body && m.body.msg) || "" }}
+									</view>
+									<!-- 语音消息：点击播放 -->
+									<view
+										v-else
+										class="flex flex-row items-center"
+										@tap.stop="handleToggleAudio(m)"
+									>
+										<cl-icon
+											:name="
+												currentAudioId === (m.id || m.msgId)
+													? 'volume-up-fill'
+													: 'volume-up-line'
+											"
+											:size="40"
+											color="currentColor"
+										></cl-icon>
+										<text class="ml-1 text-xs">
+											{{ (m.length || (m.body && m.body.length) || 0) + '"' }}
+										</text>
+									</view>
 								</view>
 							</view>
 						</view>
@@ -334,8 +454,13 @@ const handleJumpToLatest = () => {
 						跳转最新消息
 					</cl-button>
 				</view>
-				<view class="py-4">
-					<chat-input ref="inputModalRef" use-module="userChat" @send="handleSend" />
+				<view class="pb-4 pt-2">
+					<chat-input
+						ref="inputModalRef"
+						v-model:model-value="inputModel"
+						use-module="userChat"
+						@send="handleSend"
+					/>
 				</view>
 				<!-- 底部扩展交互区域：根据业务需要控制 extraPanelVisible 展示/隐藏 -->
 				<!-- <view

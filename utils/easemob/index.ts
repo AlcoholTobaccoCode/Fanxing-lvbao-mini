@@ -53,6 +53,11 @@ export interface EasemobFileMsgParams extends EasemobMediaMsgParamsBase {
 	filetype?: string;
 }
 
+export interface EasemobAudioMsgParams extends EasemobMediaMsgParamsBase {
+	// 语音时长（秒），必填
+	length: number;
+}
+
 export interface EasemobEventHandlers {
 	onOpened?: () => void;
 	onClosed?: () => void;
@@ -265,16 +270,19 @@ function ensureImReadyForSend() {
 
 function sendEasemobMessageInternal(message: any, logPrefix: string) {
 	const { conn } = ensureImReadyForSend();
-	return conn
-		.send(message)
-		.then((res: any) => {
-			console.log(`[IM] ${logPrefix} success`, res);
-			sdkEvents.onSendMsg(res);
-		})
-		.catch((e: any) => {
-			console.log(`[IM] ${logPrefix} fail`, e);
-			sdkEvents.onSendMsgError(e);
-		});
+	return new Promise((resolve, reject) => {
+		conn.send(message)
+			.then((res: any) => {
+				console.log(`[IM] ${logPrefix} success`, res);
+				sdkEvents.onSendMsg(res);
+				resolve(res);
+			})
+			.catch((e: any) => {
+				console.log(`[IM] ${logPrefix} fail`, e);
+				sdkEvents.onSendMsgError(e);
+				reject(e);
+			});
+	});
 }
 
 export async function sendEasemobTextMessage(params: EasemobTextMsgParams): Promise<any> {
@@ -326,6 +334,25 @@ export async function sendEasemobFileMessage(params: EasemobFileMsgParams): Prom
 		ext: params.ext || {}
 	});
 	return sendEasemobMessageInternal(message, "Send file message");
+}
+
+export async function sendEasemobAudioMessage(params: EasemobAudioMsgParams): Promise<any> {
+	const { sdk } = ensureImReadyForSend();
+	const chatType: ChatType = params.chatType || "singleChat";
+	const message = sdk.message.create({
+		type: "audio",
+		chatType,
+		to: params.to,
+		// 按照环信小程序官方示例，使用 body 传递已经上传完成的音频 URL 和时长
+		body: {
+			url: params.url,
+			type: "audio",
+			filename: params.filename,
+			length: params.length
+		},
+		ext: params.ext || {}
+	});
+	return sendEasemobMessageInternal(message, "Send audio message");
 }
 
 export function logoutEasemob() {
