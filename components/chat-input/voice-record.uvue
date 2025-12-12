@@ -287,7 +287,7 @@ defineExpose({
 		</view>
 
 		<!-- 底部操作区：取消 / 松开发送 / 转文字 -->
-		<view class="voice-record-bottom"> 底部 </view>
+		<!-- <view class="voice-record-bottom"> 底部 </view> -->
 	</view>
 </template>
 

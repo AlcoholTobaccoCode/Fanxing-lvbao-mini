@@ -43,19 +43,6 @@ const props = defineProps({
 	tools: {
 		type: Array as PropType<Tools>,
 		default: () => []
-	},
-	// 默认工具是否展示：深度思考 / 知识库 / 联网
-	showDefaultDeepThink: {
-		type: Boolean,
-		default: () => true
-	},
-	showDefaultKnowledge: {
-		type: Boolean,
-		default: () => true
-	},
-	showDefaultNetwork: {
-		type: Boolean,
-		default: () => true
 	}
 });
 
@@ -74,38 +61,6 @@ const emit = defineEmits<{
 
 // 输入模式
 const inputModeVal = ref(props.inputMode);
-
-// 顶部意图 chips：默认工具 + 外部传入工具
-const createDefaultTools = (): Tools => {
-	const list: Tools = [];
-	if (props.showDefaultDeepThink) {
-		list.push({
-			icon: "links-line",
-			text: "深度思考",
-			enable: false
-		});
-	}
-	if (props.showDefaultNetwork) {
-		list.push({
-			icon: "fxzh-hulianwang",
-			text: "联网搜索",
-			enable: false
-		});
-	}
-	if (props.showDefaultKnowledge) {
-		list.push({
-			icon: "fxzh-zhishiku",
-			text: "知识库",
-			enable: false
-		});
-	}
-	return list;
-};
-
-const tools = ref<Tools>([
-	...createDefaultTools(),
-	...(props.tools || []).map((item) => ({ ...item }))
-]);
 
 //#region 语音录制相关
 
@@ -169,17 +124,6 @@ const handleVoiceRecordFinish = async (result: VoiceResult) => {
 // 更多功能弹层显隐
 const showMoreAction = ref(false);
 
-// 顶部工具点击
-const handleToolTap = (item: ToolItem) => {
-	const target = tools.value.find((t) => t.text === item.text);
-	if (!target) return;
-
-	target.enable = !target.enable;
-	target.onClick?.(target);
-	emit("tool-toggle", { ...target });
-	emit("tool-change", tools.value);
-};
-
 // 切换输入模式
 const handleRecording = () => {
 	inputModeVal.value = inputModeVal.value === "text" ? "voice" : "text";
@@ -215,66 +159,15 @@ const handleOpenCall = () => {
 };
 
 //#endregion
-
-// 当外部传入的 tools 或默认展示配置变化时，同步内部列表
-watch(
-	() => ({
-		tools: props.tools,
-		deepThink: props.showDefaultDeepThink,
-		knowledge: props.showDefaultKnowledge,
-		network: props.showDefaultNetwork
-	}),
-	() => {
-		const activeMap = new Map<string, boolean>();
-		tools.value.forEach((t) => {
-			activeMap.set(t.text, !!t.enable);
-		});
-
-		const next: Tools = [
-			...createDefaultTools(),
-			...(props.tools || []).map((item) => ({ ...item }))
-		].map((item) => ({
-			...item,
-			enable: activeMap.get(item.text) ?? item.enable ?? false
-		}));
-
-		tools.value = next;
-	},
-	{ deep: true }
-);
 </script>
 
 <template>
 	<simple-card class="chat-input-wrapper" :class="{ 'is-dark': isDark }">
-		<!-- 顶部意图标签 -->
-		<view class="chat-intent-row">
-			<scroll-view scroll-x class="w-full" show-scrollbar="false">
-				<view class="chat-intent-row__inner">
-					<view
-						v-for="item in tools"
-						:key="item.text"
-						class="chat-intent-chip"
-						:class="{ 'chat-intent-chip--active': item.enable }"
-						@tap.stop="handleToolTap(item)"
-					>
-						<cl-icon
-							:name="item.icon"
-							color="currentColor"
-							:pt="{ className: 'mr-1' }"
-						></cl-icon>
-						<cl-text size="13px" class="chat-intent-chip__text">{{
-							item.text
-						}}</cl-text>
-					</view>
-				</view>
-			</scroll-view>
-		</view>
-
 		<!-- 主输入区域 -->
 		<view class="chat-main">
 			<view :class="['chat-main__inner', modelValue ? '!pl-0' : '']">
 				<!-- 默认输入交互区域 -->
-				<view v-if="!modelValue" class="chat-main__left">
+				<view class="chat-main__left">
 					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 						<cl-icon
 							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
@@ -336,10 +229,6 @@ watch(
 					</view>
 				</view>
 			</view>
-		</view>
-
-		<view class="chat-tips">
-			<cl-text size="10px" color="info">AI检索结果仅供参考，以官方法条和权威案例为准</cl-text>
 		</view>
 
 		<!-- 更多交互弹窗 -->
@@ -417,9 +306,5 @@ watch(
 
 .chat-main__icon-btn {
 	@apply flex items-center justify-center text-surface-700;
-}
-
-.chat-tips {
-	@apply flex items-center justify-center mt-2;
 }
 </style>
