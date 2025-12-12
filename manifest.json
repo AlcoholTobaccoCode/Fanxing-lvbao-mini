@@ -74,8 +74,8 @@
                 }
             },
             "icons" : {
-                "foreground" : "static/logo2.png",
-                "background" : "static/logo2.png"
+                "foreground" : "static/logo.png",
+                "background" : "static/logo.png"
             }
         }
     },

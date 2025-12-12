@@ -94,7 +94,7 @@ export class Wx {
 		const { appId } = this.mpConfig;
 
 		const redirect_uri = encodeURIComponent(
-			`${location.origin}${location.pathname}#/pages/user/login`
+			`${location.origin}${location.pathname}#/user/login`
 		);
 		const response_type = "code";
 		const scope = "snsapi_userinfo";

@@ -5,9 +5,10 @@ import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
 import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store/chatInput-store";
 import type { SendData } from "@/components/chat-input/types";
+import { createConsultTtsController } from "@/utils/aliyun/tts-stream";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/components/chat-input/index.uvue";
+import ChatInput from "@/components/chat-input/ai-chat/index.uvue";
 
 const log = new Logger("ConsultChatPage");
 const ui = useUi();
@@ -96,9 +97,9 @@ onLoad(() => {
 		consultSessionStore.sendTextQuestion(launch.text, launch.tools);
 	}
 
-	nextTick(() => {
+	setTimeout(() => {
 		scrollToBottom();
-	});
+	}, 500);
 });
 
 onUnload(() => {
@@ -128,7 +129,19 @@ const handleSend = async (data: SendData) => {
 		// 发送新问题前，重置为自动跟随到底部
 		autoScroll.value = true;
 		scrollToBottom();
-		await consultSessionStore.sendTextQuestion(data.text, chatInputStore.tools.value);
+		// 创建流式语音合成
+		const ttsController = await createConsultTtsController();
+		try {
+			await consultSessionStore.sendTextQuestion(data.text, chatInputStore.tools.value, {
+				onTextChunk: async (chunk: string) => {
+					console.info("chunk ===> ", chunk);
+					await ttsController.feedText(chunk);
+				}
+			});
+			await ttsController.finish();
+		} finally {
+			ttsController.dispose();
+		}
 	} catch (err) {
 		console.error("consult send error", err);
 		ui.showToast({ message: "咨询失败，请稍后重试" });
@@ -137,12 +150,12 @@ const handleSend = async (data: SendData) => {
 </script>
 
 <template>
-	<app-page title="法律咨询" back-top :use-history-layout="false">
+	<app-page title="法律咨询" back-top :use-history-layout="false" :chat-list-btn="false">
 		<template #content>
 			<view class="w-full h-full flex flex-col overflow-hidden">
 				<!-- 临时测试 -->
 				<view
-					v-if="!!hasValidLaunch"
+					v-if="!hasValidLaunch"
 					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
 				>
 					暂未检测到会话启动参数，请从首页发起新的咨询。

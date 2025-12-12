@@ -4,13 +4,20 @@ import { useStore } from "@/cool";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/components/chat-input/types";
 
+import { MockMessages } from "./mock";
+
 export interface ConsultMessage {
 	role: "user" | "system";
 	content: string;
 }
 
+export interface ConsultStreamHooks {
+	onTextChunk?: (chunk: string) => void;
+}
+
 export class ConsultSessionStore {
 	messages = ref<ConsultMessage[]>([]);
+	// messages = ref<ConsultMessage[]>(MockMessages);
 	sessionId = ref<string | null>(null);
 	loading = ref(false);
 
@@ -19,7 +26,7 @@ export class ConsultSessionStore {
 		this.sessionId.value = null;
 	}
 
-	async sendTextQuestion(text: string, tools: Tools) {
+	async sendTextQuestion(text: string, tools: Tools, hooks?: ConsultStreamHooks) {
 		const content = text.trim();
 		if (!content || this.loading.value) return;
 
@@ -77,6 +84,7 @@ export class ConsultSessionStore {
 
 					if (textChunk) {
 						aiMsg.content = textChunk;
+						hooks?.onTextChunk?.(textChunk);
 					}
 				} catch (err) {
 					console.error("解析咨询响应失败", err);

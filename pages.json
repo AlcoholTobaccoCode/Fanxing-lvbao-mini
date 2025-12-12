@@ -1,17 +1,17 @@
 {
 	// "entryPagePath": "pages/consult/chat",
 	// "entryPagePath": "pages/test-pages/index",
-	// "entryPagePath": "pages/home/index",
-	"entryPagePath": "pages/ease-im/index",
+	"entryPagePath": "pages/home/index",
+	// "entryPagePath": "pages/ease-im/index",
 	"pages": [
 		//#region ---------------- TEST PAGE ----------------
-		{
-			"path": "pages/test-pages/index",
-			"style": {
-				"navigationBarTitleText": "静态测试页面",
-				"navigationStyle": "custom"
-			}
-		},
+		// {
+		// 	"path": "pages/test-pages/index",
+		// 	"style": {
+		// 		"navigationBarTitleText": "静态测试页面",
+		// 		"navigationStyle": "custom"
+		// 	}
+		// },
 		//#endregion
 		{
 			"path": "pages/home/index",
@@ -27,42 +27,6 @@
 				"navigationStyle": "custom"
 			}
 		},
-		//#region ---------------- 登录 ----------------
-		{
-			"path": "pages/user/login",
-			"style": {
-				"navigationBarTitleText": "登录",
-				"navigationStyle": "custom"
-			}
-		},
-		// {
-		// 	"path": "pages/user/edit",
-		// 	"style": {
-		// 		"navigationBarTitleText": "编辑资料"
-		// 	},
-		// 	"meta": {
-		// 		"isAuth": true
-		// 	}
-		// },
-		// {
-		// 	"path": "pages/user/edit-name",
-		// 	"style": {
-		// 		"navigationStyle": "custom"
-		// 	},
-		// 	"meta": {
-		// 		"isAuth": true
-		// 	}
-		// },
-		// {
-		// 	"path": "pages/user/edit-description",
-		// 	"style": {
-		// 		"navigationStyle": "custom"
-		// 	},
-		// 	"meta": {
-		// 		"isAuth": true
-		// 	}
-		// }
-		//#endregion
 		//#region ---------------- 环信 IM ----------------
 		{
 			"path": "pages/ease-im/index",
@@ -115,6 +79,47 @@
 						"navigationBarTitleText": "联系客服"
 					}
 				}
+			]
+		},
+		//#endregion
+		//#region ---------------- 用户、登录 ----------------
+		{
+			"root": "user",
+			"pages": [
+				{
+					"path": "login",
+					"style": {
+						"navigationBarTitleText": "登录",
+						"navigationStyle": "custom"
+					}
+				}
+				// {
+				// 	"path": "user/edit",
+				// 	"style": {
+				// 		"navigationBarTitleText": "编辑资料"
+				// 	},
+				// 	"meta": {
+				// 		"isAuth": true
+				// 	}
+				// },
+				// {
+				// 	"path": "user/edit-name",
+				// 	"style": {
+				// 		"navigationStyle": "custom"
+				// 	},
+				// 	"meta": {
+				// 		"isAuth": true
+				// 	}
+				// },
+				// {
+				// 	"path": "user/edit-description",
+				// 	"style": {
+				// 		"navigationStyle": "custom"
+				// 	},
+				// 	"meta": {
+				// 		"isAuth": true
+				// 	}
+				// }
 			]
 		}
 		//#endregion

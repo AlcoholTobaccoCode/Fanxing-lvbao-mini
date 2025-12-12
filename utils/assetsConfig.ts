@@ -1,8 +1,5 @@
 import { generateUUID, generateRandomString } from "./util";
 
-// 用户默认头像
-export const USER_DEFAULT_AVATAR = "/static/user/avatar.png";
-
 export const MODULE_SESSION_NAME = {
 	// 咨询
 	consult: "ai_consult_",

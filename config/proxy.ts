@@ -11,7 +11,7 @@ export const proxy = {
 	prod: {
 		target: "https://lawapi-test.fanxingzhihui.com",
 		changeOrigin: true,
-		rewrite: (path: string) => path.replace("/prod", "/api")
+		rewrite: (path: string) => path.replace("/prod", "")
 	}
 };
 

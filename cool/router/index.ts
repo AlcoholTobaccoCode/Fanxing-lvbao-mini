@@ -53,7 +53,7 @@ export class Router {
 		const paths = {
 			// home: PAGES[0].path, // 首页为第一个页面
 			home: "/pages/home/index",
-			login: "/pages/user/login"
+			login: "/user/login"
 		};
 
 		return get(paths, name) as string;
@@ -319,7 +319,7 @@ export class Router {
 	login = debounce(() => {
 		if (!this.isLoginPage(this.path())) {
 			this.push({
-				path: "/pages/user/login",
+				path: "/user/login",
 				mode: "reLaunch"
 			});
 		}
