@@ -7,7 +7,7 @@ import { router } from "@/cool";
 import type { SendData } from "@/components/chat-input/types";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/components/chat-input/index.uvue";
+import ChatInput from "@/components/chat-input/ai-chat.uvue";
 import SimpleCard from "@/components/card/simple-card.uvue";
 import Consult from "@/pages/home/components/consult.vue";
 import CallControls from "@/components/call-controls/index.uvue";
