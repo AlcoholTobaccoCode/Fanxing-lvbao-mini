@@ -83,6 +83,20 @@ export interface EasemobServerConversationsResult {
 const USER_CHAT_TOKEN_STORAGE_KEY = "easemob_user_chat_token";
 const TOKEN_EXPIRE_GUARD_SECONDS = 120;
 
+// 发送消息时默认附加字段
+// const sendMsgExt = () => {
+// 	const { user } = useStore();
+
+// 	return {
+// 		sendUserInfo: {
+// 			id: user.info.value?.id,
+// 			name: user.info.value?.nickName,
+// 			phone: user.info.value?.phone
+// 		},
+// 		receiverUserInfo: {}
+// 	};
+// };
+
 // 获取当前登录用户信息
 let reloadInit = 0;
 const getUserInfoAndInit = async () => {

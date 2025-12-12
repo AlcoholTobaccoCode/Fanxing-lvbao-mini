@@ -1,24 +1,246 @@
 <script lang="ts" setup>
+import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { isDark, usePager } from "@/cool";
 import type { EasemobConversationItem } from "@/utils/easemob";
-import ChatHistoryList from "./chat-history-list.uvue";
+import { getEasemobServerConversations } from "@/utils/easemob";
+import { imBus } from "@/utils/easemob/events";
 
 const emit = defineEmits<{
 	(e: "select", item: EasemobConversationItem): void;
 }>();
 
-const handleSelect = (item: EasemobConversationItem) => {
+const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
+
+// 使用环信服务端游标分页
+let serverCursor = "";
+let historyType = 0;
+
+const { refresh, list, listView, loading, loadMore } = usePager(async (params, { render }) => {
+	const page = Number(params["page"] || 1);
+	const size = Number(params["size"] || 20);
+
+	if (page === 1) {
+		serverCursor = "";
+	}
+
+	const res = await getEasemobServerConversations({
+		pageSize: size,
+		cursor: serverCursor,
+		includeEmptyConversations: false
+	});
+
+	const conversations = (res?.data?.conversations || []) as EasemobConversationItem[];
+	serverCursor = res?.data?.cursor || "";
+	historyType = res.type;
+
+	const total = page * size + (serverCursor ? 1 : 0);
+
+	render({
+		list: conversations,
+		pagination: {
+			page,
+			size,
+			total
+		}
+	});
+});
+
+const handleClickItem = (item: EasemobConversationItem) => {
 	emit("select", item);
 };
+
+// 显示名称：优先 ext.sendUserInfo?.name，其次 lastMessage.from，最后 conversationId
+const getTitle = (item: EasemobConversationItem) => {
+	const m = (item as any).lastMessage;
+	const extUser = m?.ext?.sendUserInfo;
+	const name = extUser?.name || m?.from || item.conversationId;
+	return String(name || "");
+};
+
+// 最近一条消息预览：根据 type 显示
+const getLastMessagePreview = (item: EasemobConversationItem) => {
+	const m = (item as any).lastMessage;
+	if (!m) return "";
+	const type = m.type;
+	if (type === "txt") {
+		return m.msg || "";
+	}
+	if (type === "img" || type === "image") {
+		return "[图片消息]";
+	}
+	if (type === "file") {
+		return "[文件消息]";
+	}
+	return "[新消息]";
+};
+
+// TODO -  时间标签：当天显示 HH:mm，否则 yyyy/MM/dd
+const getTimeLabel = (item: EasemobConversationItem) => {
+	const m = (item as any).lastMessage;
+	const t = m?.time || m?.serverTime;
+	if (!t) return "";
+	try {
+		const d = new Date(t);
+		const now = new Date();
+		const isSameDay =
+			d.getFullYear() === now.getFullYear() &&
+			d.getMonth() === now.getMonth() &&
+			d.getDate() === now.getDate();
+		if (isSameDay) {
+			const h = String(d.getHours()).padStart(2, "0");
+			const m2 = String(d.getMinutes()).padStart(2, "0");
+			return `${h}:${m2}`;
+		}
+		const y = d.getFullYear();
+		const mon = String(d.getMonth() + 1).padStart(2, "0");
+		const day = String(d.getDate()).padStart(2, "0");
+		return `${y}/${mon}/${day}`;
+	} catch {
+		return "";
+	}
+};
+
+// 未读角标文案
+const formatUnread = (count?: number) => {
+	if (!count || count <= 0) return "";
+	if (count <= 99) return String(count);
+	if (count <= 999) return "99+";
+	return "...";
+};
+
+const onPull = async () => {
+	await refresh({ page: 1 });
+	if (listViewRef.value) {
+		listViewRef.value.stopRefresh();
+	}
+};
+
+onMounted(() => {
+	refresh({});
+
+	imBus.on("im:onTextMessage", (msg) => {
+		console.group("onTextMessage");
+		console.info("im:onTextMessage 收到文本消息 ===> ", msg);
+		console.groupEnd();
+		setTimeout(() => refresh({}), 500);
+	});
+});
+
+onBeforeUnmount(() => {
+	imBus.off("im:onTextMessage");
+});
 </script>
 
 <template>
-	<view class="easeim-history-root">
-		<chat-history-list @select="handleSelect"></chat-history-list>
+	<view class="easeim-history-list-root">
+		<view v-if="loading && !list.length" class="px-3">
+			<view v-for="n in 5" :key="n" class="easeim-chat-item">
+				<view class="easeim-chat-item__avatar">
+					<cl-skeleton type="image" loading></cl-skeleton>
+				</view>
+				<view class="easeim-chat-item__main">
+					<cl-skeleton type="text" loading></cl-skeleton>
+					<cl-skeleton type="text" loading class="mt-2 !w-[160rpx]"></cl-skeleton>
+				</view>
+				<view class="easeim-chat-item__right">
+					<cl-skeleton type="text" loading class="!w-[80rpx]"></cl-skeleton>
+				</view>
+			</view>
+		</view>
+		<cl-list-view
+			v-else
+			ref="listViewRef"
+			:data="listView"
+			:virtual="false"
+			:bufferSize="15"
+			:itemHeight="66"
+			:pt="{
+				refresher: {
+					className: 'pt-3'
+				}
+			}"
+			:refresher-enabled="true"
+			@pull="onPull"
+			@bottom="loadMore"
+		>
+			<template #item="{ value }">
+				<view
+					class="easeim-chat-item"
+					:class="{
+						'is-dark': isDark
+					}"
+					@tap="handleClickItem(value)"
+				>
+					<view class="easeim-chat-item__avatar">
+						<view class="avatar">
+							{{ getTitle(value).slice(0, 1) }}
+						</view>
+						<cl-badge
+							v-if="value.unReadCount && value.unReadCount > 0"
+							:value="formatUnread(value.unReadCount)"
+							shape="round"
+							position
+							:pt="{
+								className: '!top-[4rpx] !right-[4rpx] text-2xl p-4'
+							}"
+						></cl-badge>
+					</view>
+					<view class="easeim-chat-item__main">
+						<view class="easeim-chat-item__title">
+							<view class="easeim-chat-item__username">
+								<cl-text>{{ getTitle(value) }}</cl-text>
+							</view>
+							<view class="easeim-chat-item__time">
+								<cl-text color="info">{{ getTimeLabel(value) }}</cl-text>
+							</view>
+						</view>
+						<view class="easeim-chat-item__preview">
+							<cl-text :size="24" color="info" ellipsis :lines="1">
+								{{ getLastMessagePreview(value) || " " }}
+							</cl-text>
+						</view>
+					</view>
+				</view>
+			</template>
+
+			<template #bottom>
+				<view class="py-3">
+					<cl-loadmore :loading="loading" v-if="list.length > 0"></cl-loadmore>
+				</view>
+			</template>
+		</cl-list-view>
 	</view>
 </template>
 
 <style lang="scss" scoped>
-.easeim-history-root {
-	@apply flex flex-col h-full;
+.easeim-history-list-root {
+	@apply flex-1;
+}
+
+.easeim-chat-item {
+	@apply w-full h-[66px] flex flex-row items-center gap-4 px-3 py-2;
+
+	&__avatar {
+		@apply overflow-visible bg-gray-100 rounded-md;
+		.avatar {
+			@apply w-[40px] h-[40px] flex flex-row items-center justify-center;
+		}
+	}
+
+	&__main {
+		@apply flex-1 flex flex-col;
+	}
+
+	&__title {
+		@apply flex flex-row items-center justify-between px-2 mb-1;
+	}
+
+	&__username {
+		@apply flex-1;
+	}
+
+	&__preview {
+		@apply flex-1;
+	}
 }
 </style>

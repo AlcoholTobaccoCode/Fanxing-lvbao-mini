@@ -58,8 +58,9 @@ export const sdkEvents = {
 	// 收到文本消息
 	onTextMessage: (msg: OnTextMsgResult) => {
 		log.group("onTextMessage");
-		log.info("im:onTextMessage 收到文本消息 ===> ", JSON.stringify(msg));
+		// log.info("im:onTextMessage 收到文本消息 ===> ", JSON.stringify(msg));
 		log.groupEnd();
+		// TODO - save
 		imBus.emit("im:onTextMessage", msg);
 	}
 };

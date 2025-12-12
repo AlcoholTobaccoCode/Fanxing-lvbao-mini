@@ -1,6 +1,8 @@
 {
 	// "entryPagePath": "pages/consult/chat",
-	"entryPagePath": "pages/test-pages/index",
+	// "entryPagePath": "pages/test-pages/index",
+	// "entryPagePath": "pages/home/index",
+	"entryPagePath": "pages/ease-im/index",
 	"pages": [
 		//#region ---------------- TEST PAGE ----------------
 		{
@@ -32,7 +34,7 @@
 				"navigationBarTitleText": "登录",
 				"navigationStyle": "custom"
 			}
-		}
+		},
 		// {
 		// 	"path": "pages/user/edit",
 		// 	"style": {
@@ -68,6 +70,13 @@
 				"navigationBarTitleText": "环信 IM 对话列表",
 				"navigationStyle": "custom"
 			}
+		},
+		{
+			"path": "pages/ease-im/components/chat-detail",
+			"style": {
+				"navigationBarTitleText": "环信 IM 对话列表",
+				"navigationStyle": "custom"
+			}
 		}
 		//#endregion
 	],
@@ -97,7 +106,7 @@
 				{
 					"path": "about",
 					"style": {
-						"navigationBarTitleText": ""
+						"navigationBarTitleText": "关于"
 					}
 				},
 				{

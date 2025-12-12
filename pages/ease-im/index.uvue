@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
+import { router } from "@/cool";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatHistory from "./components/chat-history.uvue";
@@ -14,7 +15,11 @@ type TabKey = "chat" | "contacts";
 const activeTab = ref<TabKey>("chat");
 
 const handleSelectConversation = (item: any) => {
-	ui.showToast({ message: `打开会话 ${item.conversationId}` });
+	// 跳转到会话详情页，携带会话 ID 和类型
+	const conversationId = encodeURIComponent(item.conversationId || "");
+	const conversationType = encodeURIComponent(item.conversationType || "singleChat");
+	const url = `/pages/ease-im/components/chat-detail?conversationId=${conversationId}&conversationType=${conversationType}`;
+	router.to(url);
 };
 </script>
 
