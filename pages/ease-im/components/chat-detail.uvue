@@ -422,21 +422,31 @@ const handleJumpToLatest = () => {
 									<!-- 语音消息：点击播放 -->
 									<view
 										v-else
-										class="flex flex-row items-center"
+										class="audio-voice flex flex-row items-center"
 										@tap.stop="handleToggleAudio(m)"
 									>
-										<cl-icon
-											:name="
-												currentAudioId === (m.id || m.msgId)
-													? 'volume-up-fill'
-													: 'volume-up-line'
-											"
-											:size="40"
-											color="currentColor"
-										></cl-icon>
-										<text class="ml-1 text-xs">
+										<!-- 左侧：时长 -->
+										<text class="audio-voice__duration text-xs mr-2">
 											{{ (m.length || (m.body && m.body.length) || 0) + '"' }}
 										</text>
+										<!-- 右侧：动态线条 -->
+										<view
+											class="audio-voice__bars flex flex-row items-end gap-[2px]"
+											:class="{
+												'audio-voice__bars--playing':
+													currentAudioId === (m.id || m.msgId)
+											}"
+										>
+											<view
+												class="audio-voice__bar audio-voice__bar--1"
+											></view>
+											<view
+												class="audio-voice__bar audio-voice__bar--2"
+											></view>
+											<view
+												class="audio-voice__bar audio-voice__bar--3"
+											></view>
+										</view>
 									</view>
 								</view>
 							</view>
@@ -486,5 +496,62 @@ const handleJumpToLatest = () => {
 .jump-latest-btn {
 	@apply fixed right-0;
 	bottom: 100px;
+}
+
+.audio-voice__duration {
+	@apply text-gray-600;
+}
+
+.audio-voice__bars {
+}
+
+.audio-voice__bar {
+	width: 3px;
+	border-radius: 999px;
+	background-color: rgba(0, 0, 0, 0.15);
+}
+
+.audio-voice__bar--1 {
+	height: 8px;
+}
+
+.audio-voice__bar--2 {
+	height: 12px;
+}
+
+.audio-voice__bar--3 {
+	height: 16px;
+}
+
+.audio-voice__bars--playing .audio-voice__bar {
+	animation-name: audio-bar-color;
+	animation-timing-function: ease-in-out;
+	animation-iteration-count: infinite;
+	animation-direction: alternate;
+	animation-duration: 1.2s;
+}
+
+.audio-voice__bars--playing .audio-voice__bar--1 {
+	animation-delay: 0s;
+}
+
+.audio-voice__bars--playing .audio-voice__bar--2 {
+	animation-delay: 0.1s;
+}
+
+.audio-voice__bars--playing .audio-voice__bar--3 {
+	animation-delay: 0.2s;
+}
+
+@keyframes audio-bar-color {
+	0% {
+		background-color: rgba(16, 185, 129, 0.2);
+	}
+	50% {
+		background-color: rgba(16, 185, 129, 0.6);
+	}
+	100% {
+		background-color: rgba(16, 185, 129, 1);
+	}
 }
 </style>
