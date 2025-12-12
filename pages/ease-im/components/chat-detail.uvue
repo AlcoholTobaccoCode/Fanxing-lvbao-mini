@@ -2,13 +2,20 @@
 获取指定用户历史消息
 -->
 <script lang="ts" setup>
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
+import { getEasemobHistoryMessages } from "@/utils/easemob";
+import type { SendData } from "@/components/chat-input/types";
+import { sleepWait } from "@/utils";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import { getEasemobHistoryMessages } from "@/utils/easemob";
+import ChatInput from "@/components/chat-input/user-chat/index.uvue";
 
+const log = new Logger("HomePage");
 const ui = useUi();
+
+//#region 加载历史对话
 
 // 当前会话 ID（单聊为对端用户 ID，群聊为群组 ID）
 const targetId = ref("");
@@ -22,13 +29,16 @@ const historyMessages = ref<any[]>([]);
 
 const PAGE_SIZE = 20;
 const showFullTime = ref(false);
+// 列表滚动锚点，首次进入页面加载完成后滚动到底部
+const scrollIntoViewId = ref("");
+const hasInitialScrollDone = ref(false);
 
 const loadHistory = async (reset: boolean) => {
 	if (!targetId.value.trim()) {
-		ui.showToast({ message: "请输入会话 ID（用户 ID 或群组 ID）" });
+		ui.showToast({ message: "会话 ID（用户 ID 或群组 ID）获取失败，请重试" });
 		return;
 	}
-	if (loading.value) return;
+	if (loading.value || !cursor.value) return;
 
 	loading.value = true;
 	try {
@@ -48,14 +58,27 @@ const loadHistory = async (reset: boolean) => {
 		console.info("getEasemobHistoryMessages res ===> ", JSON.stringify(res));
 
 		const list = ((res && (res.messages || res.entities)) || []) as any[];
+		// 接口按时间逆序返回（新到旧），这里统一转为时间正序（旧到新）
+		const pageList = list.slice().reverse();
 		if (reset) {
-			historyMessages.value = list;
+			// 首次加载：直接用这一页（旧→新）
+			historyMessages.value = pageList;
+			// 首次进入页面时，将滚动锚点设为底部，自动滚动到底部
+			if (!hasInitialScrollDone.value) {
+				hasInitialScrollDone.value = true;
+				nextTick(() => {
+					scrollIntoViewId.value = "chat-bottom-a";
+				});
+			}
 		} else {
-			historyMessages.value = historyMessages.value.concat(list);
+			// 加载更多：在当前列表前面拼接更早的一页（更旧→当前旧）
+			historyMessages.value = pageList.concat(historyMessages.value);
 		}
 
 		cursor.value = (res && (res.cursor as any)) ?? null;
 		hasMore.value = !!cursor.value && list.length >= PAGE_SIZE;
+
+		console.info("cursor.value =====> ", cursor.value);
 	} catch (err) {
 		console.error("[IM] 获取历史消息失败", err);
 		ui.showToast({ message: "获取历史消息失败" });
@@ -76,6 +99,24 @@ const handleLoadMore = () => {
 	loadHistory(false);
 };
 
+// 滚动到顶部时加载更多历史消息，类似微信上滑加载
+let pullMoreMsg: any = null;
+const handleScrollToUpper = async () => {
+	if (loading.value || !hasMore.value) return;
+
+	if (pullMoreMsg) {
+		clearTimeout(pullMoreMsg);
+		pullMoreMsg = null;
+	}
+
+	pullMoreMsg = setTimeout(async () => {
+		loadHistory(false);
+	}, 400);
+};
+
+//#endregion
+
+//#region 消息时间处理
 const toggleTimeMode = () => {
 	showFullTime.value = !showFullTime.value;
 };
@@ -122,11 +163,41 @@ const formatMsgTimeLabel = (m: any) => {
 	return `${M}月${D}日 ${labelTime}`;
 };
 
+// 时间聚合
+// 聚合维度（分钟）
+const TimeAggregation = 5;
+const shouldShowTime = (index: number) => {
+	if (index === 0) return true;
+	const curr = historyMessages.value[index];
+	const prev = historyMessages.value[index - 1];
+	if (!curr || !prev) return index === 0;
+
+	const getTs = (m: any) => {
+		const raw = (m && (m.time || m.msgTime || (m.body && m.body.time))) as
+			| number
+			| string
+			| undefined;
+		if (!raw) return 0;
+		const n = typeof raw === "number" ? raw : Number(raw);
+		return Number.isNaN(n) ? 0 : n;
+	};
+
+	const currTs = getTs(curr);
+	const prevTs = getTs(prev);
+	if (!currTs || !prevTs) return false;
+
+	const diff = Math.abs(currTs - prevTs);
+	// 聚合间隔：超过则认为是新的时间段
+	const FIVE_MIN = TimeAggregation * 60 * 1000;
+	return diff >= FIVE_MIN;
+};
+
+//#endregion
+
 // 进入页面时，从路由参数中读取会话信息并自动加载历史记录
 onLoad((options: any) => {
-	const conversationId = (options?.conversationId || "").toString();
-	const conversationType = (options?.conversationType || "singleChat").toString();
-
+	const conversationId = (options?.conversationId || "").toString() || "95";
+	console.info("conversationId ====> ", conversationId);
 	if (conversationId) {
 		targetId.value = conversationId;
 		pageTitle.value = conversationId;
@@ -136,77 +207,81 @@ onLoad((options: any) => {
 		pageTitle.value = "IM 历史消息";
 	}
 });
+
+//#region 对话逻辑
+// 是否展示底部扩展面板
+const extraPanelVisible = ref(false);
+
+const handleSend = async (data: SendData) => {
+	log.group("handleSend");
+	log.info("send payload ==> ", data);
+	log.groupEnd();
+};
+//#endregion
 </script>
 
 <template>
-	<app-page :title="pageTitle" back-top>
+	<app-page :title="pageTitle" back-top :chat-list-btn="false" :title-action="false">
 		<template #content>
-			<view class="p-3">
-				<template v-if="false">
-					<view class="flex flex-col gap-2">
-						<input
-							v-model="targetId"
-							placeholder="会话 ID（单聊为对端用户 ID，群聊为群组 ID）"
-							class="w-full px-2 py-1 border rounded text-sm"
-						/>
-						<view class="flex gap-2">
-							<cl-button
-								class="flex-1"
-								type="primary"
-								@click="handleLoadLatest"
-								:loading="loading"
-							>
-								加载历史消息
-							</cl-button>
-							<cl-button
-								class="flex-1"
-								@click="handleLoadMore"
-								:disabled="!hasMore || loading"
-							>
-								加载更多
-							</cl-button>
-						</view>
-					</view>
-					<view class="mt-3 text-xs text-gray-500">
-						共 {{ historyMessages.length }} 条
-					</view>
-				</template>
-
-				<scroll-view scroll-y class="mt-2 h-full border rounded p-2 bg-white">
-					<view
-						v-if="!historyMessages.length"
-						class="text-center text-xs text-gray-400 py-4"
-					>
-						暂无消息
-					</view>
-
-					<view
-						v-for="m in historyMessages"
-						:key="m.id || m.msgId"
-						class="mb-4 flex flex-col items-center"
+			<view class="chat-detail-content">
+				<view class="flex-1 overflow-hidden">
+					<scroll-view
+						scroll-y
+						class="chat-detail-content__scroll"
+						:scroll-into-view="scrollIntoViewId"
+						@scrolltoupper="handleScrollToUpper"
 					>
 						<view
-							class="px-3 py-1 mb-2 rounded-full bg-gray-200 text-[10px] text-gray-600"
-							@tap="toggleTimeMode"
-						>
-							{{ formatMsgTimeLabel(m) }}
-						</view>
-						<view
-							class="w-full flex"
-							:class="m.from === targetId ? 'justify-start' : 'justify-end'"
+							v-for="(m, index) in historyMessages"
+							:key="m.id || m.msgId"
+							class="mb-4 flex flex-col items-center px-4"
 						>
 							<view
-								class="px-3 py-2 rounded-lg text-sm bg-green-400 text-white"
-								:style="{ maxWidth: '70%' }"
+								v-if="shouldShowTime(index)"
+								class="px-3 py-1 mb-4 rounded-full bg-white text-[10px] text-gray-600"
+								@tap="toggleTimeMode"
 							>
-								{{ m.msg || (m.body && m.body.msg) || "" }}
+								{{ formatMsgTimeLabel(m) }}
+							</view>
+							<view
+								class="w-full flex"
+								:class="m.from === targetId ? 'justify-start' : 'justify-end'"
+							>
+								<view
+									class="px-3 py-2 rounded-lg text-sm"
+									:style="{
+										maxWidth: '70%',
+										backgroundColor: m.from === targetId ? '#fff' : '#95ec69',
+										color: '#000'
+									}"
+								>
+									{{ m.msg || (m.body && m.body.msg) || "" }}
+								</view>
 							</view>
 						</view>
-					</view>
-				</scroll-view>
+						<view id="chat-bottom-a"></view>
+					</scroll-view>
+				</view>
+				<chat-input use-module="userChat" @send="handleSend" />
+				<!-- 底部扩展交互区域：根据业务需要控制 extraPanelVisible 展示/隐藏 -->
+				<!-- <view
+					v-if="extraPanelVisible"
+					class="w-full bg-white border-t"
+					style="height: 220rpx"
+				></view>
+				<chat-input v-model="inputValue" use-module="userChat" @send="handleSend" /> -->
 			</view>
 		</template>
 	</app-page>
 </template>
 
-<style lang="scss" scoped></style>
+<style lang="scss" scoped>
+.chat-detail-content {
+	@apply w-full h-full flex flex-col overflow-hidden;
+
+	&__scroll {
+		@apply w-full h-full flex-1 flex flex-col gap-4 box-border py-4;
+		background-color: #f3f3f3;
+	}
+}
+</style>

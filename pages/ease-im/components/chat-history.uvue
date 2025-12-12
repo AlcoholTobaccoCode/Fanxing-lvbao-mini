@@ -49,11 +49,11 @@ const handleClickItem = (item: EasemobConversationItem) => {
 	emit("select", item);
 };
 
-// 显示名称：优先 ext.sendUserInfo?.name，其次 lastMessage.from，最后 conversationId
+// 显示名称：优先 ext.sendUserInfo?.name，其次 conversationId
 const getTitle = (item: EasemobConversationItem) => {
 	const m = (item as any).lastMessage;
 	const extUser = m?.ext?.sendUserInfo;
-	const name = extUser?.name || m?.from || item.conversationId;
+	const name = extUser?.name || item.conversationId;
 	return String(name || "");
 };
 

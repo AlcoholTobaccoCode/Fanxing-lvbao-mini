@@ -1,0 +1,425 @@
+<script setup lang="ts">
+import { nextTick, ref, watch } from "vue";
+import type { PropType } from "vue";
+import { isDark } from "@/cool";
+import { useUi } from "@/uni_modules/cool-ui";
+import { uploadToOss } from "@/utils/aliyun/oss";
+import { recognizeOnceFromBuffer } from "@/utils/aliyun/asr";
+import type { ToolItem, Tools, ActionItem, Actions, SendData, VoiceResult } from "../types";
+
+import SimpleCard from "@/components/card/simple-card.uvue";
+import VoiceRecord from "../voice-record.uvue";
+import ActionsPopup from "../actions-popup.uvue";
+
+const ui = useUi();
+
+const props = defineProps({
+	placeholder: {
+		type: String,
+		default: () => "在这里输入你的问题"
+	},
+	loading: {
+		type: Boolean,
+		default: () => false
+	},
+	disabled: {
+		type: Boolean,
+		default: () => false
+	},
+	/**
+	 * inputMode
+	 * @default "text"
+	 * @description: text -> 文本输入 | voice -> 语音输入
+	 */
+	inputMode: {
+		type: String,
+		default: () => "text"
+	},
+	// 使用的模块，用来分类保存语音 OSS 文件
+	useModule: {
+		type: String,
+		default: () => "ai-chat-voice"
+	}, // 顶部工具栏：额外传入的工具项
+	tools: {
+		type: Array as PropType<Tools>,
+		default: () => []
+	},
+	// 默认工具是否展示：深度思考 / 知识库 / 联网
+	showDefaultDeepThink: {
+		type: Boolean,
+		default: () => true
+	},
+	showDefaultKnowledge: {
+		type: Boolean,
+		default: () => true
+	},
+	showDefaultNetwork: {
+		type: Boolean,
+		default: () => true
+	}
+});
+
+const modelValue = defineModel<string>({
+	default: ""
+});
+
+const emit = defineEmits<{
+	(e: "send", value: SendData): void;
+	(e: "open-call"): void;
+	(e: "input-mode-change", value: string): void;
+	// 顶部工具选中变化
+	(e: "tool-change", value: Tools): void;
+	(e: "tool-toggle", value: ToolItem): void;
+}>();
+
+// 输入模式
+const inputModeVal = ref(props.inputMode);
+
+// 顶部意图 chips：默认工具 + 外部传入工具
+const createDefaultTools = (): Tools => {
+	const list: Tools = [];
+	if (props.showDefaultDeepThink) {
+		list.push({
+			icon: "links-line",
+			text: "深度思考",
+			enable: false
+		});
+	}
+	if (props.showDefaultNetwork) {
+		list.push({
+			icon: "fxzh-hulianwang",
+			text: "联网搜索",
+			enable: false
+		});
+	}
+	if (props.showDefaultKnowledge) {
+		list.push({
+			icon: "fxzh-zhishiku",
+			text: "知识库",
+			enable: false
+		});
+	}
+	return list;
+};
+
+const tools = ref<Tools>([
+	...createDefaultTools(),
+	...(props.tools || []).map((item) => ({ ...item }))
+]);
+
+//#region 语音录制相关
+
+const voiceRecordRef = ref<any>();
+const isShowVoiceRecord = ref<any>(false);
+
+// 按住说话：按下时显示语音浮层并通知开始
+const handlePressStart = () => {
+	isShowVoiceRecord.value = true;
+};
+
+// 松开：关闭浮层并通知结束
+const handlePressEnd = () => {
+	isShowVoiceRecord.value = false;
+};
+
+const handleVoiceRecordFinish = async (result: VoiceResult) => {
+	if (!result.tempFilePath) {
+		return ui.showToast({ message: "语音丢失，请重试" });
+	}
+	// 上传 OSS
+	const res = await uploadToOss({
+		filePath: result.tempFilePath,
+		dirPrefix: `${props.useModule}/voice`
+	});
+	result.onlineUrl = res.url;
+	// TODO 录音文件识别
+	try {
+		uni.showLoading({ title: "识别中..." });
+		const text = await recognizeOnceFromBuffer(result.buffer, {
+			startParams: {
+				format: "mp3",
+				sample_rate: 16000
+			}
+		});
+		if (text) {
+			result.text = text;
+		}
+	} catch (err: any) {
+		console.error("[chat-input] 语音识别失败", err);
+		ui.showToast({ message: err?.message || "语音识别失败" });
+	} finally {
+		nextTick(() => {
+			uni.hideLoading();
+		});
+	}
+	const data: SendData = {
+		text: result.text || "",
+		mode: "voice",
+		voice: {
+			...result
+		}
+	};
+	emit("send", data);
+	modelValue.value = "";
+};
+
+//#endregion
+
+//#region 交互
+// 更多功能弹层显隐
+const showMoreAction = ref(false);
+
+// 顶部工具点击
+const handleToolTap = (item: ToolItem) => {
+	const target = tools.value.find((t) => t.text === item.text);
+	if (!target) return;
+
+	target.enable = !target.enable;
+	target.onClick?.(target);
+	emit("tool-toggle", { ...target });
+	emit("tool-change", tools.value);
+};
+
+// 切换输入模式
+const handleRecording = () => {
+	inputModeVal.value = inputModeVal.value === "text" ? "voice" : "text";
+	emit("input-mode-change", inputModeVal.value);
+	// 切换到语音模式时，预请求一次录音权限，减少长按时等待
+	if (inputModeVal.value === "voice") {
+		voiceRecordRef.value?.ensureRecordPermission?.();
+	}
+};
+
+// 发送
+const handleSend = () => {
+	if (props.disabled || props.loading) return;
+	const val = modelValue.value.trim();
+
+	const data = {
+		text: val,
+		mode: "text" as const
+	};
+
+	if (!val) return;
+	emit("send", data);
+};
+
+// 确认
+const handleConfirm = () => {
+	handleSend();
+};
+
+// 打开通话组件
+const handleOpenCall = () => {
+	emit("open-call");
+};
+
+//#endregion
+
+// 当外部传入的 tools 或默认展示配置变化时，同步内部列表
+watch(
+	() => ({
+		tools: props.tools,
+		deepThink: props.showDefaultDeepThink,
+		knowledge: props.showDefaultKnowledge,
+		network: props.showDefaultNetwork
+	}),
+	() => {
+		const activeMap = new Map<string, boolean>();
+		tools.value.forEach((t) => {
+			activeMap.set(t.text, !!t.enable);
+		});
+
+		const next: Tools = [
+			...createDefaultTools(),
+			...(props.tools || []).map((item) => ({ ...item }))
+		].map((item) => ({
+			...item,
+			enable: activeMap.get(item.text) ?? item.enable ?? false
+		}));
+
+		tools.value = next;
+	},
+	{ deep: true }
+);
+</script>
+
+<template>
+	<simple-card class="chat-input-wrapper" :class="{ 'is-dark': isDark }">
+		<!-- 顶部意图标签 -->
+		<view class="chat-intent-row">
+			<scroll-view scroll-x class="w-full" show-scrollbar="false">
+				<view class="chat-intent-row__inner">
+					<view
+						v-for="item in tools"
+						:key="item.text"
+						class="chat-intent-chip"
+						:class="{ 'chat-intent-chip--active': item.enable }"
+						@tap.stop="handleToolTap(item)"
+					>
+						<cl-icon
+							:name="item.icon"
+							color="currentColor"
+							:pt="{ className: 'mr-1' }"
+						></cl-icon>
+						<cl-text size="13px" class="chat-intent-chip__text">{{
+							item.text
+						}}</cl-text>
+					</view>
+				</view>
+			</scroll-view>
+		</view>
+
+		<!-- 主输入区域 -->
+		<view class="chat-main">
+			<view :class="['chat-main__inner', modelValue ? '!pl-0' : '']">
+				<!-- 默认输入交互区域 -->
+				<view v-if="!modelValue" class="chat-main__left">
+					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
+						<cl-icon
+							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
+							:size="48"
+							color="currentColor"
+						></cl-icon>
+					</view>
+				</view>
+
+				<view class="chat-main__center">
+					<cl-textarea
+						v-if="inputModeVal === 'text'"
+						class="max-h-[200px]"
+						v-model="modelValue"
+						clearable
+						auto-height
+						:border="false"
+						:maxlength="Infinity"
+						:showWordLimit="false"
+						:disabled="disabled"
+						:placeholder="placeholder"
+						@confirm="handleConfirm"
+					></cl-textarea>
+
+					<view v-else class="chat-main__voice">
+						<view
+							class="chat-main__voice-hit !h-[40px]"
+							@touchstart.stop="handlePressStart"
+							@touchend.stop="handlePressEnd"
+							@touchcancel.stop="handlePressEnd"
+						>
+							<cl-button type="primary" size="large" class="chat-main__voice-btn">
+								按住 说话
+							</cl-button>
+						</view>
+					</view>
+				</view>
+
+				<view class="chat-main__right">
+					<!-- <view class="chat-main__icon-btn">
+						<cl-icon name="camera-line" :size="38" color="currentColor"></cl-icon>
+					</view> -->
+					<!-- <view class="chat-main__icon-btn" @tap.stop="showMoreAction = true">
+						<cl-icon name="add-line" :size="38" color="currentColor"></cl-icon>
+					</view> -->
+					<view class="chat-main__icon-btn">
+						<cl-icon
+							v-if="!modelValue"
+							name="arrow-up-circle-line"
+							:size="48"
+						></cl-icon>
+						<cl-icon
+							v-else
+							name="arrow-up-circle-fill"
+							:size="48"
+							color="primary"
+							@tap.stop="handleConfirm"
+						></cl-icon>
+					</view>
+				</view>
+			</view>
+		</view>
+
+		<view class="chat-tips">
+			<cl-text size="10px" color="info">AI检索结果仅供参考，以官方法条和权威案例为准</cl-text>
+		</view>
+
+		<!-- 更多交互弹窗 -->
+		<actions-popup
+			v-model:is-show="showMoreAction"
+			@select-call="handleOpenCall"
+		></actions-popup>
+
+		<!-- 语音录制浮层，仅在按住说话时显示 -->
+		<voice-record
+			v-model:is-show="isShowVoiceRecord"
+			ref="voiceRecordRef"
+			@finish="handleVoiceRecordFinish"
+		></voice-record>
+	</simple-card>
+</template>
+
+<style scoped lang="scss">
+.chat-input-wrapper {
+	@apply rounded-none rounded-t-2xl bg-transparent;
+	border-width: 0;
+}
+
+.chat-intent-row {
+	@apply mb-2;
+}
+
+.chat-intent-row__inner {
+	@apply flex flex-row items-center gap-2 px-1;
+}
+
+.chat-intent-chip {
+	@apply flex flex-row items-center px-3 py-1.5 rounded-full bg-white border border-surface-100;
+}
+
+.chat-intent-chip__text {
+	@apply text-[13px] text-surface-900;
+}
+
+.chat-intent-chip--active {
+	@apply bg-primary-50 text-primary-700 border-primary-200;
+}
+
+.chat-main {
+	@apply mt-1;
+}
+
+.chat-main__inner {
+	@apply flex flex-row items-center bg-white px-3 py-2 shadow-md;
+}
+
+.chat-main__left {
+	@apply flex flex-row items-center opacity-100 transition-all;
+}
+
+.chat-main__center {
+	@apply flex-1 mx-2;
+}
+
+.chat-main__voice {
+	@apply w-full;
+}
+
+.chat-main__voice-hit {
+	@apply w-full;
+}
+
+.chat-main__voice-btn {
+	@apply w-full flex flex-row items-center justify-center rounded-full;
+}
+
+.chat-main__right {
+	@apply flex flex-row items-center gap-3;
+}
+
+.chat-main__icon-btn {
+	@apply flex items-center justify-center text-surface-700;
+}
+
+.chat-tips {
+	@apply flex items-center justify-center mt-2;
+}
+</style>

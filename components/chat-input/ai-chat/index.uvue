@@ -5,11 +5,11 @@ import { isDark } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { uploadToOss } from "@/utils/aliyun/oss";
 import { recognizeOnceFromBuffer } from "@/utils/aliyun/asr";
-import type { ToolItem, Tools, ActionItem, Actions, SendData, VoiceResult } from "./types";
+import type { ToolItem, Tools, ActionItem, Actions, SendData, VoiceResult } from "../types";
 
 import SimpleCard from "@/components/card/simple-card.uvue";
-import VoiceRecord from "./voice-record.uvue";
-import ActionsPopup from "./actions-popup.uvue";
+import VoiceRecord from "../voice-record.uvue";
+import ActionsPopup from "../actions-popup.uvue";
 
 const ui = useUi();
 

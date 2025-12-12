@@ -298,7 +298,7 @@ export async function getEasemobServerConversations(
 	};
 
 	const res = await (conn as any).getServerConversations(merged);
-	console.info("conversations origin ====> ", res);
+	console.info("conversations origin ====> ", JSON.stringify(res));
 	return (res || {}) as EasemobServerConversationsResult;
 }
 
