@@ -1,6 +1,8 @@
 import { ref } from "vue";
 import { config } from "@/config";
 import { useStore } from "@/cool";
+import { recommendLawyers, type RecommendLawyerItem } from "@/api/consult";
+import { createModelSessionId } from "@/utils/assetsConfig";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/components/chat-input/types";
 
@@ -15,6 +17,12 @@ export interface ConsultMessage {
 	voiceLength?: number;
 	// 深度思考过程（如果开启了深度思考），仅对 AI 消息有效
 	deepThink?: string;
+	// 是否包含推荐律师信息
+	haveRecommendLawyer?: boolean;
+	// 推荐律师 ID 列表
+	recommendedLawyerIds?: number[];
+	// 推荐律师详细信息列表
+	recommendedLawyers?: RecommendLawyerItem[];
 }
 
 export interface ConsultStreamHooks {
@@ -43,6 +51,11 @@ export class ConsultSessionStore {
 	) {
 		const content = text.trim();
 		if (!content || this.loading.value) return;
+
+		// 首轮发送时生成 sessionId，后续复用
+		if (!this.sessionId.value) {
+			this.sessionId.value = createModelSessionId("consult");
+		}
 
 		// 开启新一轮咨询前，重置流式状态与思考内容
 		this.streamStatus.value = null;
@@ -112,8 +125,8 @@ export class ConsultSessionStore {
 					};
 					const contents = evt.contents || [];
 
-					// 普通正文片段
-					const textChunk = contents
+					// 原始正文片段（可能包含推荐律师标记）
+					const textChunkRaw = contents
 						.filter((c) => c.contentType === "text" && typeof c.content === "string")
 						.map((c) => c.content as string)
 						.join("");
@@ -132,6 +145,18 @@ export class ConsultSessionStore {
 						contents.find((c) => c.status);
 					const statusText = (statusHolder?.status || "") as string;
 
+					// 检测是否包含推荐律师标记
+					const hasRecommendMarker =
+						textChunkRaw.includes("<推荐律师>") ||
+						textChunkRaw.includes("正在为您推荐律师...");
+
+					// 清理推荐律师提示文案：
+					// 1. 先去掉整段 "正在为您推荐律师...<推荐律师>"
+					// 2. 再兜底去掉单独的 "<推荐律师>"
+					let textChunk = textChunkRaw
+						.replace(/正在为您推荐律师.*?<推荐律师>/g, "")
+						.replace(/<推荐律师>/g, "");
+
 					if (textChunk) {
 						aiMsg.content = textChunk;
 						hooks?.onTextChunk?.(textChunk);
@@ -144,6 +169,11 @@ export class ConsultSessionStore {
 
 					if (statusText) {
 						this.streamStatus.value = statusText;
+					}
+
+					// 如检测到推荐律师标记，则在当前 AI 消息上打标记，供流结束后触发推荐接口
+					if (hasRecommendMarker) {
+						(aiMsg as any).haveRecommendLawyer = true;
 					}
 				} catch (err) {
 					console.error("解析咨询响应失败", err);
@@ -226,8 +256,38 @@ export class ConsultSessionStore {
 					});
 				}
 			});
+
+			// 流式结束后，如当前 AI 回复文案中包含 <推荐律师>，尝试请求推荐列表
+			await this.fetchRecommendLawyersIfNeeded(aiMsg);
 		} finally {
 			this.loading.value = false;
+		}
+	}
+
+	// 根据当前 AI 消息内容决定是否请求推荐律师，并将结果挂载回消息对象
+	private async fetchRecommendLawyersIfNeeded(aiMsg: ConsultMessage) {
+		try {
+			const { user } = useStore();
+			const userId = (user as any)?.info?.value?.id as number | undefined;
+			if (!this.sessionId.value || !userId || !aiMsg || !aiMsg.haveRecommendLawyer) {
+				return;
+			}
+
+			const res = await recommendLawyers({
+				session_id: this.sessionId.value,
+				// 默认按评分倒序
+				sort_by: "rating",
+				order: "desc",
+				limit: 5
+			});
+			const list = (res as any)?.data as RecommendLawyerItem[] | undefined;
+			if (Array.isArray(list) && list.length) {
+				aiMsg.haveRecommendLawyer = true;
+				aiMsg.recommendedLawyerIds = list.map((i) => i.user_id);
+				aiMsg.recommendedLawyers = list;
+			}
+		} catch (err) {
+			console.error("[ConsultSession] 推荐律师失败", err);
 		}
 	}
 

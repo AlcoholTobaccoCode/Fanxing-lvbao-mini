@@ -371,6 +371,38 @@ const handleSend = async (data: SendData) => {
 	@apply text-xs text-gray-500 leading-relaxed;
 }
 
+.lawyer-rec-wrapper {
+	@apply mt-3 px-4 py-3 bg-white rounded-xl shadow-sm;
+}
+
+.lawyer-rec-header {
+	@apply text-xs text-gray-500 mb-2;
+}
+
+.lawyer-rec-item {
+	@apply mb-2 last:mb-0;
+}
+
+.lawyer-rec-main {
+	@apply flex flex-row items-baseline gap-2;
+}
+
+.lawyer-rec-name {
+	@apply text-sm text-gray-900 font-medium;
+}
+
+.lawyer-rec-title {
+	@apply text-[11px] text-blue-500;
+}
+
+.lawyer-rec-firm {
+	@apply block text-xs text-gray-500 mt-1;
+}
+
+.lawyer-rec-expert {
+	@apply block text-xs text-gray-500 mt-0.5;
+}
+
 .ai-status-wrapper {
 	@apply px-4 py-3;
 }
