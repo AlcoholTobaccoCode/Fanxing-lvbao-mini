@@ -2,10 +2,21 @@
 @description: 历史记录
 -->
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
+import { useStore } from "@/cool";
+import {
+	DeleteMessage,
+	GetUserSessions,
+	type GetUserSessionsData,
+	type UserSessionItem,
+	UpdateSessionTitle
+} from "@/api/history-chat";
+import { type HistorySessionItem, getBizMetaBySessionId } from "./hook";
+
 const ui = useUi();
+const { user } = useStore();
 
 //#region tab 切换
 const tabValue = ref("ai");
@@ -17,27 +28,205 @@ const tabs = ref<ClTabsItem[]>([
 
 //#region 历史记录
 const isEditMode = ref<boolean>(false);
+const loading = ref(false);
+
+// 当前登录用户 id
+const userId = computed(() => user.info.value?.id ?? null);
+
+// 原始 AI 会话列表（不含律师会话），带业务标签信息
+const aiSessions = ref<HistorySessionItem[]>([]);
+
+// 按时间先排序，再分组
+const sortedSessions = computed(() => {
+	const list = aiSessions.value.slice();
+	list.sort((a, b) => b.created_at - a.created_at);
+	return list;
+});
+
+interface HistoryGroupItem {
+	label: string;
+	items: HistorySessionItem[];
+}
+
+// 判断是否为今天 / 昨天 / 更早
+const getDayLabel = (timestamp: number): string => {
+	// const d = new Date(ts);
+	// const now = new Date();
+	// const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+	// const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
+	// if (ts >= startOfToday) return "今天";
+	// if (ts >= startOfYesterday) return "昨天";
+	// return "更早";
+	const now = Date.now();
+	const diff = now - timestamp;
+	const minutes = Math.floor(diff / 60000);
+	const hours = Math.floor(diff / 3600000);
+	const days = Math.floor(diff / 86400000);
+
+	if (minutes < 1) return "刚刚";
+	if (minutes < 60) return `${minutes}分钟前`;
+	if (hours < 24) return `${hours}小时前`;
+	if (days === 0) return "今天";
+	if (days === 1) return "昨天";
+	if (days < 7) return `${days}天前`;
+	if (days < 30) return `${Math.floor(days / 7)}周前`;
+	return `${Math.floor(days / 30)}月前`;
+};
+
+const groupedSessions = computed<HistoryGroupItem[]>(() => {
+	const result: HistoryGroupItem[] = [];
+	let currentLabel = "";
+	let currentItems: HistorySessionItem[] = [];
+
+	for (const item of sortedSessions.value) {
+		const label = getDayLabel(item.created_at);
+		if (!currentLabel) {
+			currentLabel = label;
+		}
+		if (label !== currentLabel) {
+			if (currentItems.length) {
+				result.push({ label: currentLabel, items: currentItems });
+			}
+			currentLabel = label;
+			currentItems = [];
+		}
+		currentItems.push(item);
+	}
+
+	if (currentItems.length) {
+		result.push({ label: currentLabel, items: currentItems });
+	}
+
+	return result;
+});
+
+// HH:mm 格式化时间
+const formatTime = (ts: number): string => {
+	const d = new Date(ts);
+	const h = `${d.getHours()}`.padStart(2, "0");
+	const m = `${d.getMinutes()}`.padStart(2, "0");
+	return `${h}:${m}`;
+};
+
 const handleChangeEditMode = () => {
 	isEditMode.value = !isEditMode.value;
 };
 
-const historyClearAll = () => {
-	ui.showToast({
-		message: "  清空功能开发中，敬请期待"
-	});
+// 拉取历史会话列表
+const fetchSessions = async () => {
+	if (!userId.value) {
+		aiSessions.value = [];
+		return;
+	}
+
+	try {
+		loading.value = true;
+		const res = (await GetUserSessions({ user_id: userId.value })) as GetUserSessionsData | any;
+		const data = (res as GetUserSessionsData)?.sessions ?? (res as any)?.data?.sessions ?? [];
+		const sessions = (data as UserSessionItem[]).filter(
+			(s) => !s.session_id.startsWith("lawyer-session_")
+		);
+		aiSessions.value = sessions.map((s) => {
+			const meta = getBizMetaBySessionId(s.session_id);
+			return {
+				...s,
+				...meta
+			};
+		});
+	} catch (err) {
+		console.error("[history] 获取会话列表失败", err);
+		ui.showToast({ message: "获取历史记录失败，请稍后重试" });
+	} finally {
+		loading.value = false;
+	}
 };
-//#endregion
-const handleItemEdit = () => {
-	ui.showToast({
-		message: "编辑功能开发中，敬请期待"
+
+onMounted(() => {
+	fetchSessions();
+});
+
+// 清空当前所有 AI 会话
+const historyClearAll = async () => {
+	if (!userId.value || !aiSessions.value.length) {
+		return;
+	}
+
+	try {
+		loading.value = true;
+		await Promise.all(
+			aiSessions.value.map((item) =>
+				DeleteMessage({
+					user_id: userId.value as number,
+					session_id: item.session_id
+				})
+			)
+		);
+		aiSessions.value = [];
+		ui.showToast({ message: "已清空历史记录" });
+	} catch (err) {
+		console.error("[history] 清空历史记录失败", err);
+		ui.showToast({ message: "清空失败，请稍后重试" });
+	} finally {
+		loading.value = false;
+		isEditMode.value = false;
+	}
+};
+
+// 重命名单个会话
+const handleItemEdit = (item: UserSessionItem) => {
+	if (!userId.value) {
+		ui.showToast({ message: "请先登录后再操作" });
+		return;
+	}
+
+	uni.showModal({
+		title: "重命名对话",
+		editable: true,
+		content: item.title,
+		success: async (res) => {
+			// @ts-ignore 小程序下 editable 模式返回 content
+			const newTitle: string = (res as any).content ?? item.title;
+			if (!res.confirm) return;
+			const trimmed = newTitle.trim();
+			if (!trimmed) return;
+
+			try {
+				await UpdateSessionTitle({
+					session_id: item.session_id,
+					title: trimmed
+				});
+				aiSessions.value = aiSessions.value.map((s) =>
+					s.session_id === item.session_id ? { ...s, title: trimmed } : s
+				);
+				ui.showToast({ message: "重命名成功" });
+			} catch (err) {
+				console.error("[history] 重命名会话失败", err);
+				ui.showToast({ message: "重命名失败，请稍后重试" });
+			}
+		}
 	});
 };
 
-const handleItemDel = () => {
-	ui.showToast({
-		message: "删除功能开发中，敬请期待"
-	});
+// 删除单个会话
+const handleItemDel = async (item: UserSessionItem) => {
+	if (!userId.value) {
+		ui.showToast({ message: "请先登录后再操作" });
+		return;
+	}
+
+	try {
+		await DeleteMessage({
+			user_id: userId.value as number,
+			session_id: item.session_id
+		});
+		aiSessions.value = aiSessions.value.filter((s) => s.session_id !== item.session_id);
+		ui.showToast({ message: "已删除" });
+	} catch (err) {
+		console.error("[history] 删除会话失败", err);
+		ui.showToast({ message: "删除失败，请稍后重试" });
+	}
 };
+//#endregion
 </script>
 
 <template>
@@ -66,27 +255,59 @@ const handleItemDel = () => {
 		<!-- 中间：历史对话列表 -->
 		<view class="flex-1">
 			<scroll-view scroll-y class="app-setting-list__scroll" show-scrollbar="false">
-				<view class="app-setting-section">
-					<text class="app-setting-section__title">今天 </text>
-					<template v-for="i in 30" :key="i">
-						<view class="app-setting-item" hover-class="block-hover-class">
+				<view v-if="loading" class="app-setting-loading">
+					<text class="app-setting-loading__text">加载中...</text>
+				</view>
+				<view v-else>
+					<view v-if="!userId" class="flex items-center justify-center py-6">
+						<text class="text-md text-gray-400">请先登录</text>
+					</view>
+					<view
+						v-else-if="!groupedSessions.length"
+						class="flex items-center justify-center py-6"
+					>
+						<text class="text-md text-gray-400">暂无历史对话</text>
+					</view>
+					<view
+						v-for="group in groupedSessions"
+						:key="group.label"
+						class="app-setting-section"
+					>
+						<text class="app-setting-section__title">{{ group.label }}</text>
+						<view
+							v-for="item in group.items"
+							:key="item.session_id"
+							class="app-setting-item"
+							hover-class="block-hover-class"
+						>
 							<view class="app-setting-item__main">
-								<text class="app-setting-item__title">苹果掉落的原因</text>
-								<text class="app-setting-item__status">模块</text>
+								<cl-text class="app-setting-item__title" ellipsis>
+									{{ item.title }}</cl-text
+								>
+								<view class="flex flex-row items-center gap-1 mb-1">
+									<!-- <cl-tag :type="item.tagType" size="small">
+										{{ item.tagLabel }}
+									</cl-tag> -->
+									<view :class="`module-tag-${item.tagType}`" class="module-tag">
+										{{ item.tagLabel }}
+									</view>
+								</view>
 							</view>
-							<view class="flex flex-row gap-2 items-center">
+							<view class="flex flex-row items-center gap-2">
 								<template v-if="!isEditMode">
-									<text class="app-setting-item__time">19:12</text>
+									<text class="app-setting-item__time">
+										{{ formatTime(item.created_at) }}
+									</text>
 								</template>
 								<template v-else>
-									<view @click.stop="handleItemEdit">
+									<view @click.stop="handleItemEdit(item)">
 										<cl-icon
 											color="primary"
 											size="36rpx"
 											name="edit-line"
 										></cl-icon>
 									</view>
-									<view @click.stop="handleItemDel">
+									<view @click.stop="handleItemDel(item)">
 										<cl-icon
 											color="error"
 											size="36rpx"
@@ -96,7 +317,7 @@ const handleItemDel = () => {
 								</template>
 							</view>
 						</view>
-					</template>
+					</view>
 				</view>
 			</scroll-view>
 		</view>
@@ -125,7 +346,7 @@ const handleItemDel = () => {
 }
 
 .app-setting-section {
-	@apply mb-4 mr-4;
+	@apply mr-4;
 }
 
 .app-setting-section__title {
@@ -137,11 +358,11 @@ const handleItemDel = () => {
 }
 
 .app-setting-item__main {
-	@apply flex flex-col;
+	@apply flex-1 flex flex-col;
 }
 
 .app-setting-item__title {
-	@apply text-sm text-surface-900 mb-1;
+	@apply flex-1 text-sm text-surface-900 mb-1;
 }
 
 .app-setting-item__status {
@@ -150,5 +371,42 @@ const handleItemDel = () => {
 
 .app-setting-item__time {
 	@apply text-xs text-surface-400;
+}
+
+.module-tag {
+	@apply box-border inline-block whitespace-nowrap rounded-md transition-all relative text-xs;
+	border: 1px solid #d9d9d9;
+	text-align: start;
+	padding: 2px 4px;
+
+	&-green {
+		color: #389e0d;
+		background: #f6ffed;
+		border-color: #b7eb8f;
+	}
+
+	&-blue {
+		color: #0958d9;
+		background: #e6f4ff;
+		border-color: #91caff;
+	}
+
+	&-geekblue {
+		color: #1d39c4;
+		background: #f0f5ff;
+		border-color: #adc6ff;
+	}
+
+	&-orange {
+		color: #d46b08;
+		background: #fff7e6;
+		border-color: #ffd591;
+	}
+
+	&-cyan {
+		color: #08979c;
+		background: #e6fffb;
+		border-color: #87e8de;
+	}
 }
 </style>
