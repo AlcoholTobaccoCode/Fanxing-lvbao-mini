@@ -2,21 +2,9 @@
 @description: 历史记录
 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
-import { useUi } from "@/uni_modules/cool-ui";
+import { ref } from "vue";
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
-import { useStore } from "@/cool";
-import {
-	DeleteMessage,
-	GetUserSessions,
-	type GetUserSessionsData,
-	type UserSessionItem,
-	UpdateSessionTitle
-} from "@/api/history-chat";
-import { type HistorySessionItem, getBizMetaBySessionId } from "./hook";
-
-const ui = useUi();
-const { user } = useStore();
+import { useHistorySessions } from "./hook";
 
 //#region tab 切换
 const tabValue = ref("ai");
@@ -27,206 +15,22 @@ const tabs = ref<ClTabsItem[]>([
 //#endregion
 
 //#region 历史记录
-const isEditMode = ref<boolean>(false);
-const loading = ref(false);
-
-// 当前登录用户 id
-const userId = computed(() => user.info.value?.id ?? null);
-
-// 原始 AI 会话列表（不含律师会话），带业务标签信息
-const aiSessions = ref<HistorySessionItem[]>([]);
-
-// 按时间先排序，再分组
-const sortedSessions = computed(() => {
-	const list = aiSessions.value.slice();
-	list.sort((a, b) => b.created_at - a.created_at);
-	return list;
-});
-
-interface HistoryGroupItem {
-	label: string;
-	items: HistorySessionItem[];
-}
-
-// 判断是否为今天 / 昨天 / 更早
-const getDayLabel = (timestamp: number): string => {
-	// const d = new Date(ts);
-	// const now = new Date();
-	// const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-	// const startOfYesterday = startOfToday - 24 * 60 * 60 * 1000;
-	// if (ts >= startOfToday) return "今天";
-	// if (ts >= startOfYesterday) return "昨天";
-	// return "更早";
-	const now = Date.now();
-	const diff = now - timestamp;
-	const minutes = Math.floor(diff / 60000);
-	const hours = Math.floor(diff / 3600000);
-	const days = Math.floor(diff / 86400000);
-
-	if (minutes < 1) return "刚刚";
-	if (minutes < 60) return `${minutes}分钟前`;
-	if (hours < 24) return `${hours}小时前`;
-	if (days === 0) return "今天";
-	if (days === 1) return "昨天";
-	if (days < 7) return `${days}天前`;
-	if (days < 30) return `${Math.floor(days / 7)}周前`;
-	return `${Math.floor(days / 30)}月前`;
-};
-
-const groupedSessions = computed<HistoryGroupItem[]>(() => {
-	const result: HistoryGroupItem[] = [];
-	let currentLabel = "";
-	let currentItems: HistorySessionItem[] = [];
-
-	for (const item of sortedSessions.value) {
-		const label = getDayLabel(item.created_at);
-		if (!currentLabel) {
-			currentLabel = label;
-		}
-		if (label !== currentLabel) {
-			if (currentItems.length) {
-				result.push({ label: currentLabel, items: currentItems });
-			}
-			currentLabel = label;
-			currentItems = [];
-		}
-		currentItems.push(item);
-	}
-
-	if (currentItems.length) {
-		result.push({ label: currentLabel, items: currentItems });
-	}
-
-	return result;
-});
-
-// HH:mm 格式化时间
-const formatTime = (ts: number): string => {
-	const d = new Date(ts);
-	const h = `${d.getHours()}`.padStart(2, "0");
-	const m = `${d.getMinutes()}`.padStart(2, "0");
-	return `${h}:${m}`;
-};
+const {
+	isEditMode,
+	loading,
+	userId,
+	groupedSessions,
+	formatTime,
+	setEditMode,
+	historyClearAll,
+	handleItemEdit,
+	handleItemDel
+} = useHistorySessions();
+//#endregion
 
 const handleChangeEditMode = () => {
-	isEditMode.value = !isEditMode.value;
+	setEditMode(!isEditMode.value);
 };
-
-// 拉取历史会话列表
-const fetchSessions = async () => {
-	if (!userId.value) {
-		aiSessions.value = [];
-		return;
-	}
-
-	try {
-		loading.value = true;
-		const res = (await GetUserSessions({ user_id: userId.value })) as GetUserSessionsData | any;
-		const data = (res as GetUserSessionsData)?.sessions ?? (res as any)?.data?.sessions ?? [];
-		const sessions = (data as UserSessionItem[]).filter(
-			(s) => !s.session_id.startsWith("lawyer-session_")
-		);
-		aiSessions.value = sessions.map((s) => {
-			const meta = getBizMetaBySessionId(s.session_id);
-			return {
-				...s,
-				...meta
-			};
-		});
-	} catch (err) {
-		console.error("[history] 获取会话列表失败", err);
-		ui.showToast({ message: "获取历史记录失败，请稍后重试" });
-	} finally {
-		loading.value = false;
-	}
-};
-
-onMounted(() => {
-	fetchSessions();
-});
-
-// 清空当前所有 AI 会话
-const historyClearAll = async () => {
-	if (!userId.value || !aiSessions.value.length) {
-		return;
-	}
-
-	try {
-		loading.value = true;
-		await Promise.all(
-			aiSessions.value.map((item) =>
-				DeleteMessage({
-					user_id: userId.value as number,
-					session_id: item.session_id
-				})
-			)
-		);
-		aiSessions.value = [];
-		ui.showToast({ message: "已清空历史记录" });
-	} catch (err) {
-		console.error("[history] 清空历史记录失败", err);
-		ui.showToast({ message: "清空失败，请稍后重试" });
-	} finally {
-		loading.value = false;
-		isEditMode.value = false;
-	}
-};
-
-// 重命名单个会话
-const handleItemEdit = (item: UserSessionItem) => {
-	if (!userId.value) {
-		ui.showToast({ message: "请先登录后再操作" });
-		return;
-	}
-
-	uni.showModal({
-		title: "重命名对话",
-		editable: true,
-		content: item.title,
-		success: async (res) => {
-			// @ts-ignore 小程序下 editable 模式返回 content
-			const newTitle: string = (res as any).content ?? item.title;
-			if (!res.confirm) return;
-			const trimmed = newTitle.trim();
-			if (!trimmed) return;
-
-			try {
-				await UpdateSessionTitle({
-					session_id: item.session_id,
-					title: trimmed
-				});
-				aiSessions.value = aiSessions.value.map((s) =>
-					s.session_id === item.session_id ? { ...s, title: trimmed } : s
-				);
-				ui.showToast({ message: "重命名成功" });
-			} catch (err) {
-				console.error("[history] 重命名会话失败", err);
-				ui.showToast({ message: "重命名失败，请稍后重试" });
-			}
-		}
-	});
-};
-
-// 删除单个会话
-const handleItemDel = async (item: UserSessionItem) => {
-	if (!userId.value) {
-		ui.showToast({ message: "请先登录后再操作" });
-		return;
-	}
-
-	try {
-		await DeleteMessage({
-			user_id: userId.value as number,
-			session_id: item.session_id
-		});
-		aiSessions.value = aiSessions.value.filter((s) => s.session_id !== item.session_id);
-		ui.showToast({ message: "已删除" });
-	} catch (err) {
-		console.error("[history] 删除会话失败", err);
-		ui.showToast({ message: "删除失败，请稍后重试" });
-	}
-};
-//#endregion
 </script>
 
 <template>
@@ -285,9 +89,6 @@ const handleItemDel = async (item: UserSessionItem) => {
 									{{ item.title }}</cl-text
 								>
 								<view class="flex flex-row items-center gap-1 mb-1">
-									<!-- <cl-tag :type="item.tagType" size="small">
-										{{ item.tagLabel }}
-									</cl-tag> -->
 									<view :class="`module-tag-${item.tagType}`" class="module-tag">
 										{{ item.tagLabel }}
 									</view>
