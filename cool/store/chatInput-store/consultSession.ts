@@ -13,6 +13,8 @@ export interface ConsultMessage {
 	voiceUrl?: string;
 	// 语音时长（秒，可选）
 	voiceLength?: number;
+	// 深度思考过程（如果开启了深度思考），仅对 AI 消息有效
+	deepThink?: string;
 }
 
 export interface ConsultStreamHooks {
@@ -23,6 +25,10 @@ export class ConsultSessionStore {
 	messages = ref<ConsultMessage[]>([]);
 	sessionId = ref<string | null>(null);
 	loading = ref(false);
+	// 当前这轮流式回答的阶段状态文案，例如“正在思考中…”、“正在为您检索相关司法判例…”。
+	streamStatus = ref<string | null>(null);
+	// 深度思考过程文本（如果开启深度思考）。暂时只存不展示，后续用于“思考过程”折叠面板。
+	deepThinkContent = ref<string>("");
 
 	initFromLaunch(launch: ChatLaunchPayload) {
 		this.messages.value = [];
@@ -37,6 +43,10 @@ export class ConsultSessionStore {
 	) {
 		const content = text.trim();
 		if (!content || this.loading.value) return;
+
+		// 开启新一轮咨询前，重置流式状态与思考内容
+		this.streamStatus.value = null;
+		this.deepThinkContent.value = "";
 
 		// 先追加一条用户消息
 		this.messages.value.push({
@@ -90,16 +100,50 @@ export class ConsultSessionStore {
 
 				try {
 					const evt = JSON.parse(jsonStr) as {
-						contents?: { contentType: string; content: string }[];
+						contents?: {
+							id?: string;
+							contentType?: string;
+							content?: string;
+							status?: string;
+							searchList?: any[];
+							lawList?: any[];
+							caseList?: any[];
+						}[];
 					};
-					const textChunk = (evt.contents || [])
-						.filter((c) => c.contentType === "text")
-						.map((c) => c.content)
+					const contents = evt.contents || [];
+
+					// 普通正文片段
+					const textChunk = contents
+						.filter((c) => c.contentType === "text" && typeof c.content === "string")
+						.map((c) => c.content as string)
 						.join("");
+
+					// 深度思考过程片段（如果有）
+					const deepThinkChunk = contents
+						.filter(
+							(c) => c.contentType === "deepThink" && typeof c.content === "string"
+						)
+						.map((c) => c.content as string)
+						.join("");
+
+					// 当前阶段状态文案：优先取带 status 的 text 内容，其次任意带 status 的内容
+					const statusHolder =
+						contents.find((c) => c.contentType === "text" && c.status) ||
+						contents.find((c) => c.status);
+					const statusText = (statusHolder?.status || "") as string;
 
 					if (textChunk) {
 						aiMsg.content = textChunk;
 						hooks?.onTextChunk?.(textChunk);
+					}
+
+					if (deepThinkChunk) {
+						(aiMsg as any).deepThink = deepThinkChunk;
+						this.deepThinkContent.value = deepThinkChunk;
+					}
+
+					if (statusText) {
+						this.streamStatus.value = statusText;
 					}
 				} catch (err) {
 					console.error("解析咨询响应失败", err);

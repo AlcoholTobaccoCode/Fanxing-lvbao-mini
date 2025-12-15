@@ -4,7 +4,7 @@ import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
 import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store/chatInput-store";
-import type { SendData } from "@/components/chat-input/types";
+import type { SendData, Tools } from "@/components/chat-input/types";
 import { createConsultTtsController } from "@/utils/aliyun/tts-stream";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
@@ -19,6 +19,30 @@ const messages = consultSessionStore.messages;
 // 是否正在生成 AI 回复
 const isGenerating = computed(() => consultSessionStore.loading.value);
 
+// 当前流式阶段状态文案（例如：正在思考中 / 正在为您检索相关司法判例...）
+const streamStatus = computed(() => consultSessionStore.streamStatus.value);
+
+// 深度思考展开状态：按消息索引记录“收起”的条目（默认全部展开）
+const collapsedDeepThinkIndexes = ref<number[]>([]);
+
+const isDeepThinkExpanded = (idx: number) => {
+	// 不在收起列表中即视为展开
+	return !collapsedDeepThinkIndexes.value.includes(idx);
+};
+
+const toggleDeepThink = (idx: number) => {
+	const arr = collapsedDeepThinkIndexes.value.slice();
+	const i = arr.indexOf(idx);
+	if (i >= 0) {
+		// 已收起 -> 从列表移除，恢复展开
+		arr.splice(i, 1);
+	} else {
+		// 当前展开 -> 加入收起列表
+		arr.push(idx);
+	}
+	collapsedDeepThinkIndexes.value = arr;
+};
+
 // 聊天列表自动滚动控制
 const scrollIntoViewId = ref("chat-bottom-a");
 const autoScroll = ref(true);
@@ -31,6 +55,15 @@ const scrollToBottom = () => {
 		scrollIntoViewId.value =
 			scrollIntoViewId.value === "chat-bottom-a" ? "chat-bottom-b" : "chat-bottom-a";
 	});
+};
+
+// 顶部工具变化 & 输入模式变化：同步到全局 chatInputStore，保证首页与详情页一致
+const handleToolsChange = (val: Tools) => {
+	chatInputStore.tools.value = val;
+};
+
+const handleInputModeChange = (mode: string) => {
+	chatInputStore.inputMode.value = mode as any;
 };
 
 // 监听消息变化：默认保持跟随到底部，除非用户手动上滑
@@ -232,11 +265,40 @@ const handleSend = async (data: SendData) => {
 							</template>
 
 							<template v-else>
+								<!-- 思考过程：显示在每条 AI 回复的最上方（如果存在 deepThink） -->
+								<view v-if="item.deepThink" class="deepthink-wrapper">
+									<view
+										class="deepthink-header"
+										@tap.stop="toggleDeepThink(index)"
+									>
+										<view class="deepthink-icon"></view>
+										<text class="deepthink-title">思考</text>
+										<text class="deepthink-toggle">
+											{{ isDeepThinkExpanded(index) ? "收起" : "展开" }}
+										</text>
+									</view>
+									<view v-if="isDeepThinkExpanded(index)" class="deepthink-body">
+										<text class="deepthink-text">{{ item.deepThink }}</text>
+									</view>
+								</view>
+
 								<zero-markdown-view
 									:markdown="item.content"
 									:aiMode="true"
 								></zero-markdown-view>
 							</template>
+						</view>
+						<!-- 当前轮 AI 回复阶段性状态展示 -->
+						<view v-if="isGenerating && streamStatus" class="ai-status-wrapper">
+							<view class="ai-status-row">
+								<view class="ai-status-spinner"></view>
+								<text class="ai-status-text">{{ streamStatus }}</text>
+							</view>
+							<view class="ai-status-dots">
+								<view class="ai-status-dot ai-status-dot--1"></view>
+								<view class="ai-status-dot ai-status-dot--2"></view>
+								<view class="ai-status-dot ai-status-dot--3"></view>
+							</view>
 						</view>
 						<!-- 底部锚点：用于 scroll-into-view 自动滚动到底部 -->
 						<view id="chat-bottom-a"></view>
@@ -244,7 +306,16 @@ const handleSend = async (data: SendData) => {
 					</scroll-view>
 				</view>
 
-				<chat-input @send="handleSend" />
+				<chat-input
+					:input-mode="chatInputStore.inputMode.value"
+					:tools="chatInputStore.tools.value"
+					:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
+					:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
+					:show-default-network="chatInputStore.showDefaultNetwork.value"
+					@send="handleSend"
+					@tool-change="handleToolsChange"
+					@input-mode-change="handleInputModeChange"
+				/>
 			</view>
 		</template>
 	</app-page>
@@ -266,5 +337,101 @@ const handleSend = async (data: SendData) => {
 
 .voice-text {
 	@apply text-md pl-4 py-2 bg-white rounded-md mt-2;
+}
+
+.deepthink-wrapper {
+	@apply mt-3 mb-1;
+}
+
+.deepthink-header {
+	@apply flex flex-row items-center mb-1;
+}
+
+.deepthink-icon {
+	width: 14px;
+	height: 14px;
+	border-radius: 999px;
+	background-color: #3b82f6;
+	margin-right: 6px;
+}
+
+.deepthink-title {
+	@apply text-xs text-blue-500 mr-1;
+}
+
+.deepthink-toggle {
+	@apply text-xs text-gray-400;
+}
+
+.deepthink-body {
+	@apply mt-1 pl-3 border-l border-gray-200;
+}
+
+.deepthink-text {
+	@apply text-xs text-gray-500 leading-relaxed;
+}
+
+.ai-status-wrapper {
+	@apply px-4 py-3;
+}
+
+.ai-status-row {
+	@apply flex flex-row items-center mb-1;
+}
+
+.ai-status-spinner {
+	width: 14px;
+	height: 14px;
+	border-radius: 999px;
+	border-width: 2px;
+	border-style: solid;
+	border-color: #e5e7eb;
+	border-top-color: #3b82f6;
+	animation: ai-status-spin 1s linear infinite;
+}
+
+.ai-status-text {
+	@apply text-xs text-gray-500 ml-2;
+}
+
+.ai-status-dots {
+	@apply flex flex-row items-center mt-1;
+}
+
+.ai-status-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 999px;
+	background-color: #3b82f6;
+	margin-right: 4px;
+	animation: ai-status-blink 1.4s infinite both;
+}
+
+.ai-status-dot--2 {
+	animation-delay: 0.2s;
+}
+
+.ai-status-dot--3 {
+	animation-delay: 0.4s;
+}
+
+@keyframes ai-status-spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes ai-status-blink {
+	0%,
+	80%,
+	100% {
+		opacity: 0.2;
+	}
+	40% {
+		opacity: 1;
+	}
 }
 </style>
