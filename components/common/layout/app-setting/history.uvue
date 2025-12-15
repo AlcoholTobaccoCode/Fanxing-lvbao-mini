@@ -24,13 +24,18 @@ const {
 	setEditMode,
 	historyClearAll,
 	handleItemEdit,
-	handleItemDel
+	handleItemDel,
+	refreshSessions
 } = useHistorySessions();
 //#endregion
 
 const handleChangeEditMode = () => {
 	setEditMode(!isEditMode.value);
 };
+
+defineExpose({
+	refreshSessions
+});
 </script>
 
 <template>

@@ -296,6 +296,7 @@ export function useHistorySessions() {
 		userId,
 		groupedSessions,
 		formatTime,
+		refreshSessions: fetchSessions,
 		setEditMode: (val: boolean) => {
 			isEditMode.value = val;
 		},

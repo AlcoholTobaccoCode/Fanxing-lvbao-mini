@@ -42,6 +42,7 @@ const voicePlay = ref(props.initialVoicePlay ?? false);
 
 // 是否打开对话历史侧栏
 const isHistoryOpen = ref(false);
+const appSettingRef = ref<InstanceType<typeof AppSetting> | null>(null);
 
 const slots = useSlots();
 const hasHistorySlot = computed(() => !!slots.history);
@@ -66,7 +67,12 @@ const handleHeaderVoiceSelect = () => {
 
 // 默认菜单按钮点击：打开 / 关闭对话历史
 const handleDefaultLeftTap = () => {
-	isHistoryOpen.value = !isHistoryOpen.value;
+	const next = !isHistoryOpen.value;
+	isHistoryOpen.value = next;
+	// 当从关闭 -> 打开时，刷新历史列表
+	if (next) {
+		appSettingRef.value?.refreshHistory?.();
+	}
 	emit("click-left");
 };
 
@@ -102,7 +108,7 @@ const iconVisible = ref(false);
 			>
 				<cl-safe-area type="top"></cl-safe-area>
 				<slot name="history">
-					<app-setting @close="isHistoryOpen = false"></app-setting>
+					<app-setting ref="appSettingRef" @close="isHistoryOpen = false"></app-setting>
 				</slot>
 				<cl-safe-area type="bottom"></cl-safe-area>
 			</view>

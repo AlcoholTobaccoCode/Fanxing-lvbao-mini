@@ -39,6 +39,7 @@ const openCSChat = () => {};
 //#endregion
 
 const pageMainHeight = ref("");
+const historyRef = ref<InstanceType<typeof HistoryList> | null>(null);
 onMounted(() => {
 	// #ifdef MP-WEIXIN
 	try {
@@ -49,6 +50,13 @@ onMounted(() => {
 		pageMainHeight.value = "";
 	}
 	// #endif
+});
+
+// 暴露刷新历史的方法，供上层布局在“打开历史侧栏”时调用
+defineExpose({
+	refreshHistory: () => {
+		historyRef.value?.refreshSessions?.();
+	}
 });
 </script>
 
@@ -77,7 +85,7 @@ onMounted(() => {
 			}"
 		>
 			<view class="flex-1 overflow-auto">
-				<history-list> </history-list>
+				<history-list ref="historyRef"> </history-list>
 			</view>
 
 			<!-- 底部账号信息 + 设置入口 -->

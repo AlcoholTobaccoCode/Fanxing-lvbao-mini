@@ -3,6 +3,8 @@ import { config } from "@/config";
 import { useStore } from "@/cool";
 import { recommendLawyers, type RecommendLawyerItem } from "@/api/consult";
 import { createModelSessionId } from "@/utils/assetsConfig";
+import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
+import { generateUUID } from "@/utils/util";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/components/chat-input/types";
 
@@ -41,6 +43,63 @@ export class ConsultSessionStore {
 	initFromLaunch(launch: ChatLaunchPayload) {
 		this.messages.value = [];
 		this.sessionId.value = null;
+	}
+
+	private buildSessionForSave(sessionId: string, msgList?: ConsultMessage[]) {
+		const list = msgList || this.messages.value;
+		const firstUserMsg = list.find((m) => m.role === "user");
+		const rawTitle = firstUserMsg?.content || "新对话";
+		const title = rawTitle.length <= 30 ? rawTitle : rawTitle.slice(0, 30) + "...";
+		const now = Date.now();
+		const date = new Date(now);
+		const pad = (n: number) => n.toString().padStart(2, "0");
+		const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
+			date.getSeconds()
+		)}`;
+
+		const mappedMessages = list.map((m) => {
+			return {
+				id: generateUUID(),
+				content: m.content,
+				sender: m.role === "user" ? "user" : "ai",
+				timestamp: timeStr,
+				// 小程序端目前没有流式中断的概念，这里统一按已完成落库
+				isStreaming: false,
+				deepThink: m.deepThink,
+				haveRecommendLawyer: m.haveRecommendLawyer,
+				recommendedLawyerIds: m.recommendedLawyerIds,
+				recommendedLawyers: m.recommendedLawyers
+			};
+		});
+
+		return {
+			id: sessionId,
+			title,
+			messages: mappedMessages,
+			createdAt: now,
+			updatedAt: now
+		} as Record<string, any>;
+	}
+
+	private async saveCurrentSessionSnapshot() {
+		try {
+			const { user } = useStore();
+			const userId = (user as any)?.info?.value?.id as number | undefined;
+			if (!this.sessionId.value || !userId) {
+				return;
+			}
+
+			const session = this.buildSessionForSave(this.sessionId.value);
+			const payload: SaveMessagesPayload = {
+				user_id: userId,
+				session_id: this.sessionId.value,
+				message: session
+			};
+
+			await SaveMessages(payload);
+		} catch (err) {
+			console.error("[ConsultSession] 保存会话失败", err);
+		}
 	}
 
 	async sendTextQuestion(
@@ -257,7 +316,9 @@ export class ConsultSessionStore {
 				}
 			});
 
-			// 流式结束后，如当前 AI 回复文案中包含 <推荐律师>，尝试请求推荐列表
+			// 每轮 AI 回复完成后，先保存当前会话快照
+			await this.saveCurrentSessionSnapshot();
+			// 再根据 AI 文本中的推荐标记触发推荐律师逻辑（内部会在挂载结果后再保存一次）
 			await this.fetchRecommendLawyersIfNeeded(aiMsg);
 		} finally {
 			this.loading.value = false;
@@ -285,6 +346,8 @@ export class ConsultSessionStore {
 				aiMsg.haveRecommendLawyer = true;
 				aiMsg.recommendedLawyerIds = list.map((i) => i.user_id);
 				aiMsg.recommendedLawyers = list;
+				// 推荐结果挂载后，再保存一份包含推荐律师信息的会话快照
+				await this.saveCurrentSessionSnapshot();
 			}
 		} catch (err) {
 			console.error("[ConsultSession] 推荐律师失败", err);
