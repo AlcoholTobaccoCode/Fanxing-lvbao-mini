@@ -180,6 +180,7 @@ const iconVisible = ref(false);
 					@click="handleOpenChatList"
 				>
 				</cl-button>
+				<!-- TODO -->
 				<cl-badge
 					type="error"
 					:value="'99+'"

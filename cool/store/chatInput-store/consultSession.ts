@@ -4,11 +4,15 @@ import { useStore } from "@/cool";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/components/chat-input/types";
 
-import { MockMessages } from "./mock";
-
 export interface ConsultMessage {
 	role: "user" | "system";
 	content: string;
+	// 是否由语音输入转写而来，用于前端以语音气泡样式展示
+	fromVoice?: boolean;
+	// 语音播放地址（可选）
+	voiceUrl?: string;
+	// 语音时长（秒，可选）
+	voiceLength?: number;
 }
 
 export interface ConsultStreamHooks {
@@ -17,7 +21,6 @@ export interface ConsultStreamHooks {
 
 export class ConsultSessionStore {
 	messages = ref<ConsultMessage[]>([]);
-	// messages = ref<ConsultMessage[]>(MockMessages);
 	sessionId = ref<string | null>(null);
 	loading = ref(false);
 
@@ -26,15 +29,23 @@ export class ConsultSessionStore {
 		this.sessionId.value = null;
 	}
 
-	async sendTextQuestion(text: string, tools: Tools, hooks?: ConsultStreamHooks) {
+	async sendTextQuestion(
+		text: string,
+		tools: Tools,
+		hooks?: ConsultStreamHooks,
+		options?: { fromVoice?: boolean; voiceUrl?: string; voiceLength?: number }
+	) {
 		const content = text.trim();
 		if (!content || this.loading.value) return;
 
 		// 先追加一条用户消息
-		this.messages.value.push({ role: "user", content });
-
-		this.messages.value.push({ role: "system", content: "" });
-		const aiMsg = this.messages.value[this.messages.value.length - 1];
+		this.messages.value.push({
+			role: "user",
+			content,
+			fromVoice: !!options?.fromVoice,
+			voiceUrl: options?.voiceUrl,
+			voiceLength: options?.voiceLength
+		});
 
 		const onlineSearch = tools?.some((t) => t.text === "联网搜索" && t.enable);
 		const deepThink = tools?.some((t) => t.text === "深度思考" && t.enable);
@@ -47,6 +58,10 @@ export class ConsultSessionStore {
 				content: m.content
 			}))
 		};
+
+		// AI 回复占位
+		this.messages.value.push({ role: "system", content: "" });
+		const aiMsg = this.messages.value[this.messages.value.length - 1];
 
 		this.loading.value = true;
 

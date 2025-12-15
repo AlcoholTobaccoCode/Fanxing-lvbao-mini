@@ -102,10 +102,12 @@ const createDefaultTools = (): Tools => {
 	return list;
 };
 
-const tools = ref<Tools>([
-	...createDefaultTools(),
-	...(props.tools || []).map((item) => ({ ...item }))
-]);
+// 顶部工具列表：
+const tools = ref<Tools>(
+	props.tools && props.tools.length > 0
+		? (props.tools as Tools).map((item) => ({ ...item }))
+		: createDefaultTools()
+);
 
 //#region 语音录制相关
 
@@ -230,10 +232,14 @@ watch(
 			activeMap.set(t.text, !!t.enable);
 		});
 
-		const next: Tools = [
-			...createDefaultTools(),
-			...(props.tools || []).map((item) => ({ ...item }))
-		].map((item) => ({
+		let base: Tools;
+		if (props.tools && props.tools.length > 0) {
+			base = (props.tools as Tools).map((item) => ({ ...item }));
+		} else {
+			base = [...createDefaultTools(), ...(props.tools || []).map((item) => ({ ...item }))];
+		}
+
+		const next: Tools = base.map((item) => ({
 			...item,
 			enable: activeMap.get(item.text) ?? item.enable ?? false
 		}));
@@ -251,8 +257,8 @@ watch(
 			<scroll-view scroll-x class="w-full" show-scrollbar="false">
 				<view class="chat-intent-row__inner">
 					<view
-						v-for="item in tools"
-						:key="item.text"
+						v-for="(item, idx) in tools"
+						:key="item.text + '-' + idx"
 						class="chat-intent-chip"
 						:class="{ 'chat-intent-chip--active': item.enable }"
 						@tap.stop="handleToolTap(item)"
@@ -368,7 +374,7 @@ watch(
 }
 
 .chat-intent-row__inner {
-	@apply flex flex-row items-center gap-2 px-1;
+	@apply flex flex-row items-center gap-2 px-1 overflow-x-auto;
 }
 
 .chat-intent-chip {

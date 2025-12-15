@@ -9,6 +9,7 @@ import { createConsultTtsController } from "@/utils/aliyun/tts-stream";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/ai-chat/index.uvue";
+import AudioBubble from "@/components/chat/audio-bubble.uvue";
 
 const log = new Logger("ConsultChatPage");
 const ui = useUi();
@@ -94,7 +95,11 @@ onLoad(() => {
 
 	// 自动以首页首问发起一次流式咨询
 	if (launch.text) {
-		consultSessionStore.sendTextQuestion(launch.text, launch.tools);
+		consultSessionStore.sendTextQuestion(launch.text, launch.tools, undefined, {
+			fromVoice: !!launch.voice,
+			voiceUrl: launch.voice?.onlineUrl,
+			voiceLength: launch.voice ? Math.ceil((launch.voice.duration || 0) / 1000) : undefined
+		});
 	}
 
 	setTimeout(() => {
@@ -118,12 +123,20 @@ const handleSend = async (data: SendData) => {
 		return;
 	}
 
-	if (data.mode === "voice") {
-		ui.showToast({ message: "语音提问暂未接入流式咨询" });
-		return;
+	// 统一抽取本次提问文本：
+	// - 文本模式：直接用 data.text
+	// - 语音模式：优先使用语音识别出的文字 data.voice.text，兜底 data.text
+	let questionText = "";
+	if (data.mode === "voice" && data.voice) {
+		questionText = (data.voice.text || data.text || "").trim();
+	} else {
+		questionText = (data.text || "").trim();
 	}
 
-	if (!data.text || !data.text.trim()) return;
+	if (!questionText) {
+		ui.showToast({ message: "请输入或说出你的咨询问题" });
+		return;
+	}
 
 	try {
 		// 发送新问题前，重置为自动跟随到底部
@@ -132,12 +145,24 @@ const handleSend = async (data: SendData) => {
 		// 创建流式语音合成
 		const ttsController = await createConsultTtsController();
 		try {
-			await consultSessionStore.sendTextQuestion(data.text, chatInputStore.tools.value, {
-				onTextChunk: async (chunk: string) => {
-					console.info("chunk ===> ", chunk);
-					await ttsController.feedText(chunk);
+			await consultSessionStore.sendTextQuestion(
+				questionText,
+				chatInputStore.tools.value,
+				{
+					onTextChunk: async (chunk: string) => {
+						console.info("chunk ===> ", chunk);
+						await ttsController.feedText(chunk);
+					}
+				},
+				{
+					fromVoice: data.mode === "voice",
+					voiceUrl: data.mode === "voice" ? data.voice?.onlineUrl : undefined,
+					voiceLength:
+						data.mode === "voice" && data.voice
+							? Math.ceil((data.voice.duration || 0) / 1000)
+							: undefined
 				}
-			});
+			);
 			await ttsController.finish();
 		} finally {
 			ttsController.dispose();
@@ -176,17 +201,33 @@ const handleSend = async (data: SendData) => {
 							class="flex px-4 mb-4"
 							:class="item.role === 'user' ? 'items-end' : 'justify-start'"
 						>
-							<view
-								v-if="item.role === 'user'"
-								class="chat-user-main !w-fit p-2 pl-4 rounded-xl rounded-tr-none text-lg"
-							>
-								<cl-text
-									:pt="{
-										className: 'text-white'
-									}"
-									>{{ item.content }}</cl-text
+							<template v-if="item.role === 'user'">
+								<!-- 语音来源的提问：使用抽离的 AudioBubble 组件 -->
+								<view
+									v-if="item.fromVoice"
+									class="chat-user-main !w-fit px-3 py-2 rounded-xl rounded-tr-none flex flex-col gap-1"
 								>
-							</view>
+									<audio-bubble
+										mode="send"
+										:length="item.voiceLength"
+										:text="item.content"
+										:url="item.voiceUrl || ''"
+									/>
+								</view>
+								<!-- 普通文本提问：保持原有样式 -->
+								<view
+									v-else
+									class="chat-user-main !w-fit p-2 pl-4 rounded-xl rounded-tr-none text-lg"
+								>
+									<cl-text
+										:pt="{
+											className: 'text-white'
+										}"
+									>
+										{{ item.content }}
+									</cl-text>
+								</view>
+							</template>
 
 							<template v-else>
 								<zero-markdown-view

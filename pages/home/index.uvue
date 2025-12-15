@@ -4,7 +4,7 @@ import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { router } from "@/cool";
 
-import type { SendData } from "@/components/chat-input/types";
+import type { SendData, Tools } from "@/components/chat-input/types";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/ai-chat/index.uvue";
@@ -19,21 +19,44 @@ const ui = useUi();
 // 对话输入内容
 const inputValue = ref("");
 
-onLoad(() => {
-	// TODO
+onLoad(async () => {
+	// 测试 errorAi 功能
 });
 
 //#region 交互区域
 
 // 发送当前对话输入：发起咨询模块并跳转到咨询对话页
+const handleToolsChange = (val: Tools) => {
+	chatInputStore.tools.value = val;
+};
+
+const handleInputModeChange = (mode: string) => {
+	chatInputStore.inputMode.value = mode as any;
+};
+
 const handleSend = async (data: SendData) => {
 	log.group("handleSend");
 	log.info("send payload ==> ", data);
 	log.groupEnd();
 
+	// 统一抽取首问文本：
+	// - 文本模式：直接用 data.text
+	// - 语音模式：优先使用语音识别出的文字 data.voice.text，兜底 data.text
+	let questionText = "";
+	if (data.mode === "voice" && data.voice) {
+		questionText = (data.voice.text || data.text || "").trim();
+	} else {
+		questionText = (data.text || "").trim();
+	}
+
+	if (!questionText) {
+		ui.showToast({ message: "请输入或说出你的咨询问题" });
+		return;
+	}
+
 	// 记录本次从首页发起的咨询会话（先固定模块 consult）
 	chatFlowStore.startModule("consult", {
-		text: data.mode === "text" ? data.text : "",
+		text: questionText,
 		voice: data.mode === "voice" ? data.voice : null,
 		tools: chatInputStore.tools.value,
 		inputMode: chatInputStore.inputMode.value
@@ -94,8 +117,15 @@ const handleHangup = () => {
 					<chat-input
 						v-model="inputValue"
 						use-module="consult"
+						:input-mode="chatInputStore.inputMode.value"
+						:tools="chatInputStore.tools.value"
+						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
+						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
+						:show-default-network="chatInputStore.showDefaultNetwork.value"
 						@send="handleSend"
 						@open-call="handleOpenCall"
+						@tool-change="handleToolsChange"
+						@input-mode-change="handleInputModeChange"
 					/>
 				</simple-card>
 			</view>
