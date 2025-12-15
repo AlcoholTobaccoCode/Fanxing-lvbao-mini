@@ -28,11 +28,40 @@ const props = defineProps({
 const isPlaying = ref(false);
 let audioCtx: UniApp.InnerAudioContext | null = null;
 
+const barHeights = ref<number[]>([]);
+
+const getBarCountByLength = () => {
+	const len = props.length && props.length > 0 ? props.length : 1;
+	const clamped = Math.max(1, Math.min(len, 60));
+	const minBars = 6;
+	const maxBars = 28;
+	return Math.round(minBars + ((maxBars - minBars) * (clamped - 1)) / (60 - 1));
+};
+
+const initBarHeights = () => {
+	const count = getBarCountByLength();
+	const rand = (min: number, max: number) => Math.round(min + Math.random() * (max - min));
+	const list: number[] = [];
+	for (let i = 0; i < count; i++) {
+		list.push(rand(8, 20));
+	}
+	barHeights.value = list;
+};
+
 const displayLength = computed(() => {
 	if (props.length && props.length > 0) {
 		return `${props.length}"`;
 	}
 	return "语音";
+});
+
+const bubbleWidth = computed(() => {
+	const len = props.length && props.length > 0 ? props.length : 1;
+	const clamped = Math.max(1, Math.min(len, 60));
+	const minW = 40;
+	const maxW = 200;
+	const w = minW + ((maxW - minW) * (clamped - 1)) / (60 - 1);
+	return `${w}px`;
 });
 
 const disposeAudio = () => {
@@ -71,6 +100,8 @@ const handleToggle = () => {
 	isPlaying.value = true;
 };
 
+initBarHeights();
+
 onBeforeUnmount(() => {
 	disposeAudio();
 });
@@ -79,9 +110,13 @@ onBeforeUnmount(() => {
 <template>
 	<view class="audio-bubble-root">
 		<!-- 上半部分：语音条，结构与 IM 保持一致 -->
-		<view class="audio-voice flex flex-row items-center" @tap.stop="handleToggle">
+		<view
+			class="audio-voice flex flex-row items-center"
+			:style="{ width: bubbleWidth }"
+			@tap.stop="handleToggle"
+		>
 			<!-- 左侧：时长 / 文案 -->
-			<text class="audio-voice__duration text-xs mr-2">
+			<text class="audio-voice__duration">
 				{{ displayLength }}
 			</text>
 			<!-- 右侧：动态线条 -->
@@ -90,9 +125,15 @@ onBeforeUnmount(() => {
 				:class="{ 'audio-voice__bars--playing': isPlaying }"
 			>
 				<!-- TODO -->
-				<view class="audio-voice__bar audio-voice__bar--1"></view>
-				<view class="audio-voice__bar audio-voice__bar--2"></view>
-				<view class="audio-voice__bar audio-voice__bar--3"></view>
+				<view
+					v-for="(h, idx) in barHeights"
+					:key="idx"
+					class="audio-voice__bar"
+					:style="{
+						height: h + 'px',
+						animationDelay: idx * 0.08 + 's'
+					}"
+				></view>
 			</view>
 		</view>
 
@@ -109,13 +150,13 @@ onBeforeUnmount(() => {
 }
 
 .audio-voice__duration {
-	@apply text-white;
+	@apply text-white text-md mr-2;
 }
 
 .audio-voice__bar {
 	width: 3px;
 	border-radius: 999px;
-	background-color: rgba(0, 0, 0, 0.15);
+	background-color: rgba(255, 255, 255, 0.4);
 }
 
 .audio-voice__bar--1 {
@@ -131,7 +172,7 @@ onBeforeUnmount(() => {
 }
 
 .audio-voice__bars--playing .audio-voice__bar {
-	animation-name: audio-bar-color;
+	animation-name: audio-bar-pulse;
 	animation-timing-function: ease-in-out;
 	animation-iteration-count: infinite;
 	animation-direction: alternate;
@@ -150,15 +191,18 @@ onBeforeUnmount(() => {
 	animation-delay: 0.2s;
 }
 
-@keyframes audio-bar-color {
+@keyframes audio-bar-pulse {
 	0% {
-		background-color: rgba(16, 185, 129, 0.2);
+		transform: scaleY(0.7);
+		opacity: 0.4;
 	}
 	50% {
-		background-color: rgba(16, 185, 129, 0.6);
+		transform: scaleY(1.2);
+		opacity: 1;
 	}
 	100% {
-		background-color: rgba(16, 185, 129, 1);
+		transform: scaleY(0.9);
+		opacity: 0.6;
 	}
 }
 </style>

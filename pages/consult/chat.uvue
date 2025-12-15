@@ -177,7 +177,7 @@ const handleSend = async (data: SendData) => {
 <template>
 	<app-page title="法律咨询" back-top :use-history-layout="false" :chat-list-btn="false">
 		<template #content>
-			<view class="w-full h-full flex flex-col overflow-hidden">
+			<view class="page-content">
 				<!-- 临时测试 -->
 				<view
 					v-if="!hasValidLaunch"
@@ -202,22 +202,24 @@ const handleSend = async (data: SendData) => {
 							:class="item.role === 'user' ? 'items-end' : 'justify-start'"
 						>
 							<template v-if="item.role === 'user'">
-								<!-- 语音来源的提问：使用抽离的 AudioBubble 组件 -->
-								<view
-									v-if="item.fromVoice"
-									class="chat-user-main !w-fit px-3 py-2 rounded-xl rounded-tr-none flex flex-col gap-1"
-								>
-									<audio-bubble
-										mode="send"
-										:length="item.voiceLength"
-										:text="item.content"
-										:url="item.voiceUrl || ''"
-									/>
-								</view>
+								<template v-if="item.fromVoice">
+									<view
+										class="chat-user-main !w-fit px-3 py-2 rounded-xl rounded-tr-none flex flex-col gap-1"
+									>
+										<audio-bubble
+											mode="send"
+											:length="item.voiceLength"
+											:url="item.voiceUrl || ''"
+										/>
+									</view>
+									<view class="voice-text">
+										{{ item.content }}
+									</view>
+								</template>
 								<!-- 普通文本提问：保持原有样式 -->
 								<view
 									v-else
-									class="chat-user-main !w-fit p-2 pl-4 rounded-xl rounded-tr-none text-lg"
+									class="chat-user-main !w-fit p-2 pl-3 rounded-xl rounded-tr-none text-lg"
 								>
 									<cl-text
 										:pt="{
@@ -249,11 +251,20 @@ const handleSend = async (data: SendData) => {
 </template>
 
 <style lang="scss" scoped>
+.page-content {
+	@apply w-full h-full flex flex-col overflow-hidden;
+	background-color: #fafafa;
+}
+
 .ai-repeat-list__scroll {
 	@apply w-full h-full flex-1 flex flex-col gap-3;
 }
 
 .chat-user-main {
 	background-color: #22c57d;
+}
+
+.voice-text {
+	@apply text-md pl-4 py-2 bg-white rounded-md mt-2;
 }
 </style>
