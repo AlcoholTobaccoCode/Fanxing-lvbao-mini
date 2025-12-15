@@ -65,7 +65,7 @@ export interface GetChatHistoryResponse {
 	messages: ChatHistoryMessage[];
 }
 
-export const getChatHistory = (
+export const GetChatHistory = (
 	params: GetChatHistoryParams
 ): Promise<ApiResponse<GetChatHistoryResponse>> => {
 	return request({
@@ -90,7 +90,7 @@ export interface UpdateReadStatusResponse {
 	updated: number;
 }
 
-export const updateReadStatus = (
+export const UpdateReadStatus = (
 	data: UpdateReadStatusPayload
 ): Promise<ApiResponse<UpdateReadStatusResponse>> => {
 	return request({
@@ -112,7 +112,7 @@ export interface GetUsernamesResponse {
 	userNames: (string | null)[];
 }
 
-export const getUsernames = (
+export const GetUsernames = (
 	data: GetUsernamesPayload
 ): Promise<ApiResponse<GetUsernamesResponse>> => {
 	return request({
@@ -150,7 +150,7 @@ export interface GetChatSessionsResponse {
 	conversations: ChatSessionItem[];
 }
 
-export const getChatSessions = (): Promise<ApiResponse<GetChatSessionsResponse>> => {
+export const GetChatSessions = (): Promise<ApiResponse<GetChatSessionsResponse>> => {
 	return request({
 		url: "/chat/sessions",
 		method: "GET"
