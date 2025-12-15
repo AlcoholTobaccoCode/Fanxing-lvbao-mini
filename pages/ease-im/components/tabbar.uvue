@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { computed, ref } from "vue";
+import { ref } from "vue";
 import { t } from "@/locale";
 import { isDark, parseClass, router } from "@/cool";
+import { formatUnread } from "../hook";
 
 type TabKey = "chat" | "contacts" | "testpage";
 
@@ -13,11 +14,10 @@ const emit = defineEmits<{
 	(e: "update:active", value: TabKey): void;
 }>();
 
-// const items = computed(() => [
-// 	{ key: "chat" as TabKey, label: "会话", icon: "pinglun" },
-// 	{ key: "contacts" as TabKey, label: "联系人", icon: "user-3-line" },
-// 	{ key: "testpage" as TabKey, label: "测试页面", icon: "shijian" }
-// ]);
+const unReadCountModal = defineModel("unReadCount", {
+	type: Number,
+	default: () => 0
+});
 
 const items = ref([
 	{ key: "chat" as TabKey, label: "会话", icon: "pinglun" },
@@ -38,7 +38,7 @@ const handleClick = (key: TabKey) => {
 	<cl-footer
 		:pt="{
 			content: {
-				className: '!p-0 h-[60px]'
+				className: '!p-0 h-[60px] overflow-visible'
 			}
 		}"
 	>
@@ -50,19 +50,30 @@ const handleClick = (key: TabKey) => {
 				:class="{ 'easeim-tabbar-item--active': item.key === props.active }"
 				@tap="handleClick(item.key)"
 			>
-				<cl-icon
-					:name="item.icon"
-					:size="48"
-					:color="item.key === props.active ? 'primary' : 'info'"
-				></cl-icon>
-				<cl-text
-					v-if="item.label != null"
-					:color="item.key === props.active ? 'primary' : 'info'"
-					:pt="{
-						className: parseClass(['text-md mt-1'])
-					}"
-					>{{ t(item.label!) }}</cl-text
-				>
+				<view class="overflow-visible">
+					<cl-icon
+						:name="item.icon"
+						:size="48"
+						:color="item.key === props.active ? 'primary' : 'info'"
+					></cl-icon>
+					<cl-text
+						v-if="item.label != null"
+						:color="item.key === props.active ? 'primary' : 'info'"
+						:pt="{
+							className: parseClass(['text-md mt-1'])
+						}"
+						>{{ t(item.label!) }}</cl-text
+					>
+					<cl-badge
+						v-if="unReadCountModal && unReadCountModal > 0 && item.key === 'chat'"
+						:value="formatUnread(unReadCountModal)"
+						shape="round"
+						position
+						:pt="{
+							className: '!top-[4rpx] !right-[4rpx] text-2xl p-4'
+						}"
+					></cl-badge>
+				</view>
 			</view>
 		</view>
 	</cl-footer>
@@ -70,10 +81,10 @@ const handleClick = (key: TabKey) => {
 
 <style lang="scss" scoped>
 .custom-tabbar {
-	@apply flex flex-row items-center flex-1;
+	@apply flex flex-row items-center flex-1 overflow-visible;
 
 	&-item {
-		@apply flex flex-col items-center justify-center flex-1;
+		@apply flex flex-col items-center justify-center flex-1 overflow-visible;
 	}
 }
 </style>

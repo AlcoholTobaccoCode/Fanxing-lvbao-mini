@@ -8,7 +8,8 @@ import { Logger } from "@/cool/utils/log";
 import {
 	getEasemobHistoryMessages,
 	sendEasemobAudioMessage,
-	sendEasemobTextMessage
+	sendEasemobTextMessage,
+	markMessagesAsRead
 } from "@/utils/easemob";
 import type { SendData } from "@/components/chat-input/types";
 import { imBus } from "@/utils/easemob/events";
@@ -72,6 +73,12 @@ const loadHistory = async (reset: boolean) => {
 		});
 
 		console.info("getEasemobHistoryMessages res ===> ", res);
+
+		// 将消息置为已读
+		markMessagesAsRead({
+			peerId: targetId.value,
+			beforeTimestamp: res.messages?.[0].time
+		});
 
 		const list = ((res && (res.messages || res.entities)) || []) as any[];
 		// 接口按时间逆序返回（新到旧），这里统一转为时间正序（旧到新）

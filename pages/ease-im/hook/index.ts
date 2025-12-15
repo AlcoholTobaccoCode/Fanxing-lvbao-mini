@@ -48,3 +48,11 @@ export const useChatUsernames = () => {
 		getTitle
 	};
 };
+
+// 未读角标文案
+export const formatUnread = (count?: number) => {
+	if (!count || count <= 0) return "";
+	if (count <= 99) return String(count);
+	if (count <= 999) return "99+";
+	return "...";
+};

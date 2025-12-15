@@ -10,6 +10,8 @@ import EaseImTabbar from "./components/tabbar.uvue";
 
 const ui = useUi();
 
+const unReadCount = ref(0);
+
 type TabKey = "chat" | "contacts";
 
 const activeTab = ref<TabKey>("chat");
@@ -30,11 +32,15 @@ const handleSelectConversation = (item: any) => {
 				<view class="easeim-page-body">
 					<chat-history
 						v-if="activeTab === 'chat'"
+						v-model:un-read-count="unReadCount"
 						@select="handleSelectConversation"
 					></chat-history>
 					<chat-links v-else></chat-links>
 				</view>
-				<ease-im-tabbar v-model:active="activeTab"></ease-im-tabbar>
+				<ease-im-tabbar
+					v-model:active="activeTab"
+					v-model:un-read-count="unReadCount"
+				></ease-im-tabbar>
 			</view>
 		</template>
 	</app-page>
