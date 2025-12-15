@@ -13,12 +13,14 @@ import {
 import type { SendData } from "@/components/chat-input/types";
 import { imBus } from "@/utils/easemob/events";
 import { type OnTextMsgResult } from "@/utils/easemob/events";
+import { useChatUsernames } from "../hook";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/user-chat/index.uvue";
 
 const log = new Logger("ChatDetailPage");
 const ui = useUi();
+const { usernameMap, fetchUsernames, getTitle } = useChatUsernames();
 
 //#region 加载历史对话
 
@@ -305,20 +307,26 @@ const handleToggleAudio = (m: any) => {
 //#endregion
 
 // 进入页面时，从路由参数中读取会话信息并自动加载历史记录
-onLoad((options: any) => {
-	const conversationId = (options?.conversationId || "").toString() || "95";
+const handlePageLoad = async (options) => {
+	const conversationId = (options?.conversationId || "").toString();
 	if (conversationId) {
 		targetId.value = conversationId;
-		pageTitle.value = conversationId;
-		// 默认按单聊处理，后续可根据 conversationType 做拓展
+		if (conversationId) {
+			const { userNames } = await fetchUsernames({ userIds: [conversationId] });
+			pageTitle.value = usernameMap.value[conversationId] || userNames[0] || conversationId;
+		}
+
 		loadHistory(true);
 	} else {
 		pageTitle.value = "IM 历史消息";
 	}
+};
+
+onLoad((options: any) => {
+	handlePageLoad(options);
 });
 
 onMounted(() => {
-	// 计算 scroll-view 实际高度，放在 nextTick 里保证节点已渲染
 	nextTick(() => {
 		const instance = getCurrentInstance();
 		if (instance) {

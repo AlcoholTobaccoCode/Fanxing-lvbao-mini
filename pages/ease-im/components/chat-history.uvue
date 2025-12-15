@@ -4,12 +4,15 @@ import { isDark, usePager } from "@/cool";
 import type { EasemobConversationItem } from "@/utils/easemob";
 import { getEasemobServerConversations } from "@/utils/easemob";
 import { imBus } from "@/utils/easemob/events";
+import { useChatUsernames } from "../hook";
 
 const emit = defineEmits<{
 	(e: "select", item: EasemobConversationItem): void;
 }>();
 
 const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
+
+const { isLoading: isUsernamesLoading, usernameMap, fetchUsernames, getTitle } = useChatUsernames();
 
 // 使用环信服务端游标分页
 let serverCursor = "";
@@ -43,14 +46,34 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 		includeEmptyConversations: false
 	});
 
-	console.info("getEasemobServerConversations res => ", JSON.stringify(res));
-
-	const conversations = (res?.data?.conversations || []) as EasemobConversationItem[];
+	let conversations = (res?.data?.conversations || []) as EasemobConversationItem[];
 	serverCursor = res?.data?.cursor || "";
 	historyType = res.type;
 
 	// 这里只能估算 total，主要用于驱动 cl-list-view 的翻页行为
 	const total = page * size + (serverCursor ? 1 : 0);
+
+	const userIds = conversations
+		.map((e) => Number(e.conversationId))
+		.filter((id) => Number.isFinite(id));
+	if (userIds.length) {
+		try {
+			const { userNames } = await fetchUsernames({ userIds });
+			conversations.forEach((conv, idx) => {
+				const name = userNames[idx];
+				if (!name) return;
+				const m: any = (conv as any).lastMessage || {};
+				m.ext = m.ext || {};
+				m.ext.sendUserInfo = {
+					...(m.ext.sendUserInfo || {}),
+					name: String(name)
+				};
+				(conv as any).lastMessage = m;
+			});
+		} catch (e) {
+			console.error("get usernames error", e);
+		}
+	}
 
 	render({
 		list: conversations,
@@ -64,14 +87,6 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 
 const handleClickItem = (item: EasemobConversationItem) => {
 	emit("select", item);
-};
-
-// 显示名称：优先 ext.sendUserInfo?.name，其次 conversationId
-const getTitle = (item: EasemobConversationItem) => {
-	const m = (item as any).lastMessage;
-	const extUser = m?.ext?.sendUserInfo;
-	const name = extUser?.name || item.conversationId;
-	return String(name || "");
 };
 
 // 最近一条消息预览：根据 type 显示
@@ -150,7 +165,7 @@ onBeforeUnmount(() => {
 
 <template>
 	<view class="easeim-history-list-root">
-		<view v-if="loading && !list.length" class="px-3">
+		<view v-if="loading && !list.length && isUsernamesLoading" class="px-3">
 			<view v-for="n in 5" :key="n" class="easeim-chat-item">
 				<view class="easeim-chat-item__avatar">
 					<cl-skeleton type="image" loading></cl-skeleton>

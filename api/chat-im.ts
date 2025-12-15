@@ -112,14 +112,12 @@ export interface GetUsernamesResponse {
 	userNames: (string | null)[];
 }
 
-export const GetUsernames = (
-	data: GetUsernamesPayload
-): Promise<ApiResponse<GetUsernamesResponse>> => {
+export const GetUsernames = (data: GetUsernamesPayload): Promise<GetUsernamesResponse> => {
 	return request({
 		url: "/chat/usernames",
 		method: "POST",
 		data
-	}) as Promise<ApiResponse<GetUsernamesResponse>>;
+	}) as Promise<GetUsernamesResponse>;
 };
 
 //#endregion
