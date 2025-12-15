@@ -4,11 +4,17 @@ import { isDark, usePager } from "@/cool";
 import type { EasemobConversationItem } from "@/utils/easemob";
 import { getEasemobServerConversations } from "@/utils/easemob";
 import { imBus } from "@/utils/easemob/events";
-import { useChatUsernames } from "../hook";
+import { useChatUsernames, formatUnread } from "../hook";
+import { sleepWait } from "@/utils";
 
 const emit = defineEmits<{
 	(e: "select", item: EasemobConversationItem): void;
 }>();
+
+const unReadCountModal = defineModel("unReadCount", {
+	type: Number,
+	default: () => 0
+});
 
 const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
 
@@ -59,7 +65,10 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 	if (userIds.length) {
 		try {
 			const { userNames } = await fetchUsernames({ userIds });
+			unReadCountModal.value = 0;
 			conversations.forEach((conv, idx) => {
+				// 统计当前页面未读数量
+				unReadCountModal.value += conv.unReadCount || 0;
 				const name = userNames[idx];
 				if (!name) return;
 				const m: any = (conv as any).lastMessage || {};
@@ -132,14 +141,6 @@ const getTimeLabel = (item: EasemobConversationItem) => {
 	}
 };
 
-// 未读角标文案
-const formatUnread = (count?: number) => {
-	if (!count || count <= 0) return "";
-	if (count <= 99) return String(count);
-	if (count <= 999) return "99+";
-	return "...";
-};
-
 const onPull = async () => {
 	await refresh({ page: 1 });
 	if (listViewRef.value) {
@@ -147,19 +148,25 @@ const onPull = async () => {
 	}
 };
 
+const updateScrollListData = async () => {
+	await sleepWait(600);
+	await refresh({ page: 1 });
+};
+
 onMounted(() => {
 	refresh({});
-
 	imBus.on("im:onTextMessage", (msg) => {
-		console.group("onTextMessage");
-		console.info("im:onTextMessage 收到文本消息 ===> ", msg);
-		console.groupEnd();
-		setTimeout(() => refresh({}), 500);
+		updateScrollListData();
+	});
+
+	imBus.on("im:onReadStatusUpdated", (res) => {
+		updateScrollListData();
 	});
 });
 
 onBeforeUnmount(() => {
 	imBus.off("im:onTextMessage");
+	imBus.off("im:onReadStatusUpdated");
 });
 </script>
 

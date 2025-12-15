@@ -1,6 +1,11 @@
 import { createEventBus, type EventMap } from "@/utils/eventBus";
 import { Logger } from "@/cool/utils/log";
-import { type SaveChatMessagePayload, SaveChatMessage } from "@/api/chat-im";
+import {
+	type SaveChatMessagePayload,
+	SaveChatMessage,
+	type UpdateReadStatusPayload,
+	type UpdateReadStatusResponse
+} from "@/api/chat-im";
 
 export interface OnTextMsgResult<T = any> {
 	id: string;
@@ -20,6 +25,13 @@ export interface IMEvents extends EventMap {
 	"im:onSendMsg": any;
 	"im:onSendMsgError": any;
 	"im:onTextMessage": OnTextMsgResult;
+	// 本地已读状态更新完成后触发（调用 /chat/readStatus 成功后触发）
+	"im:onReadStatusUpdated": {
+		peerId: string;
+		beforeTimestamp?: number;
+		messageIds?: string[];
+		data: UpdateReadStatusResponse;
+	};
 }
 
 const log = new Logger("[IM] Events");
@@ -40,23 +52,24 @@ export const sdkEvents = {
 	onSendMsg: (res) => {
 		console.info("res =====> ", res);
 		imBus.emit("im:onSendMsg", res);
-		// const msg = res.message || {};
-		// const payload: SaveChatMessagePayload = {
-		// 	message_id: msg.id,
-		// 	senderId: msg.from,
-		// 	receiverId: msg.to,
-		// 	senderRole: "user",
-		// 	msgType: msg.type,
-		// 	content: msg.msg
-		// };
-		// log.info("onTextMessage Save payload", payload);
-		// SaveChatMessage(payload)
-		// 	.then(() => {
-		// 		log.info("onTextMessage Save Success");
-		// 	})
-		// 	.catch((e) => {
-		// 		log.info("onTextMessage Save Error:", JSON.stringify(e));
-		// 	});
+		const msg = res.message || {};
+		// TODO - 多媒体 消息区分
+		const payload: SaveChatMessagePayload = {
+			message_id: msg.id,
+			senderId: msg.from,
+			receiverId: msg.to,
+			senderRole: "user",
+			msgType: msg.type,
+			content: msg.msg
+		};
+		log.info("onTextMessage Save payload", payload);
+		SaveChatMessage(payload)
+			.then(() => {
+				log.info("onTextMessage Save Success");
+			})
+			.catch((e) => {
+				log.info("onTextMessage Save Error:", JSON.stringify(e));
+			});
 	},
 	// 发送消息失败
 	onSendMsgError: (e) => {
@@ -66,4 +79,17 @@ export const sdkEvents = {
 	onTextMessage: (msg: OnTextMsgResult) => {
 		imBus.emit("im:onTextMessage", msg);
 	}
+};
+
+// 触发本地已读状态更新事件，供其他模块在调用 UpdateReadStatus 接口成功后使用
+export const emitReadStatusUpdated = (
+	request: UpdateReadStatusPayload,
+	response: UpdateReadStatusResponse
+) => {
+	imBus.emit("im:onReadStatusUpdated", {
+		peerId: request.peerId,
+		beforeTimestamp: request.beforeTimestamp,
+		messageIds: request.messageIds,
+		data: response
+	});
 };

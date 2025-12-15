@@ -5,7 +5,12 @@ import { storage } from "@/cool";
 import { config as globalConfig } from "@/config";
 import { GetUserChatToken, type UserChatTokenData } from "@/api/common";
 import { useStore } from "@/cool";
-import { sdkEvents } from "./events";
+import { sdkEvents, emitReadStatusUpdated } from "./events";
+import {
+	UpdateReadStatus,
+	type UpdateReadStatusPayload,
+	type UpdateReadStatusResponse
+} from "@/api/chat-im";
 
 export const IM_APP_KEY = "1168250507209322#demo";
 
@@ -56,6 +61,11 @@ export interface EasemobFileMsgParams extends EasemobMediaMsgParamsBase {
 export interface EasemobAudioMsgParams extends EasemobMediaMsgParamsBase {
 	// 语音时长（秒），必填
 	length: number;
+}
+
+export interface sendMsgRead {
+	chatType?: ChatType;
+	to: string; // 接收消息对象的用户 ID。
 }
 
 export interface EasemobEventHandlers {
@@ -355,6 +365,24 @@ export async function sendEasemobAudioMessage(params: EasemobAudioMsgParams): Pr
 	return sendEasemobMessageInternal(message, "Send audio message");
 }
 
+export async function sendMsgRead(params: sendMsgRead): Promise<any> {
+	const { sdk } = ensureImReadyForSend();
+	const chatType: ChatType = params.chatType || "singleChat";
+	const msg = sdk.message.create({
+		chatType,
+		type: "channel",
+		to: params.to
+	});
+	conn.send(msg)
+		.then((res: any) => {
+			console.log(`[IM] success`, res);
+		})
+		.catch((e: any) => {
+			console.log(`[IM] fail`, e);
+		});
+	// return sendEasemobMessageInternal(message, "Send audio message");
+}
+
 export function logoutEasemob() {
 	if (conn && typeof conn.close === "function") {
 		conn.close();
@@ -376,6 +404,26 @@ export async function getEasemobHistoryMessages(options: EasemobHistoryOptions):
 	return conn.getHistoryMessages(merged as any);
 }
 
+// 调用后端已读回执接口，并通过事件总线广播结果
+export const markMessagesAsRead = async (
+	payload: UpdateReadStatusPayload
+): Promise<UpdateReadStatusResponse> => {
+	// 更新环信那边的状态
+	sendMsgRead({
+		to: payload.peerId
+	});
+
+	// 更新自己的接口
+	const res = (await UpdateReadStatus(payload)) as any;
+	const data: UpdateReadStatusResponse = (res && res.data) || res;
+	try {
+		emitReadStatusUpdated(payload, data);
+	} catch (e) {
+		console.error("emitReadStatusUpdated error", e);
+	}
+	return data;
+};
+
 export async function getEasemobServerConversations(
 	params: EasemobServerConversationsParams = {}
 ): Promise<EasemobServerConversationsResult> {
@@ -391,8 +439,9 @@ export async function getEasemobServerConversations(
 		...params
 	};
 
+	console.info("merged =====> ", merged);
+
 	const res = await (conn as any).getServerConversations(merged);
-	console.info("conversations origin ====> ", res);
 	return (res || {}) as EasemobServerConversationsResult;
 }
 
