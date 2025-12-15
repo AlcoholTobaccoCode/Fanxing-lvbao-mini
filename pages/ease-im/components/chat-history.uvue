@@ -19,8 +19,22 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 	const page = Number(params["page"] || 1);
 	const size = Number(params["size"] || 20);
 
+	// 首次加载或下拉刷新：重置游标
 	if (page === 1) {
 		serverCursor = "";
+	}
+
+	// 如果已经没有更多游标了，并且是向后翻页，则直接返回空列表，避免重复请求首页数据
+	if (page > 1 && !serverCursor) {
+		const total = (page - 1) * size;
+		return render({
+			list: [],
+			pagination: {
+				page,
+				size,
+				total
+			}
+		});
 	}
 
 	const res = await getEasemobServerConversations({
@@ -29,10 +43,13 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 		includeEmptyConversations: false
 	});
 
+	console.info("getEasemobServerConversations res => ", JSON.stringify(res));
+
 	const conversations = (res?.data?.conversations || []) as EasemobConversationItem[];
 	serverCursor = res?.data?.cursor || "";
 	historyType = res.type;
 
+	// 这里只能估算 total，主要用于驱动 cl-list-view 的翻页行为
 	const total = page * size + (serverCursor ? 1 : 0);
 
 	render({
