@@ -12,6 +12,8 @@ import {
 	type UpdateReadStatusResponse
 } from "@/api/chat-im";
 
+//#region type、声明
+
 export const IM_APP_KEY = "1168250507209322#demo";
 
 export type ChatType = "singleChat" | "groupChat";
@@ -73,6 +75,8 @@ export interface EasemobEventHandlers {
 	onClosed?: () => void;
 	onTextMessage?: (message: any) => void;
 	onError?: (error: any) => void;
+	onTokenWillExpire?: () => void;
+	onTokenExpired?: () => void;
 }
 
 export type HistorySearchDirection = "up" | "down";
@@ -118,6 +122,8 @@ export interface EasemobServerConversationsResult {
 
 const USER_CHAT_TOKEN_STORAGE_KEY = "easemob_user_chat_token";
 const TOKEN_EXPIRE_GUARD_SECONDS = 120;
+
+//#endregion
 
 // 发送消息时默认附加字段
 // const sendMsgExt = () => {
@@ -231,6 +237,8 @@ export async function addEasemobEventHandlers(handlers: EasemobEventHandlers) {
 		throw new Error(`[IM] 尚未初始化或初始化失败. [hasInit] => ${hasInit}`);
 	}
 
+	const { user } = useStore();
+
 	const mergedHandlers: EasemobEventHandlers = {
 		onOpened: handlers.onOpened,
 		onClosed: handlers.onClosed,
@@ -243,6 +251,32 @@ export async function addEasemobEventHandlers(handlers: EasemobEventHandlers) {
 				console.error("[IM] sdkEvents.onTextMessage error", e);
 			}
 			handlers.onTextMessage && handlers.onTextMessage(msg);
+		},
+		// Token 即将过期（达到 80% 有效期）
+		onTokenWillExpire: async () => {
+			console.log("[IM] Token 马上过期，准备刷新...");
+			try {
+				const userId = String(user.info.value?.id || "");
+				if (userId) {
+					await refreshTokenAndRelogin(userId);
+				}
+			} catch (e) {
+				console.error("[IM] Failed to refresh token on TokenWillExpire:", e);
+			}
+			handlers.onTokenWillExpire && handlers.onTokenWillExpire();
+		},
+		// Token 已过期
+		onTokenExpired: async () => {
+			console.log("[IM] Token 已过期，准备刷新...");
+			try {
+				const userId = String(user.info.value?.id || "");
+				if (userId) {
+					await refreshTokenAndRelogin(userId);
+				}
+			} catch (e) {
+				console.error("[IM] Token 刷新失败:", e);
+			}
+			handlers.onTokenExpired && handlers.onTokenExpired();
 		}
 	};
 
@@ -444,6 +478,40 @@ export async function getEasemobServerConversations(
 	const res = await (conn as any).getServerConversations(merged);
 	return (res || {}) as EasemobServerConversationsResult;
 }
+
+// 刷新 Token 并重新登录
+let isRefreshingToken = false;
+export const refreshTokenAndRelogin = async (userId: string) => {
+	// 防止并发刷新
+	if (isRefreshingToken) {
+		console.log("[IM] Token refresh already in progress");
+		return;
+	}
+
+	try {
+		isRefreshingToken = true;
+		console.log("[IM] Refreshing token...");
+
+		// 清除缓存的 Token，强制获取新的
+		storage.remove(USER_CHAT_TOKEN_STORAGE_KEY);
+
+		// 获取新的 Token
+		const tokenData = await getValidUserChatToken();
+
+		// 使用新 Token 重新登录
+		await loginEasemob({
+			user: userId,
+			accessToken: tokenData.access_token
+		});
+
+		console.log("[IM] Token refreshed and relogin success");
+	} catch (error) {
+		console.error("[IM] Failed to refresh token:", error);
+		throw error;
+	} finally {
+		isRefreshingToken = false;
+	}
+};
 
 export const ensureGlobalIMForUser = async (userId: string) => {
 	if (!userId) return;

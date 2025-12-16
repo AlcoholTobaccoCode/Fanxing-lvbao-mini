@@ -42,15 +42,17 @@ export const imBus = createEventBus<IMEvents>();
 export const sdkEvents = {
 	// 登录成功
 	onLogin: () => {
+		console.info("[IM] 登录成功 ✨✨✨ ");
 		imBus.emit("im:onLogin", null);
 	},
 	// 登录失败
 	onLoginError: (reason) => {
+		console.info("[IM] 登录失败 reason =====> ", reason);
 		imBus.emit("im:onLoginError", reason);
 	},
 	// 发送消息成功
 	onSendMsg: (res) => {
-		console.info("res =====> ", res);
+		console.info("[IM] 发送消息成功 res =====> ", res);
 		imBus.emit("im:onSendMsg", res);
 		const msg = res.message || {};
 		// TODO - 多媒体 消息区分

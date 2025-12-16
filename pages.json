@@ -111,8 +111,8 @@
 				{
 					"path": "index",
 					"style": {
-						"navigationBarTitleText": "历史对话"
-						// "navigationStyle": "custom"
+						"navigationBarTitleText": "历史对话",
+						"navigationStyle": "custom"
 					}
 				},
 				{
