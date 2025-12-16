@@ -1,8 +1,7 @@
 <script lang="ts" setup>
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { isDark, router, usePager } from "@/cool";
-import type { EasemobConversationItem } from "@/utils/easemob";
-import { getEasemobServerConversations } from "@/utils/easemob";
+import { type EasemobConversationItem, getEasemobServerConversations } from "@/utils/easemob";
 import { imBus } from "@/utils/easemob/events";
 import { useChatUsernames, formatUnread } from "./hook";
 import { sleepWait } from "@/utils";

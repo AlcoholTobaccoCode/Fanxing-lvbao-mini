@@ -5,6 +5,7 @@ import { request } from "../service";
 import { GetUserProfile } from "@/api/user";
 import type { UserInfo } from "@/types";
 import { clearEasemobCache, ensureGlobalIMForUser } from "@/utils/easemob";
+import { imStore } from "./im";
 
 // 登录成功返回的认证信息
 // 对应后端 data: { access_token, token_type, userType, phone, username }
@@ -167,6 +168,9 @@ export class User {
 
 		// 清空环信 IM 相关缓存和连接
 		clearEasemobCache();
+
+		// 清空 IM store 数据
+		imStore.clear();
 	}
 
 	/**
