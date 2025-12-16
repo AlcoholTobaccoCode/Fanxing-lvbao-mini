@@ -423,6 +423,20 @@ export function logoutEasemob() {
 	}
 }
 
+// 清空环信相关缓存（退出登录时调用）
+export function clearEasemobCache() {
+	// 清除环信 Token 缓存
+	storage.remove(USER_CHAT_TOKEN_STORAGE_KEY);
+
+	// 断开环信连接
+	logoutEasemob();
+
+	// 重置初始化状态
+	hasGlobalIMInited = false;
+
+	console.log("[IM] Cache cleared and connection closed");
+}
+
 export async function getEasemobHistoryMessages(options: EasemobHistoryOptions): Promise<any> {
 	if (!conn) {
 		await getUserInfoAndInit();

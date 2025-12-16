@@ -1,8 +1,7 @@
 <script lang="ts">
 import { useStore } from "@/cool";
-import { ensureGlobalIMForUser, logoutEasemob } from "@/utils/easemob";
+import { ensureGlobalIMForUser, logoutEasemob, refreshTokenAndRelogin } from "@/utils/easemob";
 import { imBus } from "@/utils/easemob/events";
-import { refreshTokenAndRelogin } from "@/utils/easemob";
 
 // #ifdef H5
 import TouchEmulator from "hammer-touchemulator";
