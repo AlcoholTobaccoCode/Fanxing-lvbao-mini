@@ -14,7 +14,7 @@ import {
 import type { SendData } from "@/components/chat-input/types";
 import { imBus } from "@/utils/easemob/events";
 import { type OnTextMsgResult } from "@/utils/easemob/events";
-import { useChatUsernames } from "../hook";
+import { useChatUsernames } from "./hook";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/user-chat/index.uvue";
@@ -415,7 +415,7 @@ const handleJumpToLatest = () => {
 							</view>
 							<view
 								class="w-full flex"
-								:class="[m.from === targetId ? 'justify-start' : 'items-end']"
+								:class="[m.from === targetId ? 'justify-start' : 'justify-end']"
 							>
 								<view
 									class="px-3 py-2 rounded-lg text-sm w-fit"

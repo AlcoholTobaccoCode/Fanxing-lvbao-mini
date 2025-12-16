@@ -211,14 +211,13 @@ const handleSend = async (data: SendData) => {
 	<app-page title="法律咨询" back-top :use-history-layout="false" :chat-list-btn="false">
 		<template #content>
 			<view class="page-content">
-				<!-- 临时测试 -->
 				<view
 					v-if="!hasValidLaunch"
 					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
 				>
 					暂未检测到会话启动参数，请从首页发起新的咨询。
 				</view>
-				<view class="flex-1 px-2 pt-2 pb-4" v-else>
+				<view v-else class="flex-1 px-2 pt-2 pb-4">
 					<scroll-view
 						scroll-y
 						class="ai-repeat-list__scroll"
@@ -232,7 +231,7 @@ const handleSend = async (data: SendData) => {
 							v-for="(item, index) in messages"
 							:key="index"
 							class="flex px-4 mb-4"
-							:class="item.role === 'user' ? 'items-end' : 'justify-start'"
+							:class="item.role === 'user' ? 'justify-end' : 'justify-start'"
 						>
 							<template v-if="item.role === 'user'">
 								<template v-if="item.fromVoice">

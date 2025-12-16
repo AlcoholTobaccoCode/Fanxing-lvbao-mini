@@ -1,48 +1,16 @@
 {
-	// "entryPagePath": "pages/consult/chat",
-	// "entryPagePath": "pages/test-pages/index",
+	// "entryPagePath": "consult/index",
+	// "entryPagePath": "test-pages/index",
 	"entryPagePath": "pages/home/index",
-	// "entryPagePath": "pages/ease-im/index",
+	// "entryPagePath": "ease-im/index",
 	"pages": [
-		//#region ---------------- TEST PAGE ----------------
-		// {
-		// 	"path": "pages/test-pages/index",
-		// 	"style": {
-		// 		"navigationBarTitleText": "静态测试页面",
-		// 		"navigationStyle": "custom"
-		// 	}
-		// },
-		//#endregion
 		{
 			"path": "pages/home/index",
 			"style": {
 				"navigationBarTitleText": "律先锋",
 				"navigationStyle": "custom"
 			}
-		},
-		{
-			"path": "pages/consult/chat",
-			"style": {
-				"navigationBarTitleText": "咨询",
-				"navigationStyle": "custom"
-			}
-		},
-		//#region ---------------- 环信 IM ----------------
-		{
-			"path": "pages/ease-im/index",
-			"style": {
-				"navigationBarTitleText": "环信 IM 对话列表",
-				"navigationStyle": "custom"
-			}
-		},
-		{
-			"path": "pages/ease-im/components/chat-detail",
-			"style": {
-				"navigationBarTitleText": "环信 IM 对话列表",
-				"navigationStyle": "custom"
-			}
 		}
-		//#endregion
 	],
 	"subPackages": [
 		//#region ---------------- 设置 ----------------
@@ -120,6 +88,54 @@
 				// 		"isAuth": true
 				// 	}
 				// }
+			]
+		},
+		//#endregion
+		{
+			// consult
+			"root": "ai-chat-module",
+			"pages": [
+				{
+					"path": "consult/index",
+					"style": {
+						"navigationBarTitleText": "咨询",
+						"navigationStyle": "custom"
+					}
+				}
+			]
+		},
+		//#region ---------------- 环信 IM ----------------
+		{
+			"root": "ease-im",
+			"pages": [
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "历史对话"
+						// "navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "chat-detail",
+					"style": {
+						"navigationBarTitleText": "环信 IM 对话页面",
+						"navigationStyle": "custom"
+					}
+				}
+			]
+		},
+		//#endregion
+		//#region ---------------- TEST PAGE ----------------
+		{
+			"root": "test-pages",
+			"pages": [
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "测试页面",
+						"navigationStyle": "custom"
+					}
+				}
 			]
 		}
 		//#endregion

@@ -89,7 +89,7 @@ const handleHeaderClickRecord = () => {
 //#endregion
 
 const handleOpenChatList = () => {
-	router.to("/pages/ease-im/index");
+	router.to("/ease-im/index");
 };
 
 //#region 测试区域

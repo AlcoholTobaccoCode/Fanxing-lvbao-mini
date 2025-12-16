@@ -1,15 +1,11 @@
 <script lang="ts" setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from "vue";
-import { isDark, usePager } from "@/cool";
+import { isDark, router, usePager } from "@/cool";
 import type { EasemobConversationItem } from "@/utils/easemob";
 import { getEasemobServerConversations } from "@/utils/easemob";
 import { imBus } from "@/utils/easemob/events";
-import { useChatUsernames, formatUnread } from "../hook";
+import { useChatUsernames, formatUnread } from "./hook";
 import { sleepWait } from "@/utils";
-
-const emit = defineEmits<{
-	(e: "select", item: EasemobConversationItem): void;
-}>();
 
 const unReadCountModal = defineModel("unReadCount", {
 	type: Number,
@@ -95,7 +91,11 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 });
 
 const handleClickItem = (item: EasemobConversationItem) => {
-	emit("select", item);
+	// 跳转到会话详情页，携带会话 ID 和类型
+	const conversationId = encodeURIComponent(item.conversationId || "");
+	const conversationType = encodeURIComponent(item.conversationType || "singleChat");
+	const url = `/ease-im/chat-detail?conversationId=${conversationId}&conversationType=${conversationType}`;
+	router.to(url);
 };
 
 // 最近一条消息预览：根据 type 显示
@@ -253,14 +253,14 @@ onBeforeUnmount(() => {
 
 <style lang="scss" scoped>
 .easeim-history-list-root {
-	@apply flex-1;
+	@apply flex-1 w-full overflow-visible py-2 box-border;
 }
 
 .easeim-chat-item {
-	@apply w-full h-[66px] flex flex-row items-center gap-4 px-3 py-2;
+	@apply w-full h-[66px] flex flex-row items-center gap-4 px-3 py-2 box-border;
 
 	&__avatar {
-		@apply overflow-visible bg-gray-100 rounded-md;
+		@apply relative overflow-visible bg-gray-100 rounded-md;
 		.avatar {
 			@apply w-[40px] h-[40px] flex flex-row items-center justify-center;
 		}

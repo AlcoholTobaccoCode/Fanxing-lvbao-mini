@@ -3,7 +3,7 @@
 -->
 <script lang="ts" setup>
 import { computed, ref } from "vue";
-import { contractPresets, type ContractType } from "../config";
+import { contractPresets, type ContractType } from "../pages/home/config";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;

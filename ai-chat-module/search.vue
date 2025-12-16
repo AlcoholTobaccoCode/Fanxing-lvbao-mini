@@ -1,25 +1,32 @@
 <!-- 
-@description: 文书起始页
+@description: 检索起始页
 -->
+
 <script lang="ts" setup>
 import { computed, ref } from "vue";
-import { documentPresets, type DocumentType } from "../config";
+import { searchPresets, type SearchType } from "../pages/home/config";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
 }>();
 
-const activeType = ref<DocumentType>("indictment");
+const activeType = ref<SearchType>("law");
 
-const questions = computed(() => documentPresets[activeType.value]);
+const questions = computed(() => searchPresets[activeType.value]);
 
-const title = computed(() => (activeType.value === "indictment" ? "起诉状" : "答辩状"));
+const title = computed(() => (activeType.value === "law" ? "法条检索" : "案例检索"));
+
+const desc = computed(() =>
+	activeType.value === "law"
+		? "欢迎使用法条检索智能助手！输入关键词或具体法律问题，我将为你精准定位相关法条，并提供最新修订说明与关联案例。"
+		: "欢迎使用法律案例智能助手！输入案由、法条或关键词，我将为你精准检索相关案例，并提供裁判要旨分析。"
+);
 
 const handleClick = (q: string) => {
 	emit("preset-select", q);
 };
 
-const switchType = (type: DocumentType) => {
+const switchType = (type: SearchType) => {
 	activeType.value = type;
 };
 </script>
@@ -31,18 +38,14 @@ const switchType = (type: DocumentType) => {
 				{{ title }}
 			</cl-text>
 			<cl-text class="mt-3 text-sm text-surface-600 dark:text-surface-300 leading-relaxed">
-				根据案情描述，自动总结法律诉求并一键生成专属法律文书。
-			</cl-text>
-			<cl-text class="mt-2 text-sm text-surface-600 dark:text-surface-300 leading-relaxed">
-				请尽可能详细地描述案情的事实和法律诉求，包括当事人信息、时间地点、起因经过和结果等，详细的描述有助于{{
-					title
-				}}的准确书写。
+				{{ desc }}
 			</cl-text>
 		</view>
 
 		<view class="mt-6">
 			<view class="flex items-center justify-between mb-3">
-				<cl-text class="text-xs text-surface-500 dark:text-surface-400">可以这样问</cl-text>
+				<cl-text class="text-xs text-surface-500 dark:text-surface-400">试着问我</cl-text>
+				<cl-text class="text-xs text-primary">换一换</cl-text>
 			</view>
 			<view class="flex flex-col gap-3">
 				<view
@@ -60,24 +63,24 @@ const switchType = (type: DocumentType) => {
 			<view
 				class="flex-1 py-2 rounded-full border text-center text-xs"
 				:class="[
-					activeType === 'indictment'
+					activeType === 'law'
 						? 'border-primary bg-primary text-white'
 						: 'border-surface-300 text-surface-600 dark:border-surface-600 dark:text-surface-200'
 				]"
-				@click="switchType('indictment')"
+				@click="switchType('law')"
 			>
-				<cl-text>起诉状</cl-text>
+				<cl-text>法条检索</cl-text>
 			</view>
 			<view
 				class="flex-1 py-2 rounded-full border text-center text-xs"
 				:class="[
-					activeType === 'defense'
+					activeType === 'case'
 						? 'border-primary bg-primary text-white'
 						: 'border-surface-300 text-surface-600 dark:border-surface-600 dark:text-surface-200'
 				]"
-				@click="switchType('defense')"
+				@click="switchType('case')"
 			>
-				<cl-text>答辩状</cl-text>
+				<cl-text>案例检索</cl-text>
 			</view>
 		</view>
 	</view>

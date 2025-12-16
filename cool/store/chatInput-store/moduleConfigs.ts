@@ -4,7 +4,7 @@ export const CHAT_MODULE_CONFIGS: Record<ChatModuleKey, ChatModuleConfig> = {
 	consult: {
 		key: "consult",
 		title: "法律咨询",
-		detailRoute: "/pages/consult/chat", // 咨询详情对话页
+		detailRoute: "/ai-chat-module/consult/index", // 咨询详情对话页
 		enableVoice: true,
 		enableFileUpload: false,
 		enableDeepThink: true,
