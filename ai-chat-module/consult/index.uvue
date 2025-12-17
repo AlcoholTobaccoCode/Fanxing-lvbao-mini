@@ -6,6 +6,7 @@ import { useStore } from "@/cool";
 import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store/chatInput-store";
 import type { SendData, Tools } from "@/components/chat-input/types";
 import { createConsultTtsController } from "@/utils/aliyun/tts-stream";
+import { showLoginModal } from "@/cool/store/login-modal";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/ai-chat/index.uvue";
@@ -151,8 +152,13 @@ const handleSend = async (data: SendData) => {
 	log.info("payload ==> ", data);
 	log.groupEnd();
 
+	// 检查登录状态
 	if (!user.token) {
-		ui.showToast({ message: "请先登录后再发起咨询" });
+		// 显示登录弹窗，登录成功后重新发送
+		showLoginModal(() => {
+			// 登录成功后，重新调用 handleSend 发送消息
+			handleSend(data);
+		});
 		return;
 	}
 

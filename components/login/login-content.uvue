@@ -6,6 +6,7 @@ import { provide, reactive, ref, onMounted } from "vue";
 import type { LoginByCode, LoginByPassword, Register as RegisterForm } from "./types";
 import { useUi } from "@/uni_modules/cool-ui";
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
+import { onLoginSuccess } from "@/cool/store/login-modal";
 
 import LoginPhone from "./phone.uvue";
 import PswLogin from "./psw.uvue";
@@ -76,8 +77,15 @@ const toLogin = async (res: any) => {
 		storage.set("login-form-phone", formCode.phone || formPassword.phone, 0);
 	}
 	user.setToken(parse<Token>(res)!);
-	user.get();
-	router.nextLogin();
+	await user.get();
+
+	// 执行登录成功回调（如果在弹窗模式）
+	if (props.compact) {
+		await onLoginSuccess();
+	} else {
+		// 页面模式：跳转到登录后的页面
+		router.nextLogin();
+	}
 };
 
 //#region 协议相关

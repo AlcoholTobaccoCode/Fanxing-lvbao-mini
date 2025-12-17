@@ -9,8 +9,8 @@ import { useHistorySessions } from "./hook";
 //#region tab 切换
 const tabValue = ref("ai");
 const tabs = ref<ClTabsItem[]>([
-	{ label: "AI对话", value: "ai" },
-	{ label: "律师对话", value: "lawyer" }
+	{ label: "AI对话", value: "ai" }
+	// { label: "律师对话", value: "lawyer" }
 ]);
 //#endregion
 

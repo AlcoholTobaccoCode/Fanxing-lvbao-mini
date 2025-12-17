@@ -3,6 +3,7 @@ import { computed, ref, useSlots } from "vue";
 import { router, unReadCount as imUnReadCount, useStore } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { t } from "@/locale";
+import { loginModalVisible } from "@/cool/store/login-modal";
 
 import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
@@ -100,7 +101,7 @@ const handleOpenChatList = () => {
 	if (!user.isNull() && user.info.value?.id != null) {
 		router.to("/ease-im/index");
 	} else {
-		loginVisibleModal.value = true;
+		loginModalVisible.value = true;
 	}
 };
 
@@ -114,13 +115,6 @@ const unReadCountText = computed(() => {
 
 // 是否显示未读角标
 const showUnReadBadge = computed(() => imUnReadCount.value > 0);
-//#endregion
-
-//#region 登录弹窗
-const loginVisibleModal = defineModel("loginVisible", {
-	type: Boolean,
-	default: () => false
-});
 //#endregion
 
 //#region 测试区域
@@ -230,7 +224,7 @@ const iconVisible = ref(false);
 			</view>
 		</DragButton>
 
-		<cl-popup v-model="loginVisibleModal" title="" size="80%" :show-close="false">
+		<cl-popup v-model="loginModalVisible" title="" size="80%" :show-close="false">
 			<LoginContent compact />
 		</cl-popup>
 	</view>

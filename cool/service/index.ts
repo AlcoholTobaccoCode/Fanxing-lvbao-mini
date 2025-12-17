@@ -3,6 +3,7 @@ import { locale, t } from "@/locale";
 import { isNull, isObject, parse } from "../utils";
 import { useStore } from "../store";
 import { ERROR_DEFAULT_MESSAGE } from "./error.map";
+import { showLoginModal } from "../store/login-modal";
 
 // 请求参数类型定义
 export type RequestOptions = {
@@ -96,10 +97,17 @@ export function request(options: RequestOptions): Promise<any | null> {
 				timeout,
 
 				success(res) {
-					// 401 无权限
+					// 401 无权限 - 弹出登录弹窗
 					if (res.statusCode == 401) {
-						user.logout();
-						reject({ message: t("无权限") } as Response);
+						// 只在用户已登出时弹窗，避免重复弹窗
+						if (!user.token) {
+							showLoginModal();
+						} else {
+							// token过期，先登出再弹窗
+							user.logout();
+							showLoginModal();
+						}
+						reject({ message: t("请先登录"), code: 401 } as Response);
 					}
 
 					// 5xx 服务异常

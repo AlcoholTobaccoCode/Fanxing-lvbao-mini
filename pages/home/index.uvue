@@ -2,7 +2,8 @@
 import { ref } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
-import { router } from "@/cool";
+import { router, useStore } from "@/cool";
+import { showLoginModal } from "@/cool/store/login-modal";
 
 import type { SendData, Tools } from "@/components/chat-input/types";
 
@@ -15,6 +16,7 @@ import { chatFlowStore, chatInputStore } from "@/cool/store/chatInput-store";
 
 const log = new Logger("HomePage");
 const ui = useUi();
+const { user } = useStore();
 
 // 对话输入内容
 const inputValue = ref("");
@@ -38,6 +40,16 @@ const handleSend = async (data: SendData) => {
 	log.group("handleSend");
 	log.info("send payload ==> ", data);
 	log.groupEnd();
+
+	// 检查登录状态
+	if (!user.token) {
+		// 显示登录弹窗，登录成功后继续发送
+		showLoginModal(() => {
+			// 登录成功后，重新调用 handleSend 发送消息
+			handleSend(data);
+		});
+		return;
+	}
 
 	// 统一抽取首问文本：
 	// - 文本模式：直接用 data.text
