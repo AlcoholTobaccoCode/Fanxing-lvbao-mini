@@ -3,7 +3,11 @@
 		<view class="p-3">
 			<view class="flex flex-col items-center justify-center py-10">
 				<view class="p-3 bg-primary-500 rounded-xl">
-					<cl-image src="/static/logo.png" :height="80" :width="80"></cl-image>
+					<cl-image
+						src="https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/logo-%E5%8E%9F%E5%9B%BE.png"
+						:height="80"
+						:width="80"
+					></cl-image>
 				</view>
 				<cl-text :pt="{ className: 'mt-3 mb-1' }">{{ config.name }}</cl-text>
 				<cl-text

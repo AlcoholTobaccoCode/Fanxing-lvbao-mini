@@ -1,10 +1,14 @@
 <script lang="ts" setup>
 import { computed, ref, useSlots } from "vue";
+import { router, unReadCount as imUnReadCount, useStore } from "@/cool";
+import { useUi } from "@/uni_modules/cool-ui";
+import { t } from "@/locale";
+
 import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
 // import RemixIcon from "../icon-all/remixicon.uvue";
 import DragButton from "@/components/dragon-dragButton/index.vue";
-import { router, unReadCount as imUnReadCount } from "@/cool";
+import LoginContent from "@/components/login/login-content.uvue";
 
 const props = withDefaults(
 	defineProps<{
@@ -36,6 +40,9 @@ const emit = defineEmits<{
 	(e: "click-left"): void;
 	(e: "click-record"): void;
 }>();
+
+const { user } = useStore();
+const ui = useUi();
 
 // 语音播放开关（仅用于传给 header 的初始值和本地展示）
 const voicePlay = ref(props.initialVoicePlay ?? false);
@@ -88,8 +95,13 @@ const handleHeaderClickRecord = () => {
 
 //#endregion
 
+//#region IM 相关
 const handleOpenChatList = () => {
-	router.to("/ease-im/index");
+	if (!user.isNull() && user.info.value?.id != null) {
+		router.to("/ease-im/index");
+	} else {
+		loginVisible.value = true;
+	}
 };
 
 // 格式化未读消息数（99+）
@@ -102,6 +114,11 @@ const unReadCountText = computed(() => {
 
 // 是否显示未读角标
 const showUnReadBadge = computed(() => imUnReadCount.value > 0);
+//#endregion
+
+//#region 登录弹窗
+const loginVisible = ref(true);
+//#endregion
 
 //#region 测试区域
 const iconVisible = ref(false);
@@ -183,7 +200,7 @@ const iconVisible = ref(false);
 		</cl-page>
 
 		<!-- 律师对话入口 -->
-		<DragButton v-if="!isHistoryOpen && chatListBtn" :yEdge="100">
+		<DragButton v-if="!isHistoryOpen && chatListBtn" :yEdge="100" :zIndex="500">
 			<view class="layer-chat-drag__btn">
 				<cl-button
 					size="large"
@@ -209,6 +226,10 @@ const iconVisible = ref(false);
 				</cl-badge>
 			</view>
 		</DragButton>
+
+		<cl-popup v-model="loginVisible" title="" size="80%" :show-close="false">
+			<LoginContent compact />
+		</cl-popup>
 	</view>
 </template>
 

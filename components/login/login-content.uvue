@@ -1,0 +1,244 @@
+<script setup lang="ts">
+import { config } from "@/config";
+import { parse, router, useStore, storage, type Token } from "@/cool";
+import { t } from "@/locale";
+import { provide, reactive, ref, onMounted } from "vue";
+import type { LoginByCode, LoginByPassword, Register as RegisterForm } from "./types";
+import { useUi } from "@/uni_modules/cool-ui";
+import type { ClTabsItem } from "@/uni_modules/cool-ui";
+
+import LoginPhone from "./phone.uvue";
+import PswLogin from "./psw.uvue";
+import Register from "./register.uvue";
+
+const props = withDefaults(
+	defineProps<{
+		// 是否在弹窗中使用（调整样式）
+		compact?: boolean;
+	}>(),
+	{
+		compact: false
+	}
+);
+
+const { user } = useStore();
+const ui = useUi();
+
+//#region 登录选项切换
+const loginTypeTab = ref("code-login");
+
+const loginTypeList = ref<ClTabsItem[]>([
+	{
+		label: t("验证码登录"),
+		value: "code-login"
+	},
+	{
+		label: t("密码登录"),
+		value: "psw-login"
+	},
+	{
+		label: t("注册"),
+		value: "register"
+	}
+]);
+//#endregion
+
+const formCode = reactive<LoginByCode>({
+	phone: "",
+	code: ""
+});
+
+const formPassword = reactive<LoginByPassword>({
+	phone: "",
+	password: ""
+});
+
+// 临时：快速填充登录信息
+const setLoginInfo = () => {
+	formCode.phone = "18768196490";
+	formPassword.phone = "18768196490";
+	formPassword.password = "123456";
+};
+
+const formRegister = reactive<RegisterForm>({
+	phone: "",
+	code: "",
+	password: "",
+	username: ""
+});
+
+// 登录成功
+const toLogin = async (res: any) => {
+	// 存储本次登录类型
+	storage.set("login-form-type", loginTypeTab.value, 0);
+	// 存储本次登录手机号
+	if (["code-login", "psw-login"].includes(loginTypeTab.value)) {
+		storage.set("login-form-phone", formCode.phone || formPassword.phone, 0);
+	}
+	user.setToken(parse<Token>(res)!);
+	user.get();
+	router.nextLogin();
+};
+
+//#region 协议相关
+const agree = ref(false);
+
+// 跳转文档
+const toDoc = (name: string, path: string) => {
+	uni.showToast({
+		title: `查看${name}`,
+		icon: "success",
+		mask: true
+	});
+};
+
+// 是否同意
+const isAgree = () => {
+	if (!agree.value) {
+		ui.showToast({
+			message: t("请先阅读并同意《用户协议》和《隐私政策》")
+		});
+
+		return false;
+	}
+
+	return true;
+};
+
+provide("isAgree", isAgree);
+//#endregion
+
+// 组件初始化时恢复上次的登录信息
+onMounted(() => {
+	const beforeLoginFormType = storage.get("login-form-type");
+	const typeList = loginTypeList.value.map((e) => e.value);
+	if (beforeLoginFormType && typeList.includes(beforeLoginFormType)) {
+		loginTypeTab.value = beforeLoginFormType;
+	}
+	const beforeLoginFormPhone = storage.get("login-form-phone");
+	if (beforeLoginFormPhone) {
+		formCode.phone = beforeLoginFormPhone;
+		formPassword.phone = beforeLoginFormPhone;
+	}
+});
+</script>
+
+<template>
+	<view class="login-content" :class="{ 'login-content--compact': props.compact }">
+		<!-- Logo -->
+		<view class="login-content__logo">
+			<view class="logo-wrapper" @click="setLoginInfo">
+				<cl-image
+					src="https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/logo-%E5%8E%9F%E5%9B%BE.png"
+					mode="widthFix"
+					:width="props.compact ? 150 : 200"
+					:height="props.compact ? 150 : 200"
+				></cl-image>
+			</view>
+
+			<cl-text
+				:pt="{
+					className: props.compact ? 'text-lg font-bold mt-2' : 'text-xl font-bold mt-3'
+				}"
+			>
+				{{ config.name }}
+			</cl-text>
+		</view>
+
+		<!-- 登录选项 - 登录 / 注册 -->
+		<view class="login-content__tabs">
+			<cl-tabs v-model="loginTypeTab" :list="loginTypeList"></cl-tabs>
+		</view>
+
+		<!-- 手机号登录 -->
+		<template v-if="loginTypeTab === 'code-login'">
+			<login-phone :form="formCode" @success="toLogin"></login-phone>
+		</template>
+
+		<!-- 密码登录 -->
+		<template v-if="loginTypeTab === 'psw-login'">
+			<psw-login :form="formPassword" @success="toLogin"></psw-login>
+		</template>
+
+		<!-- 注册 -->
+		<template v-if="loginTypeTab === 'register'">
+			<register :form="formRegister" @success="toLogin"></register>
+		</template>
+
+		<!-- 协议 -->
+		<view class="login-content__agreement">
+			<cl-checkbox
+				v-model="agree"
+				:pt="{ icon: { size: 28 } }"
+				active-icon="checkbox-circle-fill"
+				inactive-icon="checkbox-blank-circle-line"
+			>
+			</cl-checkbox>
+			<view class="agreement-text" @click="agree = !agree">
+				<cl-text color="info" :pt="{ className: 'text-xs' }">{{
+					t("已阅读并同意")
+				}}</cl-text>
+				<cl-text
+					:pt="{ className: 'text-xs' }"
+					@tap.stop="toDoc(t('用户协议'), 'userAgreement')"
+				>
+					《{{ t("用户协议") }}》
+				</cl-text>
+				<cl-text color="info" :pt="{ className: 'text-xs' }">、</cl-text>
+				<cl-text
+					:pt="{ className: 'text-xs' }"
+					@tap.stop="toDoc(t('隐私政策'), 'privacyPolicy')"
+				>
+					《{{ t("隐私政策") }}》
+				</cl-text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.login-content {
+	@apply px-10;
+
+	&__logo {
+		@apply flex flex-col items-center justify-center pt-10 pb-6;
+
+		.logo-wrapper {
+			@apply p-3 rounded-2xl;
+		}
+	}
+
+	&__tabs {
+		@apply pb-6;
+	}
+
+	&__agreement {
+		@apply mt-6 flex flex-row flex-wrap items-center justify-center gap-2 pb-10;
+
+		.agreement-text {
+			@apply flex flex-row flex-wrap items-center;
+		}
+	}
+
+	// 紧凑模式（用于弹窗）
+	&--compact {
+		@apply h-full overflow-auto;
+
+		.login-content__logo {
+			@apply pt-4 pb-4;
+
+			.logo-wrapper {
+				@apply p-2 rounded-xl;
+			}
+		}
+
+		.login-content__tabs {
+			@apply pb-4;
+		}
+
+		.login-content__agreement {
+			@apply mt-4 pb-4;
+		}
+	}
+}
+</style>

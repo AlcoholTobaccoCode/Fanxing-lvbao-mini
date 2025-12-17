@@ -8,6 +8,11 @@ import { sleepWait } from "@/utils";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 
+/* 
+	TODO
+	- 合并环信、本地接口
+*/
+
 const unReadCountModal = defineModel("unReadCount", {
 	type: Number,
 	default: () => 0
