@@ -29,6 +29,16 @@ export class ImStore {
 	 */
 	isInitialized = ref<boolean>(false);
 
+	/**
+	 * 消息提示音信息（后续移到 config 中）
+	 */
+	audioInfo = {
+		name: "消息接收音效",
+		src: "/static/audio/msg-receive.wav",
+		context: null as UniApp.InnerAudioContext | null,
+		isPlaying: false
+	};
+
 	constructor() {
 		// 监听 IM 事件，通过回调数据更新本地缓存
 		this.setupEventListeners();
@@ -42,6 +52,7 @@ export class ImStore {
 		imBus.on("im:onTextMessage", (msg: OnTextMsgResult) => {
 			console.log("[IM Store] 收到新消息，更新本地缓存", msg);
 			this.updateConversationByMessage(msg, true);
+			this.playAudio();
 		});
 
 		// 监听发送消息成功 - 更新本地缓存（未读数不变）
@@ -64,6 +75,7 @@ export class ImStore {
 			console.log("[IM Store] 登录成功，初始化会话列表...");
 			this.isInitialized.value = true;
 			this.loadConversations();
+			this.initAudio();
 		});
 	}
 
@@ -214,7 +226,81 @@ export class ImStore {
 		this.isLoading.value = false;
 
 		console.log("[IM Store] 数据已清空");
+
+		this.clearAudio();
 	}
+
+	//#region 消息提示音
+	initAudio() {
+		if (!this.audioInfo.context) {
+			this.audioInfo.context = uni.createInnerAudioContext();
+			this.audioInfo.context.src = this.audioInfo.src;
+
+			// 监听播放事件
+			this.audioInfo.context.onPlay(() => {
+				console.debug(`消息提示音开始播放: ${this.audioInfo.name}`);
+				this.audioInfo.isPlaying = true;
+			});
+
+			// 监听暂停事件
+			this.audioInfo.context.onPause(() => {
+				console.debug(`消息提示音暂停: ${this.audioInfo.name}`);
+				this.audioInfo.isPlaying = false;
+			});
+
+			// 监听停止事件
+			this.audioInfo.context.onStop(() => {
+				console.debug(`消息提示音停止: ${this.audioInfo.name}`);
+				this.audioInfo.isPlaying = false;
+			});
+
+			// 监听播放结束
+			this.audioInfo.context.onEnded(() => {
+				console.debug(`消息提示音播放完成: ${this.audioInfo.name}`);
+				this.audioInfo.isPlaying = false;
+			});
+
+			// 监听错误
+			this.audioInfo.context.onError((err) => {
+				console.error(`消息提示音播放错误: ${this.audioInfo.name}`, err);
+				uni.showToast({ title: `播放失败: ${this.audioInfo.name}`, icon: "error" });
+				this.audioInfo.isPlaying = false;
+			});
+
+			// 监听加载完成
+			this.audioInfo.context.onCanplay(() => {
+				console.debug(`消息提示音加载完成 ✨✨✨: ${this.audioInfo.name}`);
+			});
+		}
+	}
+
+	// 播放/暂停音频
+	playAudio() {
+		// 初始化音频上下文
+		if (!this.audioInfo.context) {
+			this.initAudio();
+		}
+
+		if (!this.audioInfo.isPlaying) {
+			return this.audioInfo.context?.play();
+		}
+	}
+
+	// 停止音频
+	stopAudio() {
+		this.audioInfo.context?.stop();
+	}
+
+	// 销毁音频
+	clearAudio() {
+		if (this.audioInfo.context) {
+			this.audioInfo.context.destroy();
+			this.audioInfo.context = null;
+			console.log("[IM Store] Audio 已清空");
+		}
+	}
+
+	//#endregion
 }
 
 /**
