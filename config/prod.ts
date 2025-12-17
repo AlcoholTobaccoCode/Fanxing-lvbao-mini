@@ -14,11 +14,8 @@ export const prod = () => {
 	baseUrl = host + "";
 	// #endif
 
-	const hxImDebug = false;
-
 	return {
 		host,
-		baseUrl,
-		hxImDebug
+		baseUrl
 	};
 };

@@ -100,7 +100,7 @@ const handleOpenChatList = () => {
 	if (!user.isNull() && user.info.value?.id != null) {
 		router.to("/ease-im/index");
 	} else {
-		loginVisible.value = true;
+		loginVisibleModal.value = true;
 	}
 };
 
@@ -117,7 +117,10 @@ const showUnReadBadge = computed(() => imUnReadCount.value > 0);
 //#endregion
 
 //#region 登录弹窗
-const loginVisible = ref(true);
+const loginVisibleModal = defineModel("loginVisible", {
+	type: Boolean,
+	default: () => false
+});
 //#endregion
 
 //#region 测试区域
@@ -227,7 +230,7 @@ const iconVisible = ref(false);
 			</view>
 		</DragButton>
 
-		<cl-popup v-model="loginVisible" title="" size="80%" :show-close="false">
+		<cl-popup v-model="loginVisibleModal" title="" size="80%" :show-close="false">
 			<LoginContent compact />
 		</cl-popup>
 	</view>

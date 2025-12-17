@@ -129,7 +129,7 @@ onMounted(() => {
 		<view class="login-content__logo">
 			<view class="logo-wrapper" @click="setLoginInfo">
 				<cl-image
-					src="https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/logo-%E5%8E%9F%E5%9B%BE.png"
+					:src="config.logo"
 					mode="widthFix"
 					:width="props.compact ? 150 : 200"
 					:height="props.compact ? 150 : 200"

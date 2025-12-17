@@ -23,6 +23,7 @@ type WxConfig = {
 type Config = {
 	name: string; // 应用名称
 	version: string; // 应用版本
+	logo: string; // 应用 logo
 	locale: string; // 应用语言
 	website: string; // 官网地址
 	host: string; // 主机地址
@@ -39,8 +40,8 @@ export const config = {
 	name: "律先锋",
 	version: "1.0.0",
 	locale: "zh",
-	// website: "https://fanxingzhihui.com",
 	website: "https://lvbao.fanxingzhihui.com",
+	logo: "https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/logo-%E5%8E%9F%E5%9B%BE.png",
 	showDarkButton: isMp() ? false : true,
 	isCustomTabBar: true,
 	backTop: true,

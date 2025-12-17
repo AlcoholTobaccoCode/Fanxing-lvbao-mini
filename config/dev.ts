@@ -14,7 +14,7 @@ export const dev = () => {
 	baseUrl = host + "";
 	// #endif
 
-	const hxImDebug = false;
+	const hxImDebug = true;
 
 	return {
 		host,
