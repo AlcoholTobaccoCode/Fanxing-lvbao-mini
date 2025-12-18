@@ -116,6 +116,61 @@ const isAgree = () => {
 provide("isAgree", isAgree);
 //#endregion
 
+//#region 动态计算表单区域最大高度
+const formMaxHeight = ref(0);
+
+const calculateFormMaxHeight = () => {
+	// 获取屏幕信息
+	const systemInfo = uni.getSystemInfoSync();
+	const screenHeight = systemInfo.windowHeight || systemInfo.screenHeight;
+
+	// 计算固定元素的高度
+	let fixedHeight = 0;
+
+	if (props.compact) {
+		// 紧凑模式（弹窗）
+		// Logo 区域：pt-4(16px) + logo(150px) + 标题文字(约24px) + pb-4(16px) + 20 额外
+		fixedHeight += 16 + 150 + 24 + 16 + 20;
+
+		// Tabs 区域：tabs 高度(约44px) + pb-4(16px)
+		fixedHeight += 44 + 16;
+
+		// 协议区域：mt-4(16px) + 内容高度(约36px) + pb-4(16px)
+		fixedHeight += 16 + 36 + 16;
+
+		// 弹窗的内边距和安全区域（顶部、底部预留空间）
+		fixedHeight += 80;
+	} else {
+		// 正常模式（页面）
+		// Logo 区域：pt-10(40px) + logo(200px) + 标题文字(约32px) + pb-6(24px)
+		fixedHeight += 40 + 200 + 32 + 24;
+
+		// Tabs 区域：tabs 高度(约44px) + pb-6(24px)
+		fixedHeight += 44 + 24;
+
+		// 协议区域：mt-6(24px) + 内容高度(约36px) + pb-10(40px)
+		fixedHeight += 24 + 36 + 40;
+
+		// 页面的状态栏和安全区域
+		fixedHeight += 40;
+	}
+
+	// 计算表单区域的最大高度 = 屏幕高度 - 固定元素高度
+	formMaxHeight.value = screenHeight - fixedHeight;
+
+	// 确保最小高度，避免过小
+	if (formMaxHeight.value < 200) {
+		formMaxHeight.value = 200;
+	}
+
+	// 确保最大高度不超过屏幕的70%（避免过大）
+	const maxAllowedHeight = screenHeight * 0.7;
+	if (formMaxHeight.value > maxAllowedHeight) {
+		formMaxHeight.value = maxAllowedHeight;
+	}
+};
+//#endregion
+
 // 组件初始化时恢复上次的登录信息
 onMounted(() => {
 	const beforeLoginFormType = storage.get("login-form-type");
@@ -128,6 +183,9 @@ onMounted(() => {
 		formCode.phone = beforeLoginFormPhone;
 		formPassword.phone = beforeLoginFormPhone;
 	}
+
+	// 计算表单区域的最大高度
+	calculateFormMaxHeight();
 });
 </script>
 
@@ -158,20 +216,33 @@ onMounted(() => {
 			<cl-tabs v-model="loginTypeTab" :list="loginTypeList"></cl-tabs>
 		</view>
 
-		<!-- 手机号登录 -->
-		<template v-if="loginTypeTab === 'code-login'">
-			<login-phone :form="formCode" @success="toLogin"></login-phone>
-		</template>
+		<view
+			class="flex-1 p-[15px] login-content__form"
+			:style="{ maxHeight: formMaxHeight + 'px', overflowY: 'auto' }"
+		>
+			<!-- 手机号登录 -->
+			<template v-if="loginTypeTab === 'code-login'">
+				<login-phone :form="formCode" @success="toLogin"></login-phone>
+			</template>
 
-		<!-- 密码登录 -->
-		<template v-if="loginTypeTab === 'psw-login'">
-			<psw-login :form="formPassword" @success="toLogin"></psw-login>
-		</template>
+			<!-- 密码登录 -->
+			<template v-if="loginTypeTab === 'psw-login'">
+				<psw-login :form="formPassword" @success="toLogin"></psw-login>
+			</template>
 
-		<!-- 注册 -->
-		<template v-if="loginTypeTab === 'register'">
-			<register :form="formRegister" @success="toLogin"></register>
-		</template>
+			<!-- 注册 -->
+			<template v-if="loginTypeTab === 'register'">
+				<scroll-view
+					class="h-full"
+					:scroll-with-animation="true"
+					enhanced
+					:show-scrollbar="false"
+					@touchmove.stop
+				>
+					<register :form="formRegister" @success="toLogin"></register>
+				</scroll-view>
+			</template>
+		</view>
 
 		<!-- 协议 -->
 		<view class="login-content__agreement">
@@ -206,7 +277,7 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .login-content {
-	@apply px-10;
+	@apply h-full px-10;
 
 	&__logo {
 		@apply flex flex-col items-center justify-center pt-10 pb-6;
@@ -218,6 +289,16 @@ onMounted(() => {
 
 	&__tabs {
 		@apply pb-6;
+	}
+
+	&__form {
+		// 隐藏滚动条
+		scrollbar-width: none; /* Firefox */
+		-ms-overflow-style: none; /* IE and Edge */
+
+		&::-webkit-scrollbar {
+			display: none; /* Chrome, Safari and Opera */
+		}
 	}
 
 	&__agreement {
@@ -242,7 +323,7 @@ onMounted(() => {
 		}
 
 		.login-content__tabs {
-			@apply pb-4;
+			@apply flex flex-row justify-center pb-4;
 		}
 
 		.login-content__agreement {
