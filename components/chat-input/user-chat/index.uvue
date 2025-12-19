@@ -261,7 +261,7 @@ const handleOpenCall = () => {
 }
 
 .chat-intent-chip {
-	@apply flex flex-row items-center px-3 py-1.5 rounded-full bg-white border border-surface-100;
+	@apply flex flex-row items-center px-3 py-2 rounded-full bg-white border border-surface-100;
 }
 
 .chat-intent-chip__text {

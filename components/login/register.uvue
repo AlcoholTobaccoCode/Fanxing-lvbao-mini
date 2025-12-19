@@ -3,7 +3,7 @@ import { t } from "@/locale";
 import { computed, inject, ref, type PropType } from "vue";
 import { isDark, parseClass, useRefs, type Response } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
-import type { Register } from "../../types";
+import type { Register } from "./types";
 import SmsBtn from "@/components/common/sms-btn.uvue";
 import { RegisterUser } from "@/api/user";
 

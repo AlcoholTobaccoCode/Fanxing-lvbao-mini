@@ -3,7 +3,7 @@ import { t } from "@/locale";
 import { computed, inject, ref, type PropType } from "vue";
 import { isDark, parseClass, type Response } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
-import type { LoginByPassword } from "../../types";
+import type { LoginByPassword } from "./types";
 import { LoginByPassword as LoginByPasswordApi } from "@/api/user";
 
 const props = defineProps({
