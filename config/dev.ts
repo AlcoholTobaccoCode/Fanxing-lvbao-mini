@@ -16,9 +16,13 @@ export const dev = () => {
 
 	const hxImDebug = true;
 
+	const voiceCallUrl = "https://voicecall.fanxingzhihui.com/";
+	// const voiceCallUrl = "http://localhost:5173";
+
 	return {
 		host,
 		baseUrl,
-		hxImDebug
+		hxImDebug,
+		voiceCallUrl
 	};
 };

@@ -14,8 +14,11 @@ export const prod = () => {
 	baseUrl = host + "";
 	// #endif
 
+	const voiceCallUrl = "https://voicecall.fanxingzhihui.com/";
+
 	return {
 		host,
-		baseUrl
+		baseUrl,
+		voiceCallUrl
 	};
 };

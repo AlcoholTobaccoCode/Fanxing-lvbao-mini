@@ -1,8 +1,7 @@
 {
-	// "entryPagePath": "consult/index",
 	// "entryPagePath": "test-pages/index",
-	"entryPagePath": "pages/home/index",
-	// "entryPagePath": "ease-im/index",
+	// "entryPagePath": "ai-chat-module/voice-call/index",
+	// "entryPagePath": "user/login",
 	"pages": [
 		{
 			"path": "pages/home/index",
@@ -92,13 +91,19 @@
 		},
 		//#endregion
 		{
-			// consult
 			"root": "ai-chat-module",
 			"pages": [
 				{
 					"path": "consult/index",
 					"style": {
 						"navigationBarTitleText": "咨询",
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "voice-call/index",
+					"style": {
+						"navigationBarTitleText": "实时通话",
 						"navigationStyle": "custom"
 					}
 				}

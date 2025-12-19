@@ -1,0 +1,95 @@
+<script lang="ts" setup>
+import { computed, ref } from "vue";
+import { isDev, config } from "@/config";
+import { useStore } from "@/cool";
+import { sleepWait } from "@/utils";
+import { showLoginModal } from "@/cool/store/login-modal";
+
+import AppPage from "@/components/common/layout/app-page.uvue";
+
+/**
+ * 参数说明
+ * `token`: Bearer Token（必需）
+ * `agentType`: 智能体类型（必需）
+ * `0` = 语音通话
+ * `1` = 数字人
+ * `2` = 视觉理解
+ * `3` = 视频通话
+ * isDev: 0 - 非开发模式 1 - 开发模式，开发模式下会打开 vConsole
+ */
+
+type AgentType = "0" | "1" | "2" | "3";
+
+const { user } = useStore();
+
+// 智能体类型，默认语音通话
+const agentType = ref<AgentType>("0");
+
+// 是否首次加载页面（用于控制登录提示的淡入效果）
+const isFirstLoadPage = ref(true);
+
+// 是否显示 webview
+const isShowWebview = ref(false);
+
+// 提取 Bearer Token 中的实际 token
+const userToken = computed(() => {
+	const token = user?.token?.split(" ")[1];
+	return token;
+});
+
+const webViewUrl = ref("");
+
+const showWebview = () => {
+	isShowWebview.value = true;
+	webViewUrl.value = `${config.voiceCallUrl}?token=${userToken.value}&agentType=${agentType.value}&isDev=${isDev ? 1 : 0}`;
+};
+
+// 检查并处理登录逻辑
+const checkAndShowWebview = async () => {
+	await sleepWait(300);
+	isFirstLoadPage.value = false;
+
+	if (!userToken.value) {
+		// 没有 token，显示登录框
+		return showLoginModal(async () => {
+			await user.get();
+			showWebview();
+		});
+	}
+
+	showWebview();
+};
+
+onLoad(() => {
+	checkAndShowWebview();
+});
+</script>
+
+<template>
+	<app-page title="" :back-top="!isShowWebview" :title-action="false" :chat-list-btn="false">
+		<template #content>
+			<view class="w-full h-full">
+				<web-view v-if="isShowWebview" :src="webViewUrl" class="webview-container" />
+				<view
+					v-else
+					class="login-box"
+					:class="isFirstLoadPage ? 'opacity-0' : 'opacity-100'"
+				>
+					<cl-text color="primary">若需使用该功能，请先登录</cl-text>
+					<cl-button @click="checkAndShowWebview()">登录</cl-button>
+				</view>
+			</view>
+		</template>
+	</app-page>
+</template>
+
+<style scoped>
+.login-box {
+	@apply w-full h-full flex items-center justify-center gap-4 transition-all;
+}
+
+.webview-container {
+	width: 100%;
+	height: 100%;
+}
+</style>

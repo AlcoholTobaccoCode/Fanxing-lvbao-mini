@@ -33,6 +33,7 @@ type Config = {
 	backTop: boolean; // 是否显示回到顶部按钮
 	wx: WxConfig; // 微信配置
 	hxImDebug: boolean; // 是否开启环信 debug
+	voiceCallUrl: string; // 阿里云 ai 实时通话
 };
 
 // 根据环境导出最终配置
