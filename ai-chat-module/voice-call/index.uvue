@@ -3,9 +3,15 @@ import { computed, ref } from "vue";
 import { isDev, config } from "@/config";
 import { useStore } from "@/cool";
 import { sleepWait } from "@/utils";
+import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
 import { showLoginModal } from "@/cool/store/login-modal";
+import { PermissionScope, requestPermission, openSettings } from "@/utils/permission";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
+
+const log = new Logger("VoiceCall");
+const ui = useUi();
 
 /**
  * 参数说明
@@ -21,6 +27,9 @@ import AppPage from "@/components/common/layout/app-page.uvue";
 type AgentType = "0" | "1" | "2" | "3";
 
 const { user } = useStore();
+
+// 麦克风权限
+const useRecordPermission = ref<boolean>(false);
 
 // 智能体类型，默认语音通话
 const agentType = ref<AgentType>("0");
@@ -44,8 +53,24 @@ const showWebview = () => {
 	webViewUrl.value = `${config.voiceCallUrl}?token=${userToken.value}&agentType=${agentType.value}&isDev=${isDev ? 1 : 0}`;
 };
 
+// 测试录音权限
+const recordPermission = async () => {
+	const result = await requestPermission({
+		scope: PermissionScope.RECORD,
+		logger: log,
+		ui
+	});
+	useRecordPermission.value = result.success;
+	log.info("录音权限测试结果:", useRecordPermission.value);
+	if (!useRecordPermission.value) {
+		ui.showToast({ message: "未获得录音权限，无法使用语音通话功能" });
+		return;
+	}
+};
+
 // 检查并处理登录逻辑
 const checkAndShowWebview = async () => {
+	await recordPermission();
 	await sleepWait(300);
 	isFirstLoadPage.value = false;
 
@@ -69,15 +94,26 @@ onLoad(() => {
 	<app-page title="" :back-top="!isShowWebview" :title-action="false" :chat-list-btn="false">
 		<template #content>
 			<view class="w-full h-full">
-				<web-view v-if="isShowWebview" :src="webViewUrl" class="webview-container" />
-				<view
-					v-else
-					class="login-box"
-					:class="isFirstLoadPage ? 'opacity-0' : 'opacity-100'"
-				>
-					<cl-text color="primary">若需使用该功能，请先登录</cl-text>
-					<cl-button @click="checkAndShowWebview()">登录</cl-button>
-				</view>
+				<template v-if="!useRecordPermission">
+					<view
+						class="login-box"
+						:class="useRecordPermission ? 'opacity-0' : 'opacity-100'"
+					>
+						<cl-text color="warn">未获得录音权限，无法使用语音通话功能</cl-text>
+						<cl-button @click="checkAndShowWebview()">去授权</cl-button>
+					</view>
+				</template>
+				<template v-else>
+					<web-view v-if="isShowWebview" :src="webViewUrl" class="webview-container" />
+					<view
+						v-else
+						class="login-box"
+						:class="isFirstLoadPage ? 'opacity-0' : 'opacity-100'"
+					>
+						<cl-text color="primary">若需使用该功能，请先登录</cl-text>
+						<cl-button @click="checkAndShowWebview()">登录</cl-button>
+					</view>
+				</template>
 			</view>
 		</template>
 	</app-page>
