@@ -10,6 +10,7 @@ import type { ToolItem, Tools, ActionItem, Actions, SendData, VoiceResult } from
 import SimpleCard from "@/components/card/simple-card.uvue";
 import VoiceRecord from "../voice-record.uvue";
 import ActionsPopup from "../actions-popup.uvue";
+import RealtimeVoiceInput from "../realtime-voice-input.uvue";
 
 const ui = useUi();
 
@@ -158,6 +159,12 @@ const handleOpenCall = () => {
 	emit("open-call");
 };
 
+// 实时录音状态变化
+const handleRealtimeRecordingChange = (isRecording: boolean) => {
+	// 可以根据录音状态调整 UI（如隐藏/显示其他按钮）
+	console.log("实时录音状态变化:", isRecording);
+};
+
 //#endregion
 </script>
 
@@ -207,12 +214,13 @@ const handleOpenCall = () => {
 				</view>
 
 				<view class="chat-main__right">
-					<!-- <view class="chat-main__icon-btn">
-						<cl-icon name="camera-line" :size="38" color="currentColor"></cl-icon>
-					</view> -->
-					<!-- <view class="chat-main__icon-btn" @tap.stop="showMoreAction = true">
-						<cl-icon name="add-line" :size="38" color="currentColor"></cl-icon>
-					</view> -->
+					<!-- 实时语音输入按钮 -->
+					<realtime-voice-input
+						v-model="modelValue"
+						@recording-change="handleRealtimeRecordingChange"
+					/>
+
+					<!-- 发送按钮 -->
 					<view class="chat-main__icon-btn">
 						<cl-icon
 							v-if="!modelValue"
