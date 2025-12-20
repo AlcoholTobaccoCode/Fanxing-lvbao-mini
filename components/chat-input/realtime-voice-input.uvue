@@ -1,0 +1,314 @@
+<!--
+实时语音识别
+-->
+<script lang="ts" setup>
+import { ref, onMounted, onUnmounted } from "vue";
+import { Logger } from "@/cool/utils/log";
+import { useUi } from "@/uni_modules/cool-ui";
+import { PermissionScope, requestPermission } from "@/utils/permission";
+import { createAsrStream, type AsrStreamSession } from "@/utils/aliyun/asr-stream";
+
+const log = new Logger("RealtimeVoiceInput");
+const ui = useUi();
+
+interface Props {
+	modelValue: string; // 双向绑定输入框文本
+}
+
+interface Emits {
+	(e: "update:modelValue", text: string): void;
+	(e: "recording-change", isRecording: boolean): void;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+	modelValue: ""
+});
+
+const emit = defineEmits<Emits>();
+
+//#region 状态管理
+
+const isRecording = ref(false); // 是否正在录音
+const hasPermission = ref(false); // 是否有录音权限
+const asrSession = ref<AsrStreamSession | null>(null); // ASR 会话
+const recorderManager = ref<any>(null); // 录音管理器
+
+// 用于追加模式的状态
+const baseText = ref(""); // 录音开始时的基础文本
+const currentSentences = ref<string[]>([]); // 已完成的句子列表
+const tempResult = ref(""); // 当前句子的临时结果
+
+//#endregion
+
+//#region 权限管理
+
+/**
+ * 确保有录音权限
+ */
+const ensurePermission = async (): Promise<boolean> => {
+	if (hasPermission.value) return true;
+
+	const result = await requestPermission({
+		scope: PermissionScope.RECORD,
+		logger: log,
+		ui
+	});
+
+	hasPermission.value = result.success;
+	return result.success;
+};
+
+//#endregion
+
+//#region 录音管理器初始化
+
+/**
+ * 初始化录音管理器（仅一次）
+ */
+const initRecorderManager = () => {
+	recorderManager.value = uni.getRecorderManager();
+
+	// 监听录音帧数据
+	recorderManager.value.onFrameRecorded((res: any) => {
+		// 实时发送音频帧到 ASR
+		if (isRecording.value && asrSession.value && res.frameBuffer) {
+			log.debug(
+				"[RealtimeVoiceInput] 发送音频帧:",
+				res.frameBuffer.byteLength,
+				"bytes, isLastFrame:",
+				res.isLastFrame
+			);
+			asrSession.value.sendAudio(res.frameBuffer).catch((err: any) => {
+				log.error("发送音频帧失败", err);
+			});
+		}
+	});
+
+	// 监听录音开始
+	recorderManager.value.onStart(() => {
+		log.info("录音管理器已启动");
+	});
+
+	// 监听录音停止
+	recorderManager.value.onStop((res: any) => {
+		log.info("录音已停止", res);
+	});
+
+	// 监听录音错误
+	recorderManager.value.onError((err: any) => {
+		log.error("录音错误", err);
+		ui.showToast({ message: "录音失败，请重试", icon: "error" });
+		stopRecording();
+	});
+};
+
+//#endregion
+
+//#region 录音控制
+
+/**
+ * 开始录音
+ */
+const startRecording = async () => {
+	try {
+		log.info("开始录音...");
+
+		// 1. 检查权限
+		const hasAuth = await ensurePermission();
+		if (!hasAuth) {
+			ui.showToast({ message: "需要录音权限才能使用语音输入", icon: "error" });
+			return;
+		}
+
+		// 2. 保存当前文本作为基础文本
+		baseText.value = props.modelValue || "";
+		currentSentences.value = [];
+		tempResult.value = "";
+
+		// 3. 确保录音管理器已初始化
+		if (!recorderManager.value) {
+			log.warn("录音管理器未初始化，尝试重新初始化...");
+			initRecorderManager();
+			// 等待一小段时间确保初始化完成
+			await new Promise((resolve) => setTimeout(resolve, 100));
+
+			if (!recorderManager.value) {
+				throw new Error("录音管理器初始化失败");
+			}
+		}
+
+		// 4. 创建 ASR Stream 会话
+		asrSession.value = await createAsrStream(
+			{
+				format: "pcm",
+				sampleRate: 16000,
+				enableIntermediateResult: true, // 启用中间结果
+				enablePunctuationPrediction: true, // 启用标点预测
+				enableInverseTextNormalization: true, // 启用数字转换
+				maxSentenceSilence: 800 // 句子静音时长 800ms
+			},
+			{
+				onStarted: () => {
+					log.info("ASR 识别已开始");
+				},
+				onSentenceBegin: () => {
+					log.info("句子开始");
+					tempResult.value = ""; // 清空临时结果
+				},
+				onResultChanged: (result, isFinal) => {
+					log.info("识别结果变化", { result, isFinal });
+
+					if (isFinal) {
+						// 最终结果：追加到句子列表
+						if (result) {
+							currentSentences.value.push(result);
+						}
+						tempResult.value = "";
+					} else {
+						// 临时结果：实时显示
+						tempResult.value = result;
+					}
+
+					// 更新输入框内容（基础文本 + 已完成句子 + 临时结果）
+					updateInputValue();
+				},
+				onSentenceEnd: (result) => {
+					log.info("句子结束", { result });
+
+					// 确保句子已加入列表（防止遗漏）
+					if (result && !currentSentences.value.includes(result)) {
+						currentSentences.value.push(result);
+					}
+					tempResult.value = "";
+					updateInputValue();
+				},
+				onCompleted: () => {
+					log.info("ASR 识别完成");
+				},
+				onFailed: (err) => {
+					log.error("ASR 识别失败", err);
+					ui.showToast({ message: "语音识别失败，请重试", icon: "error" });
+					stopRecording();
+				}
+			}
+		);
+
+		// 5. 启动录音
+		recorderManager.value.start({
+			format: "PCM", // PCM 格式
+			sampleRate: 16000, // 16kHz 采样率
+			numberOfChannels: 1, // 单声道
+			frameSize: 4 // 每帧 4KB（参考阿里云官方示例）
+		});
+
+		isRecording.value = true;
+		emit("recording-change", true);
+
+		log.info("录音已启动");
+	} catch (error: any) {
+		log.error("启动录音失败", error);
+		ui.showToast({ message: error.message || "启动录音失败", icon: "error" });
+		stopRecording();
+	}
+};
+
+/**
+ * 停止录音
+ */
+const stopRecording = async () => {
+	try {
+		log.info("停止录音...");
+
+		// 1. 停止录音管理器（保留实例以便下次使用）
+		if (recorderManager.value) {
+			recorderManager.value.stop();
+		}
+
+		// 2. 停止并关闭 ASR 会话
+		if (asrSession.value) {
+			await asrSession.value.stop();
+			asrSession.value.close();
+			asrSession.value = null;
+		}
+
+		isRecording.value = false;
+		emit("recording-change", false);
+
+		log.info("录音已停止");
+	} catch (error: any) {
+		log.error("停止录音失败", error);
+	}
+};
+
+/**
+ * 更新输入框内容
+ */
+const updateInputValue = () => {
+	const allText = baseText.value + currentSentences.value.join("") + tempResult.value;
+	emit("update:modelValue", allText);
+};
+
+//#endregion
+
+//#region 交互
+/**
+ * 点击麦克风按钮
+ */
+const handleClick = async () => {
+	if (isRecording.value) {
+		// 正在录音 → 停止录音
+		await stopRecording();
+	} else {
+		// 空闲状态 → 开始录音
+		await startRecording();
+	}
+};
+
+//#endregion
+
+/**
+ * 组件挂载时初始化录音管理器
+ */
+onMounted(() => {
+	initRecorderManager();
+});
+
+/**
+ * 组件卸载时清理
+ */
+onUnmounted(() => {
+	if (isRecording.value) {
+		stopRecording();
+	}
+});
+
+defineExpose({
+	startRecording,
+	stopRecording,
+	isRecording
+});
+</script>
+
+<template>
+	<view class="realtime-voice-btn" @click="handleClick">
+		<cl-icon
+			:name="isRecording ? 'speak-fill' : 'speak-line'"
+			:color="isRecording ? 'success' : 'default'"
+			:size="40"
+		/>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.realtime-voice-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: all 0.3s;
+
+	&:active {
+		transform: scale(0.95);
+	}
+}
+</style>

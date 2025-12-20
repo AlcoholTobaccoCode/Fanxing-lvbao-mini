@@ -3,6 +3,7 @@ import { GetVoiceToken, type VoiceTokenData } from "@/api/common";
 
 export * from "./tts";
 
+// TODO - 静态配置收拢
 export const APP_KEY = "UU8bWaD9Si5osxLy";
 
 // 本地缓存的 key

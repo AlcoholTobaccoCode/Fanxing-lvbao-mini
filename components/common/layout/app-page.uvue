@@ -7,7 +7,7 @@ import { loginModalVisible } from "@/cool/store/login-modal";
 
 import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
-// import RemixIcon from "../icon-all/remixicon.uvue";
+import RemixIcon from "@/test/icon-all/remixicon.uvue";
 import DragButton from "@/components/dragon-dragButton/index.vue";
 import LoginContent from "@/components/login/login-content.uvue";
 
@@ -181,7 +181,7 @@ const iconVisible = ref(false);
 			</view>
 
 			<!-- 测试阶段使用 - icon  -->
-			<!-- <cl-float-view v-if="openIconPicker" :bottom="300">
+			<cl-float-view v-if="openIconPicker" :bottom="300">
 				<view
 					class="w-[40px] h-[40px] bg-primary-500 flex flex-row items-center justify-center rounded"
 					@click="iconVisible = true"
@@ -193,7 +193,7 @@ const iconVisible = ref(false);
 				<view class="h-[500px]">
 					<remix-icon v-model:icon-visible="iconVisible"></remix-icon>
 				</view>
-			</cl-popup> -->
+			</cl-popup>
 		</cl-page>
 
 		<!-- 律师对话入口 -->
