@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, watch } from "vue";
+import { nextTick, ref, watch, computed } from "vue";
 import type { PropType } from "vue";
 import { isDark } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
@@ -17,7 +17,7 @@ const ui = useUi();
 const props = defineProps({
 	placeholder: {
 		type: String,
-		default: () => "在这里输入你的问题"
+		default: () => "在这里输入你的问题或按住说话"
 	},
 	loading: {
 		type: Boolean,
@@ -110,10 +110,20 @@ const tools = ref<Tools>(
 		: createDefaultTools()
 );
 
+// 输入框动态最大高度
+const inputMaxHeight = computed(() => {
+	const { windowHeight } = uni.getSystemInfoSync();
+	// 屏幕高度的 50%，上限 500px，下限 200px
+	return `${Math.max(Math.min(windowHeight * 0.5, 500), 200)}px`;
+});
+
 //#region 语音录制相关
 
 const voiceRecordRef = ref<any>();
 const isShowVoiceRecord = ref<any>(false);
+
+// 输入框聚焦状态
+const isFocused = ref(false);
 
 // 按住说话：按下时显示语音浮层并通知开始
 const handlePressStart = () => {
@@ -217,6 +227,32 @@ const handleOpenCall = () => {
 	emit("open-call");
 };
 
+// 打开底部工具栏
+const handleOpenToolbar = () => {
+	showMoreAction.value = true;
+};
+
+// 处理工具栏选择
+const handleActionSelect = (type: "camera" | "album" | "file" | "wechat") => {
+	console.log("工具栏选择:", type);
+	// TODO: 处理选择结果（上传、发送等）
+};
+
+// 输入框聚焦
+const handleFocus = () => {
+	isFocused.value = true;
+};
+
+// 输入框失焦
+const handleBlur = () => {
+	// 延迟失焦，避免点击按钮时立即失焦
+	setTimeout(() => {
+		if (!modelValue.value) {
+			isFocused.value = false;
+		}
+	}, 200);
+};
+
 //#endregion
 
 // 当外部传入的 tools 或默认展示配置变化时，同步内部列表
@@ -279,41 +315,58 @@ watch(
 
 		<!-- 主输入区域 -->
 		<view class="chat-main">
-			<view :class="['chat-main__inner', modelValue ? '!pl-0' : '']">
-				<!-- 默认输入交互区域 -->
-				<view v-if="!modelValue" class="chat-main__left">
-					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
-						<cl-icon
-							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
-							:size="48"
-							color="currentColor"
-						></cl-icon>
-					</view>
+			<!-- 情况1: 无内容 && 无聚焦 - 一行展示，占位符 + 按钮 -->
+			<view v-if="!modelValue && !isFocused" class="chat-main__single-row">
+				<!-- 左侧：切换按钮 -->
+				<view class="chat-main__icon-btn" @tap.stop="handleRecording">
+					<cl-icon
+						:name="inputModeVal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
+						:size="40"
+						color="currentColor"
+					></cl-icon>
 				</view>
 
-				<view class="chat-main__center">
-					<view v-if="inputModeVal === 'text'" class="inset-input-box reactive">
-						<cl-textarea
-							class="max-h-[200px]"
-							v-model="modelValue"
-							clearable
-							auto-height
-							:border="false"
-							:maxlength="Infinity"
-							:showWordLimit="false"
-							:disabled="disabled"
-							:placeholder="placeholder"
-							@confirm="handleConfirm"
-						></cl-textarea>
-						<!-- 实时语音输入按钮 -->
-						<view class="absolute bottom-2 right-4">
-							<realtime-voice-input v-model="modelValue" />
-						</view>
+				<!-- 中间：占位符（点击聚焦） -->
+				<view class="chat-main__placeholder" @tap="isFocused = true">
+					<text class="chat-main__placeholder-text">{{ placeholder }}</text>
+				</view>
+
+				<!-- 右侧：实时语音 + 加号 -->
+				<view class="chat-main__actions">
+					<realtime-voice-input v-model="modelValue" />
+					<!-- <view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
+						<cl-icon name="add-circle-line" :size="40"></cl-icon>
+					</view> -->
+					<view class="chat-main__icon-btn" @tap.stop="handleConfirm">
+						<cl-icon name="arrow-up-circle-line" :size="48" color="default"></cl-icon>
 					</view>
+				</view>
+			</view>
+
+			<!-- 情况2: 聚焦 && 无内容 - 两行，输入框在上，按钮在下 -->
+			<view v-else-if="isFocused" class="chat-main__two-rows">
+				<!-- 上面：输入框 -->
+				<view class="chat-main__input-row">
+					<cl-textarea
+						v-if="inputModeVal === 'text'"
+						v-model="modelValue"
+						:style="{ maxHeight: inputMaxHeight }"
+						clearable
+						auto-height
+						:border="false"
+						:autofocus="true"
+						:maxlength="Infinity"
+						:showWordLimit="false"
+						:disabled="disabled"
+						:placeholder="placeholder"
+						@confirm="handleConfirm"
+						@focus="handleFocus"
+						@blur="handleBlur"
+					></cl-textarea>
 
 					<view v-else class="chat-main__voice">
 						<view
-							class="chat-main__voice-hit !h-[40px]"
+							class="chat-main__voice-hit"
 							@touchstart.stop="handlePressStart"
 							@touchend.stop="handlePressEnd"
 							@touchcancel.stop="handlePressEnd"
@@ -325,23 +378,32 @@ watch(
 					</view>
 				</view>
 
-				<view class="chat-main__right">
-					<!-- <view class="chat-main__icon-btn">
-						<cl-icon name="camera-line" :size="38" color="currentColor"></cl-icon>
-					</view> -->
-					<!-- <view class="chat-main__icon-btn" @tap.stop="showMoreAction = true">
-						<cl-icon name="add-line" :size="38" color="currentColor"></cl-icon>
-					</view> -->
-
-					<view class="chat-main__icon-btn">
-						<cl-icon v-if="!modelValue" name="send-plane-line" :size="32"></cl-icon>
+				<!-- 下面：按钮行 -->
+				<view class="chat-main__button-row">
+					<!-- 左侧：切换按钮 -->
+					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 						<cl-icon
-							v-else
-							name="send-plane-fill"
-							:size="32"
-							color="primary"
-							@tap.stop="handleConfirm"
+							:name="inputModeVal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
+							:size="40"
+							color="currentColor"
 						></cl-icon>
+					</view>
+
+					<view class="flex-1"></view>
+
+					<!-- 右侧：实时语音 + 加号 -->
+					<view class="chat-main__actions">
+						<realtime-voice-input v-model="modelValue" />
+						<view class="chat-main__icon-btn" @tap.stop="handleConfirm">
+							<cl-icon
+								:name="`arrow-up-circle-${modelValue ? 'fill' : 'line'}`"
+								:size="48"
+								:color="modelValue ? 'primary' : 'default'"
+							></cl-icon>
+						</view>
+						<!-- <view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
+							<cl-icon name="add-circle-line" :size="40"></cl-icon>
+						</view> -->
 					</view>
 				</view>
 			</view>
@@ -351,10 +413,10 @@ watch(
 			<cl-text size="10px" color="info">AI检索结果仅供参考，以官方法条和权威案例为准</cl-text>
 		</view>
 
-		<!-- 更多交互弹窗 -->
+		<!-- 底部工具栏 -->
 		<actions-popup
 			v-model:is-show="showMoreAction"
-			@select-call="handleOpenCall"
+			@select="handleActionSelect"
 		></actions-popup>
 
 		<!-- 语音录制浮层，仅在按住说话时显示 -->
@@ -396,40 +458,66 @@ watch(
 	@apply mt-1;
 }
 
-.chat-main__inner {
-	@apply flex flex-row items-center bg-white px-3 py-2 shadow-md;
+// 单行布局（情况1和3）
+.chat-main__single-row {
+	@apply flex flex-row items-center bg-white px-3 py-2 shadow-sm;
+	gap: 12rpx;
 }
 
-.chat-main__left {
-	@apply flex flex-row items-center opacity-100 transition-all;
+// 两行布局（情况2）
+.chat-main__two-rows {
+	@apply flex flex-col bg-white px-3 py-2 shadow-sm;
+	gap: 12rpx;
 }
 
-.chat-main__center {
-	@apply flex-1 mx-2;
-}
-
-.chat-main__voice {
+// 输入框行（情况2）
+.chat-main__input-row {
 	@apply w-full;
 }
 
-.chat-main__voice-hit {
-	@apply w-full;
+// 按钮行（情况2）
+.chat-main__button-row {
+	@apply flex flex-row items-center;
+	gap: 12rpx;
 }
 
-.chat-main__voice-btn {
-	@apply w-full flex flex-row items-center justify-center rounded-full;
+// 占位符区域（情况1）
+.chat-main__placeholder {
+	@apply flex-1 flex flex-col items-center;
+	min-height: 40px;
+	cursor: pointer;
+	flex-direction: unset;
 }
 
-.inset-input-box {
-	padding-right: 60rpx;
+.chat-main__placeholder-text {
+	@apply text-[14px] text-surface-400;
 }
 
-.chat-main__right {
-	@apply flex flex-row items-center gap-3;
+// 输入框容器（情况3）
+.chat-main__input-wrapper {
+	@apply flex-1;
+
+	:deep(.cl-textarea) {
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch;
+	}
 }
 
+// 右侧按钮组
+.chat-main__actions {
+	@apply flex flex-row items-center;
+	gap: 12rpx;
+}
+
+// 通用图标按钮
 .chat-main__icon-btn {
 	@apply flex items-center justify-center text-surface-700;
+	cursor: pointer;
+	transition: transform 0.2s;
+
+	&:active {
+		transform: scale(0.95);
+	}
 }
 
 .chat-tips {

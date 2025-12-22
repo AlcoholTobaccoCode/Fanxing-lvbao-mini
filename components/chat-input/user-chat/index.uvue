@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref } from "vue";
+import { nextTick, ref, computed } from "vue";
 import type { PropType } from "vue";
 import { isDark } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
@@ -62,6 +62,13 @@ const emit = defineEmits<{
 
 // 输入模式
 const inputModeVal = ref(props.inputMode);
+
+// 输入框动态最大高度
+const inputMaxHeight = computed(() => {
+	const { windowHeight } = uni.getSystemInfoSync();
+	// 屏幕高度的 50%，上限 500px，下限 200px
+	return `${Math.max(Math.min(windowHeight * 0.5, 500), 200)}px`;
+});
 
 //#region 语音录制相关
 
@@ -186,8 +193,8 @@ const handleRealtimeRecordingChange = (isRecording: boolean) => {
 				<view class="chat-main__center">
 					<cl-textarea
 						v-if="inputModeVal === 'text'"
-						class="max-h-[200px]"
 						v-model="modelValue"
+						:style="{ maxHeight: inputMaxHeight }"
 						clearable
 						auto-height
 						:border="false"
@@ -294,6 +301,12 @@ const handleRealtimeRecordingChange = (isRecording: boolean) => {
 
 .chat-main__center {
 	@apply flex-1 mx-2;
+
+	// 优化输入框滚动
+	:deep(.cl-textarea) {
+		overflow-y: auto;
+		-webkit-overflow-scrolling: touch; /* iOS 平滑滚动 */
+	}
 }
 
 .chat-main__voice {

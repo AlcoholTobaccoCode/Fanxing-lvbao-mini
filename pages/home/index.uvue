@@ -115,6 +115,11 @@ const handleHangup = () => {
 	showCallDemo.value = false;
 };
 
+const toTestPage = () => {
+	showCallDemo.value = false;
+	router.to("/ai-chat-module/voice-call/index");
+};
+
 //#endregion
 </script>
 
@@ -126,6 +131,7 @@ const handleHangup = () => {
 					<view class="flex-1 p-4 !px-8">
 						<Consult @preset-select="handlePresetSelect" />
 					</view>
+					<!-- <cl-button @click="toTestPage">toTestPage</cl-button> -->
 					<chat-input
 						v-model="inputValue"
 						use-module="consult"

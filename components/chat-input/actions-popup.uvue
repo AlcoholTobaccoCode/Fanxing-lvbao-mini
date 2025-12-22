@@ -1,15 +1,38 @@
+<!--
+底部工具栏组件 - 提供拍照、相册、本地文件、微信文件等功能
+-->
 <script lang="ts" setup>
 import { ref, watch } from "vue";
-import type { ActionItem } from "./types";
 
-const isShowModal = defineModel<boolean>("isShow", {
-	type: Boolean,
-	default: () => false
+interface Props {
+	isShow: boolean;
+}
+
+interface Emits {
+	(e: "update:isShow", value: boolean): void;
+	(e: "select", type: "camera" | "album" | "file" | "wechat"): void;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+	isShow: false
 });
 
-const emit = defineEmits<{
-	(e: "select-call"): void;
-}>();
+const emit = defineEmits<Emits>();
+
+const isShowModal = ref(props.isShow);
+
+// 监听外部 isShow 变化
+watch(
+	() => props.isShow,
+	(val) => {
+		isShowModal.value = val;
+	}
+);
+
+// 监听内部 isShowModal 变化，同步到外部
+watch(isShowModal, (val) => {
+	emit("update:isShow", val);
+});
 
 const MIN_SHEET_HEIGHT = 260;
 const MAX_SHEET_HEIGHT = 620;
@@ -17,59 +40,85 @@ const MAX_SHEET_HEIGHT = 620;
 // 当前弹层高度，跟随拖拽变化
 const sheetHeight = ref(MIN_SHEET_HEIGHT);
 
-const moreActions = ref<ActionItem[]>([
-	{
-		icon: "camera-line",
-		text: "拍摄",
-		disabled: false,
-		onClick: (item: ActionItem) => {
-			isShowModal.value = false;
+// 关闭工具栏
+const handleClose = () => {
+	isShowModal.value = false;
+};
+
+// 选择拍照
+const handleCamera = () => {
+	uni.chooseImage({
+		count: 1,
+		sourceType: ["camera"],
+		success: (res) => {
+			console.log("拍照成功", res);
+			emit("select", "camera");
+		},
+		fail: (err) => {
+			console.error("拍照失败", err);
 		}
-	},
-	{
-		icon: "image-line",
-		text: "相册",
-		disabled: false,
-		onClick: (item: ActionItem) => {
-			isShowModal.value = false;
+	});
+	handleClose();
+};
+
+// 选择相册
+const handleAlbum = () => {
+	uni.chooseImage({
+		count: 9,
+		sourceType: ["album"],
+		success: (res) => {
+			console.log("选择图片成功", res);
+			emit("select", "album");
+		},
+		fail: (err) => {
+			console.error("选择图片失败", err);
 		}
-	},
-	{
-		icon: "mic-line",
-		text: "录音",
-		disabled: false,
-		onClick: (item: ActionItem) => {
-			isShowModal.value = false;
+	});
+	handleClose();
+};
+
+// 选择本地文件
+const handleFile = () => {
+	// #ifdef MP-WEIXIN
+	uni.chooseMessageFile({
+		count: 1,
+		type: "all",
+		success: (res) => {
+			console.log("选择文件成功", res);
+			emit("select", "file");
+		},
+		fail: (err) => {
+			console.error("选择文件失败", err);
 		}
-	},
-	{
-		icon: "file-text-line",
-		text: "文档",
-		disabled: false,
-		onClick: (item: ActionItem) => {
-			isShowModal.value = false;
+	});
+	// #endif
+	handleClose();
+};
+
+// 选择微信文件
+const handleWechat = () => {
+	// #ifdef MP-WEIXIN
+	uni.chooseMessageFile({
+		count: 1,
+		type: "all",
+		success: (res) => {
+			console.log("选择微信文件成功", res);
+			emit("select", "wechat");
+		},
+		fail: (err) => {
+			console.error("选择微信文件失败", err);
 		}
-	},
-	{
-		icon: "phone-line",
-		text: "通话",
-		disabled: false,
-		onClick: (item: ActionItem) => {
-			isShowModal.value = false;
-			emit("select-call");
-		}
-	}
-]);
+	});
+	// #endif
+	handleClose();
+};
 
 // 打开时重置为最小高度
-watch(
-	() => isShowModal.value,
-	val => {
-		if (val) {
-			sheetHeight.value = MIN_SHEET_HEIGHT;
-		}
+watch(isShowModal, (val) => {
+	if (val) {
+		sheetHeight.value = MIN_SHEET_HEIGHT;
 	}
-);
+});
 
 // 句柄拖拽，丝滑改变高度
 const dragging = ref(false);
@@ -111,6 +160,7 @@ const handleHandleTouchEnd = () => {
 		:size="sheetHeight"
 	>
 		<view class="actions-sheet">
+			<!-- 拖拽句柄 -->
 			<view
 				class="actions-sheet__handle"
 				@touchstart.stop="handleHandleTouchStart"
@@ -118,18 +168,41 @@ const handleHandleTouchEnd = () => {
 				@touchend.stop="handleHandleTouchEnd"
 				@touchcancel.stop="handleHandleTouchEnd"
 			></view>
+
+			<!-- 工具栏内容 -->
 			<view class="actions-sheet__content">
-				<view class="flex flex-row flex-wrap items-center justify-start gap-4 px-4 pb-4 pt-1">
-					<template v-for="(item, index) in moreActions" :key="index">
-						<cl-button type="light" :border="false" @click="item.onClick(item)">
-							<view
-								class="w-[72px] h-[72px] rounded-2xl bg-surface-50 flex flex-col items-center justify-center gap-2"
-							>
-								<cl-icon :name="item.icon" :size="28"></cl-icon>
-								<cl-text size="12px">{{ item.text }}</cl-text>
-							</view>
-						</cl-button>
-					</template>
+				<view class="toolbar-grid">
+					<!-- 拍照 -->
+					<view class="toolbar-item" @tap="handleCamera">
+						<view class="toolbar-icon">
+							<cl-icon name="camera-line" :size="48" />
+						</view>
+						<text class="toolbar-label">拍照</text>
+					</view>
+
+					<!-- 相册 -->
+					<view class="toolbar-item" @tap="handleAlbum">
+						<view class="toolbar-icon">
+							<cl-icon name="image-line" :size="48" />
+						</view>
+						<text class="toolbar-label">相册</text>
+					</view>
+
+					<!-- 本地文件 -->
+					<view class="toolbar-item" @tap="handleFile">
+						<view class="toolbar-icon">
+							<cl-icon name="folder-line" :size="48" />
+						</view>
+						<text class="toolbar-label">本地文件</text>
+					</view>
+
+					<!-- 微信文件 -->
+					<view class="toolbar-item" @tap="handleWechat">
+						<view class="toolbar-icon">
+							<cl-icon name="wechat-line" :size="48" />
+						</view>
+						<text class="toolbar-label">微信文件</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -146,6 +219,45 @@ const handleHandleTouchEnd = () => {
 }
 
 .actions-sheet__content {
-	@apply flex-1;
+	@apply flex-1 px-4 pb-4 pt-1;
+}
+
+// 工具栏网格布局
+.toolbar-grid {
+	display: grid;
+	grid-template-columns: repeat(4, 1fr);
+	gap: 32rpx;
+}
+
+// 工具项
+.toolbar-item {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12rpx;
+	cursor: pointer;
+	transition: opacity 0.2s;
+
+	&:active {
+		opacity: 0.7;
+	}
+}
+
+// 工具图标
+.toolbar-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 96rpx;
+	height: 96rpx;
+	border-radius: 16rpx;
+	background: #f5f5f5;
+	color: #333;
+}
+
+// 工具标签
+.toolbar-label {
+	font-size: 24rpx;
+	color: #666;
 }
 </style>
