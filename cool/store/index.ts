@@ -19,3 +19,4 @@ export function useStore(): Store {
 export * from "./dict";
 export * from "./user";
 export * from "./im";
+export * from "./chatInput-store";

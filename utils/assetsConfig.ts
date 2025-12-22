@@ -45,3 +45,7 @@ export const LEGAL_QUICK_QUESTIONS: string[] = [
 	"无证驾驶事故责任如何分担？",
 	"交通事故中的赔偿问题，如何解决？"
 ];
+
+// TODO
+export const MSG_RECEIVE_BG =
+	"https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/msg-receive.wav";

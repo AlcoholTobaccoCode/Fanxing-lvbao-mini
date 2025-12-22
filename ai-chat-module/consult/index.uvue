@@ -3,14 +3,15 @@ import { computed, nextTick, ref, watch } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
-import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store/chatInput-store";
-import type { SendData, Tools } from "@/components/chat-input/types";
+import type { SendData, Tools } from "@/cool/types/chat-input";
 import { createConsultTtsController } from "@/utils/aliyun/tts-stream";
 import { showLoginModal } from "@/cool/store/login-modal";
+import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/components/chat-input/ai-chat/index.uvue";
-import AudioBubble from "@/components/chat/audio-bubble.uvue";
+import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue";
+import AudioBubble from "@/ai-chat-module/components/chat-input/audio-bubble.uvue";
+import ZeroMarkdownView from "../components/zero-markdown-view/components/zero-markdown-view/zero-markdown-view.vue";
 
 const log = new Logger("ConsultChatPage");
 const ui = useUi();
@@ -308,6 +309,7 @@ const handleSend = async (data: SendData) => {
 								</view>
 
 								<template v-if="item.content">
+									<!-- <mp-html :content="item.content" /> -->
 									<zero-markdown-view
 										:markdown="item.content"
 										:aiMode="true"

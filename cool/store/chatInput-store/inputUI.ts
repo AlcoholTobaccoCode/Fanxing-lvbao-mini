@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import type { Tools } from "@/components/chat-input/types";
+import type { Tools } from "@/cool/types/chat-input";
 
 export type InputMode = "text" | "voice";
 

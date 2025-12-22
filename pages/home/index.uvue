@@ -4,14 +4,14 @@ import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { router, useStore } from "@/cool";
 import { showLoginModal } from "@/cool/store/login-modal";
+import { chatFlowStore, chatInputStore } from "@/cool/store";
 
-import type { SendData, Tools } from "@/components/chat-input/types";
+import type { SendData, Tools } from "@/cool/types/chat-input";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/components/chat-input/ai-chat/index.uvue";
+import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue";
 import SimpleCard from "@/components/card/simple-card.uvue";
-import Consult from "@/pages/home/components/consult.vue";
-import { chatFlowStore, chatInputStore } from "@/cool/store/chatInput-store";
+import Consult from "@/ai-chat-module/consult/consult.uvue";
 
 const log = new Logger("HomePage");
 const ui = useUi();

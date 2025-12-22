@@ -1,5 +1,5 @@
 import { ref } from "vue";
-import type { Tools } from "@/components/chat-input/types";
+import type { Tools } from "@/cool/types/chat-input";
 import type { ChatModuleKey, ChatModuleConfig } from "./types";
 import { CHAT_MODULE_CONFIGS } from "./moduleConfigs";
 

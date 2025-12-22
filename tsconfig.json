@@ -12,7 +12,8 @@
 			"@dcloudio/types",
 			"vue",
 			"./uni_modules/cool-ui/index.d.ts",
-			"./uni_modules/cool-svg/index.d.ts"
+			"./uni_modules/cool-svg/index.d.ts",
+			"@uni-ku/bundle-optimizer/client"
 		],
 		"lib": ["esnext", "dom"],
 		"outDir": "esbuild",
@@ -24,6 +25,18 @@
 	"vueCompilerOptions": {
 		"extensions": [".vue", ".uvue"]
 	},
-	"include": ["**/*.uts", "**/*.ts", "main.ts", "**/*.uvue", "**/*.vue", "App.uvue", "**/*.d.ts"],
+	"include": [
+		"**/*.uts",
+		"**/*.ts",
+		"main.ts",
+		"**/*.uvue",
+		"**/*.vue",
+		"App.uvue",
+		"**/*.d.ts",
+		"async-import.d.ts",
+		"async-component.d.ts",
+		"async-*.d.ts",
+		"client.d.ts"
+	],
 	"exclude": ["node_modules", "dist"]
 }

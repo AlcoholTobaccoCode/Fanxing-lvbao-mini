@@ -7,7 +7,15 @@
 			"path": "pages/home/index",
 			"style": {
 				"navigationBarTitleText": "律先锋",
-				"navigationStyle": "custom"
+				"navigationStyle": "custom",
+				"usingComponents": {
+					"chat-input": "/ai-chat-module/components/chat-input/ai-chat/index",
+					"consult": "/ai-chat-module/consult/consult"
+				},
+				"componentPlaceholder": {
+					"chat-input": "view",
+					"consult": "view"
+				}
 			}
 		}
 	],
@@ -145,6 +153,13 @@
 		}
 		//#endregion
 	],
+	"preloadRule": {
+		"pages/home/index": {
+			"network": "all","packages": [
+				"ai-chat-module"
+			]
+		}
+	},
 	"globalStyle": {
 		"navigationBarTitleText": "律先锋",
 		"navigationBarTextStyle": "@navTextStyle",

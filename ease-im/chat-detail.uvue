@@ -11,13 +11,13 @@ import {
 	sendEasemobTextMessage,
 	markMessagesAsRead
 } from "@/utils/easemob";
-import type { SendData } from "@/components/chat-input/types";
+import type { SendData } from "@/cool/types/chat-input";
 import { imBus } from "@/utils/easemob/events";
 import { type OnTextMsgResult } from "@/utils/easemob/events";
 import { useChatUsernames } from "./hook";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/components/chat-input/user-chat/index.uvue";
+import ChatInput from "@/ai-chat-module/components/chat-input/user-chat/index.uvue";
 
 const log = new Logger("ChatDetailPage");
 const ui = useUi();

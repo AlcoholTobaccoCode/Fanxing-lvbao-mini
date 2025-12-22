@@ -6,7 +6,7 @@ import { createModelSessionId } from "@/utils/assetsConfig";
 import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID } from "@/utils/util";
 import type { ChatLaunchPayload } from "./flow";
-import type { Tools } from "@/components/chat-input/types";
+import type { Tools } from "@/cool/types/chat-input";
 
 export interface ConsultMessage {
 	role: "user" | "system";

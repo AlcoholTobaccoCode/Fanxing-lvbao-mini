@@ -2,6 +2,7 @@ import { ref, computed } from "vue";
 import type { EasemobConversationItem } from "@/utils/easemob";
 import { getEasemobServerConversations } from "@/utils/easemob";
 import { imBus, type OnTextMsgResult } from "@/utils/easemob/events";
+import { MSG_RECEIVE_BG } from "@/utils";
 
 /**
  * 环信 IM Store
@@ -34,7 +35,7 @@ export class ImStore {
 	 */
 	audioInfo = {
 		name: "消息接收音效",
-		src: "/static/audio/msg-receive.wav",
+		src: MSG_RECEIVE_BG,
 		context: null as UniApp.InnerAudioContext | null,
 		isPlaying: false
 	};

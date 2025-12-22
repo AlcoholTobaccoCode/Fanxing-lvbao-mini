@@ -4,6 +4,7 @@ import { proxy } from "./config/proxy";
 import tailwindcss from "tailwindcss";
 import { join } from "node:path";
 import uni from "@dcloudio/vite-plugin-uni";
+import optimizer from "@uni-ku/bundle-optimizer";
 
 const resolve = (dir: string) => join(__dirname, dir);
 
@@ -20,6 +21,10 @@ export default defineConfig({
 			tailwind: {
 				enable: true
 			}
+		}),
+		optimizer({
+			enable: true,
+			logger: true
 		})
 	],
 

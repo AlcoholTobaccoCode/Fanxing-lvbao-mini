@@ -23,6 +23,9 @@
 			"scope.camera": {
 				"desc": "需要您的摄像头权限以实现 Ai 实时通话"
 			}
+		},
+		"optimization": {
+			"subPackages": true
 		}
 	},
 	"mp-alipay": {
