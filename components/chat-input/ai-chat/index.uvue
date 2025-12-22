@@ -27,15 +27,6 @@ const props = defineProps({
 		type: Boolean,
 		default: () => false
 	},
-	/**
-	 * inputMode
-	 * @default "text"
-	 * @description: text -> 文本输入 | voice -> 语音输入
-	 */
-	inputMode: {
-		type: String,
-		default: () => "text"
-	},
 	// 使用的模块，用来分类保存语音 OSS 文件
 	useModule: {
 		type: String,
@@ -60,8 +51,19 @@ const props = defineProps({
 	}
 });
 
-const modelValue = defineModel<string>({
-	default: ""
+/**
+ * inputModeModal
+ * @default "text"
+ * @description: text -> 文本输入 | voice -> 语音输入
+ */
+const inputModeModal = defineModel("inputMode", {
+	type: String,
+	default: () => "text"
+});
+
+const modelValueModal = defineModel("modelValue", {
+	type: String,
+	default: () => ""
 });
 
 const emit = defineEmits<{
@@ -72,9 +74,6 @@ const emit = defineEmits<{
 	(e: "tool-change", value: Tools): void;
 	(e: "tool-toggle", value: ToolItem): void;
 }>();
-
-// 输入模式
-const inputModeVal = ref(props.inputMode);
 
 // 顶部意图 chips：默认工具 + 外部传入工具
 const createDefaultTools = (): Tools => {
@@ -173,7 +172,7 @@ const handleVoiceRecordFinish = async (result: VoiceResult) => {
 		}
 	};
 	emit("send", data);
-	modelValue.value = "";
+	modelValueModal.value = "";
 };
 
 //#endregion
@@ -195,10 +194,10 @@ const handleToolTap = (item: ToolItem) => {
 
 // 切换输入模式
 const handleRecording = () => {
-	inputModeVal.value = inputModeVal.value === "text" ? "voice" : "text";
-	emit("input-mode-change", inputModeVal.value);
+	inputModeModal.value = inputModeModal.value === "text" ? "voice" : "text";
+	emit("input-mode-change", inputModeModal.value);
 	// 切换到语音模式时，预请求一次录音权限，减少长按时等待
-	if (inputModeVal.value === "voice") {
+	if (inputModeModal.value === "voice") {
 		voiceRecordRef.value?.ensureRecordPermission?.();
 	}
 };
@@ -206,7 +205,7 @@ const handleRecording = () => {
 // 发送
 const handleSend = () => {
 	if (props.disabled || props.loading) return;
-	const val = modelValue.value.trim();
+	const val = modelValueModal.value.trim();
 
 	const data = {
 		text: val,
@@ -247,7 +246,7 @@ const handleFocus = () => {
 const handleBlur = () => {
 	// 延迟失焦，避免点击按钮时立即失焦
 	setTimeout(() => {
-		if (!modelValue.value) {
+		if (!modelValueModal.value) {
 			isFocused.value = false;
 		}
 	}, 200);
@@ -315,56 +314,114 @@ watch(
 
 		<!-- 主输入区域 -->
 		<view class="chat-main">
-			<!-- 情况1: 无内容 && 无聚焦 - 一行展示，占位符 + 按钮 -->
-			<view v-if="!modelValue && !isFocused" class="chat-main__single-row">
-				<!-- 左侧：切换按钮 -->
-				<view class="chat-main__icon-btn" @tap.stop="handleRecording">
-					<cl-icon
-						:name="inputModeVal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
-						:size="40"
-						color="currentColor"
-					></cl-icon>
-				</view>
+			<template v-if="inputModeModal === 'text'">
+				<!-- 情况1: 无内容 && 无聚焦 - 一行展示，占位符 + 按钮 -->
+				<view v-if="!modelValueModal && !isFocused" class="chat-main__single-row">
+					<!-- 左侧：切换按钮 -->
+					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
+						<cl-icon
+							:name="inputModeModal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
+							:size="48"
+							color="currentColor"
+						></cl-icon>
+					</view>
 
-				<!-- 中间：占位符（点击聚焦） -->
-				<view class="chat-main__placeholder" @tap="isFocused = true">
-					<text class="chat-main__placeholder-text">{{ placeholder }}</text>
-				</view>
+					<!-- 中间：占位符（点击聚焦） -->
+					<view class="chat-main__placeholder" @tap="isFocused = true">
+						<text class="chat-main__placeholder-text">{{ placeholder }}</text>
+					</view>
 
-				<!-- 右侧：实时语音 + 加号 -->
-				<view class="chat-main__actions">
-					<realtime-voice-input v-model="modelValue" />
-					<!-- <view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
-						<cl-icon name="add-circle-line" :size="40"></cl-icon>
-					</view> -->
-					<view class="chat-main__icon-btn" @tap.stop="handleConfirm">
-						<cl-icon name="arrow-up-circle-line" :size="48" color="default"></cl-icon>
+					<!-- 右侧：实时语音 + 加号 -->
+					<view class="chat-main__actions">
+						<realtime-voice-input v-model="modelValueModal" />
+						<!-- <view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
+							<cl-icon name="add-circle-line" :size="40"></cl-icon>
+						</view> -->
+						<view class="chat-main__icon-btn" @tap.stop="handleConfirm">
+							<cl-icon
+								name="arrow-up-circle-line"
+								:size="48"
+								color="default"
+							></cl-icon>
+						</view>
 					</view>
 				</view>
-			</view>
 
-			<!-- 情况2: 聚焦 && 无内容 - 两行，输入框在上，按钮在下 -->
-			<view v-else-if="isFocused" class="chat-main__two-rows">
-				<!-- 上面：输入框 -->
-				<view class="chat-main__input-row">
-					<cl-textarea
-						v-if="inputModeVal === 'text'"
-						v-model="modelValue"
-						:style="{ maxHeight: inputMaxHeight }"
-						clearable
-						auto-height
-						:border="false"
-						:autofocus="true"
-						:maxlength="Infinity"
-						:showWordLimit="false"
-						:disabled="disabled"
-						:placeholder="placeholder"
-						@confirm="handleConfirm"
-						@focus="handleFocus"
-						@blur="handleBlur"
-					></cl-textarea>
+				<!-- 情况2: 聚焦 && 无内容 - 两行，输入框在上，按钮在下 -->
+				<view v-else-if="isFocused" class="chat-main__two-rows">
+					<!-- 上面：输入框 -->
+					<view class="chat-main__input-row">
+						<cl-textarea
+							v-if="inputModeModal === 'text'"
+							v-model="modelValueModal"
+							:style="{ maxHeight: inputMaxHeight }"
+							clearable
+							auto-height
+							:border="false"
+							:autofocus="true"
+							:maxlength="Infinity"
+							:showWordLimit="false"
+							:disabled="disabled"
+							:placeholder="placeholder"
+							@confirm="handleConfirm"
+							@focus="handleFocus"
+							@blur="handleBlur"
+						></cl-textarea>
 
-					<view v-else class="chat-main__voice">
+						<!-- <view v-else class="chat-main__voice">
+							<view
+								class="chat-main__voice-hit"
+								@touchstart.stop="handlePressStart"
+								@touchend.stop="handlePressEnd"
+								@touchcancel.stop="handlePressEnd"
+							>
+								<cl-button type="primary" size="large" class="chat-main__voice-btn">
+									按住 说话
+								</cl-button>
+							</view>
+						</view> -->
+					</view>
+
+					<!-- 下面：按钮行 -->
+					<view class="chat-main__button-row">
+						<!-- 左侧：切换按钮 -->
+						<view class="chat-main__icon-btn" @tap.stop="handleRecording">
+							<cl-icon
+								:name="
+									inputModeModal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'
+								"
+								:size="40"
+								color="currentColor"
+							></cl-icon>
+						</view>
+
+						<view class="flex-1"></view>
+
+						<!-- 右侧：实时语音 + 加号 -->
+						<view class="chat-main__actions">
+							<realtime-voice-input v-model="modelValueModal" />
+							<view class="chat-main__icon-btn" @tap.stop="handleConfirm">
+								<cl-icon
+									:name="`arrow-up-circle-${modelValueModal ? 'fill' : 'line'}`"
+									:size="48"
+									:color="modelValueModal ? 'primary' : 'default'"
+								></cl-icon>
+							</view>
+							<!-- <view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
+								<cl-icon name="add-circle-line" :size="40"></cl-icon>
+							</view> -->
+						</view>
+					</view>
+				</view>
+			</template>
+			<template v-else-if="inputModeModal === 'voice'">
+				<view class="chat-main__single-row">
+					<!-- 左侧：切换按钮 -->
+					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
+						<cl-icon name="keyboard-box-line" :size="48" color="currentColor"></cl-icon>
+					</view>
+
+					<view class="chat-main__voice flex-1">
 						<view
 							class="chat-main__voice-hit"
 							@touchstart.stop="handlePressStart"
@@ -377,36 +434,7 @@ watch(
 						</view>
 					</view>
 				</view>
-
-				<!-- 下面：按钮行 -->
-				<view class="chat-main__button-row">
-					<!-- 左侧：切换按钮 -->
-					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
-						<cl-icon
-							:name="inputModeVal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
-							:size="40"
-							color="currentColor"
-						></cl-icon>
-					</view>
-
-					<view class="flex-1"></view>
-
-					<!-- 右侧：实时语音 + 加号 -->
-					<view class="chat-main__actions">
-						<realtime-voice-input v-model="modelValue" />
-						<view class="chat-main__icon-btn" @tap.stop="handleConfirm">
-							<cl-icon
-								:name="`arrow-up-circle-${modelValue ? 'fill' : 'line'}`"
-								:size="48"
-								:color="modelValue ? 'primary' : 'default'"
-							></cl-icon>
-						</view>
-						<!-- <view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
-							<cl-icon name="add-circle-line" :size="40"></cl-icon>
-						</view> -->
-					</view>
-				</view>
-			</view>
+			</template>
 		</view>
 
 		<view class="chat-tips">

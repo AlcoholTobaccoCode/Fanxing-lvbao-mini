@@ -133,9 +133,9 @@ const toTestPage = () => {
 					</view>
 					<!-- <cl-button @click="toTestPage">toTestPage</cl-button> -->
 					<chat-input
-						v-model="inputValue"
+						v-model:model-value="inputValue"
+						v-model:input-mode="chatInputStore.inputMode.value"
 						use-module="consult"
-						:input-mode="chatInputStore.inputMode.value"
 						:tools="chatInputStore.tools.value"
 						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
 						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
