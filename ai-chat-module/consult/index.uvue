@@ -44,6 +44,20 @@ const toggleDeepThink = (idx: number) => {
 	collapsedDeepThinkIndexes.value = arr;
 };
 
+// 计算思考用时
+const getDeepThinkTimeText = (msg: any) => {
+	if (!msg.deepThink) return "";
+
+	// 如果有结束时间，显示用时
+	if (msg.deepThinkEndTime && msg.deepThinkStartTime) {
+		const seconds = Math.round((msg.deepThinkEndTime - msg.deepThinkStartTime) / 1000);
+		return `思考（用时 ${seconds} 秒）`;
+	}
+
+	// 否则显示思考中
+	return "思考中...";
+};
+
 // 聊天列表自动滚动控制
 const scrollIntoViewId = ref("chat-bottom-a");
 const autoScroll = ref(true);
@@ -181,8 +195,8 @@ const handleSend = async (data: SendData) => {
 		// 发送新问题前，重置为自动跟随到底部
 		autoScroll.value = true;
 		scrollToBottom();
-		// 创建流式语音合成
-		const ttsController = await createConsultTtsController();
+		// TODO - 创建流式语音合成
+		// const ttsController = await createConsultTtsController();
 		try {
 			await consultSessionStore.sendTextQuestion(
 				questionText,
@@ -190,7 +204,7 @@ const handleSend = async (data: SendData) => {
 				{
 					onTextChunk: async (chunk: string) => {
 						console.info("chunk ===> ", chunk);
-						await ttsController.feedText(chunk);
+						// await ttsController.feedText(chunk);
 					}
 				},
 				{
@@ -202,9 +216,9 @@ const handleSend = async (data: SendData) => {
 							: undefined
 				}
 			);
-			await ttsController.finish();
+			// await ttsController.finish();
 		} finally {
-			ttsController.dispose();
+			// ttsController.dispose();
 		}
 	} catch (err) {
 		console.error("consult send error", err);
@@ -236,8 +250,8 @@ const handleSend = async (data: SendData) => {
 						<view
 							v-for="(item, index) in messages"
 							:key="index"
-							class="flex px-4 mb-4"
-							:class="item.role === 'user' ? 'justify-end' : 'justify-start'"
+							class="flex px-4 my-2"
+							:class="item.role === 'user' ? 'flex-row justify-end' : 'justify-start'"
 						>
 							<template v-if="item.role === 'user'">
 								<template v-if="item.fromVoice">
@@ -276,10 +290,16 @@ const handleSend = async (data: SendData) => {
 										class="deepthink-header"
 										@tap.stop="toggleDeepThink(index)"
 									>
-										<view class="deepthink-icon"></view>
-										<text class="deepthink-title">思考</text>
+										<view class="deepthink-icon">
+											<cl-text>💭</cl-text>
+										</view>
+										<text class="deepthink-title">
+											{{ getDeepThinkTimeText(item) }}
+										</text>
 										<text class="deepthink-toggle">
-											{{ isDeepThinkExpanded(index) ? "收起" : "展开" }}
+											<cl-icon
+												:name="`arrow-${isDeepThinkExpanded(index) ? 'up-s-line' : 'down-s-line'}`"
+											></cl-icon>
 										</text>
 									</view>
 									<view v-if="isDeepThinkExpanded(index)" class="deepthink-body">
@@ -287,10 +307,12 @@ const handleSend = async (data: SendData) => {
 									</view>
 								</view>
 
-								<zero-markdown-view
-									:markdown="item.content"
-									:aiMode="true"
-								></zero-markdown-view>
+								<template v-if="item.content">
+									<zero-markdown-view
+										:markdown="item.content"
+										:aiMode="true"
+									></zero-markdown-view>
+								</template>
 							</template>
 						</view>
 						<!-- 当前轮 AI 回复阶段性状态展示 -->
@@ -353,19 +375,16 @@ const handleSend = async (data: SendData) => {
 }
 
 .deepthink-icon {
-	width: 14px;
-	height: 14px;
 	border-radius: 999px;
-	background-color: #3b82f6;
 	margin-right: 6px;
 }
 
 .deepthink-title {
-	@apply text-xs text-blue-500 mr-1;
+	@apply text-md text-blue-500 mr-1;
 }
 
 .deepthink-toggle {
-	@apply text-xs text-gray-400;
+	@apply text-md text-gray-400;
 }
 
 .deepthink-body {
@@ -373,7 +392,7 @@ const handleSend = async (data: SendData) => {
 }
 
 .deepthink-text {
-	@apply text-xs text-gray-500 leading-relaxed;
+	@apply text-md text-gray-500 leading-relaxed;
 }
 
 .lawyer-rec-wrapper {
@@ -381,7 +400,7 @@ const handleSend = async (data: SendData) => {
 }
 
 .lawyer-rec-header {
-	@apply text-xs text-gray-500 mb-2;
+	@apply text-md text-gray-500 mb-2;
 }
 
 .lawyer-rec-item {
@@ -401,11 +420,11 @@ const handleSend = async (data: SendData) => {
 }
 
 .lawyer-rec-firm {
-	@apply block text-xs text-gray-500 mt-1;
+	@apply block text-md text-gray-500 mt-1;
 }
 
 .lawyer-rec-expert {
-	@apply block text-xs text-gray-500 mt-0.5;
+	@apply block text-md text-gray-500 mt-0.5;
 }
 
 .ai-status-wrapper {
@@ -428,7 +447,7 @@ const handleSend = async (data: SendData) => {
 }
 
 .ai-status-text {
-	@apply text-xs text-gray-500 ml-2;
+	@apply text-md text-gray-500 ml-2;
 }
 
 .ai-status-dots {

@@ -19,6 +19,10 @@ export interface ConsultMessage {
 	voiceLength?: number;
 	// 深度思考过程（如果开启了深度思考），仅对 AI 消息有效
 	deepThink?: string;
+	// 深度思考开始时间戳（毫秒）
+	deepThinkStartTime?: number;
+	// 深度思考结束时间戳（毫秒）
+	deepThinkEndTime?: number;
 	// 是否包含推荐律师信息
 	haveRecommendLawyer?: boolean;
 	// 推荐律师 ID 列表
@@ -222,6 +226,10 @@ export class ConsultSessionStore {
 					}
 
 					if (deepThinkChunk) {
+						// 首次接收到深度思考内容时，记录开始时间
+						if (!aiMsg.deepThinkStartTime) {
+							aiMsg.deepThinkStartTime = Date.now();
+						}
 						(aiMsg as any).deepThink = deepThinkChunk;
 						this.deepThinkContent.value = deepThinkChunk;
 					}
@@ -315,6 +323,11 @@ export class ConsultSessionStore {
 					});
 				}
 			});
+
+			// 如果存在深度思考，记录结束时间
+			if (aiMsg.deepThink && aiMsg.deepThinkStartTime && !aiMsg.deepThinkEndTime) {
+				aiMsg.deepThinkEndTime = Date.now();
+			}
 
 			// 每轮 AI 回复完成后，先保存当前会话快照
 			await this.saveCurrentSessionSnapshot();
