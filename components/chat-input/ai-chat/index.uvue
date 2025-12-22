@@ -5,7 +5,7 @@ import { isDark } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { uploadToOss } from "@/utils/aliyun/oss";
 import { recognizeOnceFromBuffer } from "@/utils/aliyun/asr";
-import type { ToolItem, Tools, ActionItem, Actions, SendData, VoiceResult } from "../types";
+import type { ToolItem, Tools, ActionItems, SendData, VoiceResult } from "../types";
 
 import SimpleCard from "@/components/card/simple-card.uvue";
 import VoiceRecord from "../voice-record.uvue";
@@ -232,7 +232,7 @@ const handleOpenToolbar = () => {
 };
 
 // 处理工具栏选择
-const handleActionSelect = (type: "camera" | "album" | "file" | "wechat") => {
+const handleActionSelect = (type: ActionItems) => {
 	console.log("工具栏选择:", type);
 	// TODO: 处理选择结果（上传、发送等）
 };
@@ -334,21 +334,14 @@ watch(
 					<!-- 右侧：实时语音 + 加号 -->
 					<view class="chat-main__actions">
 						<realtime-voice-input v-model="modelValueModal" />
-						<!-- <view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
+						<view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
 							<cl-icon name="add-circle-line" :size="40"></cl-icon>
-						</view> -->
-						<view class="chat-main__icon-btn" @tap.stop="handleConfirm">
-							<cl-icon
-								name="arrow-up-circle-line"
-								:size="48"
-								color="default"
-							></cl-icon>
 						</view>
 					</view>
 				</view>
 
 				<!-- 情况2: 聚焦 && 无内容 - 两行，输入框在上，按钮在下 -->
-				<view v-else-if="isFocused" class="chat-main__two-rows">
+				<view v-else-if="isFocused || modelValueModal" class="chat-main__two-rows">
 					<!-- 上面：输入框 -->
 					<view class="chat-main__input-row">
 						<cl-textarea
@@ -367,19 +360,6 @@ watch(
 							@focus="handleFocus"
 							@blur="handleBlur"
 						></cl-textarea>
-
-						<!-- <view v-else class="chat-main__voice">
-							<view
-								class="chat-main__voice-hit"
-								@touchstart.stop="handlePressStart"
-								@touchend.stop="handlePressEnd"
-								@touchcancel.stop="handlePressEnd"
-							>
-								<cl-button type="primary" size="large" class="chat-main__voice-btn">
-									按住 说话
-								</cl-button>
-							</view>
-						</view> -->
 					</view>
 
 					<!-- 下面：按钮行 -->
@@ -407,9 +387,6 @@ watch(
 									:color="modelValueModal ? 'primary' : 'default'"
 								></cl-icon>
 							</view>
-							<!-- <view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
-								<cl-icon name="add-circle-line" :size="40"></cl-icon>
-							</view> -->
 						</view>
 					</view>
 				</view>
@@ -431,6 +408,12 @@ watch(
 							<cl-button type="primary" size="large" class="chat-main__voice-btn">
 								按住 说话
 							</cl-button>
+						</view>
+					</view>
+
+					<view class="chat-main__actions">
+						<view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
+							<cl-icon name="add-circle-line" :size="40"></cl-icon>
 						</view>
 					</view>
 				</view>

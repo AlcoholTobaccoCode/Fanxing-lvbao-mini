@@ -11,7 +11,6 @@ import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/components/chat-input/ai-chat/index.uvue";
 import SimpleCard from "@/components/card/simple-card.uvue";
 import Consult from "@/pages/home/components/consult.vue";
-import CallControls from "@/components/call-controls/index.uvue";
 import { chatFlowStore, chatInputStore } from "@/cool/store/chatInput-store";
 
 const log = new Logger("HomePage");
@@ -102,22 +101,13 @@ const handleOpenNewChat = () => {
 
 //#region 通话
 
-// 是否展示通话演示浮层
-const showCallDemo = ref(false);
-
-// 打开通话演示
-const handleOpenCall = () => {
-	showCallDemo.value = true;
-};
-
-// 通话演示中的挂断
-const handleHangup = () => {
-	showCallDemo.value = false;
-};
-
 const toTestPage = () => {
-	showCallDemo.value = false;
-	router.to("/ai-chat-module/voice-call/index");
+	// 登录
+	uni.login({
+		success: (res) => {
+			console.info(res);
+		}
+	});
 };
 
 //#endregion
@@ -141,17 +131,11 @@ const toTestPage = () => {
 						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
 						:show-default-network="chatInputStore.showDefaultNetwork.value"
 						@send="handleSend"
-						@open-call="handleOpenCall"
 						@tool-change="handleToolsChange"
 						@input-mode-change="handleInputModeChange"
 					/>
 				</simple-card>
 			</view>
 		</template>
-
-		<!-- 通话演示浮层：简单全屏遮罩 + 通话控制组件 -->
-		<view v-if="showCallDemo" class="fixed left-0 top-0 right-0 bottom-0 z-50 bg-black">
-			<call-controls @hangup="handleHangup"></call-controls>
-		</view>
 	</app-page>
 </template>

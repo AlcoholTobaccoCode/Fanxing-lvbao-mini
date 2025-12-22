@@ -35,3 +35,5 @@ export type SendData = {
 	mode?: "text" | "voice";
 	voice?: VoiceResult;
 };
+
+export type ActionItems = "camera" | "album" | "file" | "wechat" | "phoneCall";
