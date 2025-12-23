@@ -1,0 +1,344 @@
+<!--
+@description: 更多律师列表页面
+-->
+<script lang="ts" setup>
+import { ref, computed } from "vue";
+import { RecommendLawyers, type RecommendLawyerItem, type RecommendLawyerParams } from "@/api/consult";
+import AppPage from "@/components/common/layout/app-page.uvue";
+
+// 排序选项
+const sortOptions = [
+	{ key: "rating", label: "评分优先" },
+	{ key: "case_count", label: "案例优先" },
+	{ key: "practice_years", label: "年限优先" }
+] as const;
+
+type SortKey = (typeof sortOptions)[number]["key"];
+
+const sessionId = ref("");
+const currentSort = ref<SortKey>("rating");
+const lawyers = ref<RecommendLawyerItem[]>([]);
+const loading = ref(false);
+
+// 加载律师列表
+const loadLawyers = async () => {
+	if (!sessionId.value || loading.value) return;
+
+	loading.value = true;
+	try {
+		const params: RecommendLawyerParams = {
+			session_id: sessionId.value,
+			sort_by: currentSort.value,
+			order: "desc",
+			limit: 20
+		};
+		const res = await RecommendLawyers(params);
+		if (res.code === 200 && Array.isArray(res.data)) {
+			lawyers.value = res.data;
+		}
+	} catch (err) {
+		console.error("加载律师列表失败", err);
+	} finally {
+		loading.value = false;
+	}
+};
+
+// 切换排序
+const handleSortChange = (sortKey: SortKey) => {
+	if (currentSort.value === sortKey) return;
+	currentSort.value = sortKey;
+	loadLawyers();
+};
+
+// 点击律师卡片
+const handleLawyerClick = (lawyer: RecommendLawyerItem) => {
+	uni.navigateTo({
+		url: `/pages/lawyer/detail?id=${lawyer.user_id}`
+	});
+};
+
+// 渲染星级
+const renderStars = (rating: number) => {
+	const full = Math.floor(rating);
+	const half = rating - full >= 0.5;
+	return { full, half, empty: 5 - full - (half ? 1 : 0) };
+};
+
+onLoad((options: any) => {
+	sessionId.value = options?.sessionId || "";
+	if (sessionId.value) {
+		loadLawyers();
+	}
+});
+</script>
+
+<template>
+	<app-page title="更多律师" back-top :use-history-layout="false" :chat-list-btn="false">
+		<template #content>
+			<view class="page-wrapper">
+				<!-- 排序栏 -->
+				<view class="sort-bar">
+					<view
+						v-for="opt in sortOptions"
+						:key="opt.key"
+						class="sort-item"
+						:class="{ active: currentSort === opt.key }"
+						@click="handleSortChange(opt.key)"
+					>
+						<text class="sort-text">{{ opt.label }}</text>
+					</view>
+				</view>
+
+				<!-- 律师列表 -->
+				<scroll-view scroll-y class="lawyer-scroll">
+					<view v-if="loading" class="loading-wrapper">
+						<view class="loading-spinner"></view>
+						<text class="loading-text">加载中...</text>
+					</view>
+
+					<view v-else-if="lawyers.length === 0" class="empty-wrapper">
+						<cl-icon name="user-line" size="48px" color="#d1d5db" />
+						<text class="empty-text">暂无推荐律师</text>
+					</view>
+
+					<view v-else class="lawyer-list">
+						<view
+							v-for="lawyer in lawyers"
+							:key="lawyer.user_id"
+							class="lawyer-card"
+							@click="handleLawyerClick(lawyer)"
+						>
+							<!-- 头像 -->
+							<image
+								class="avatar"
+								:src="lawyer.license_no || '/static/images/default-avatar.png'"
+								mode="aspectFill"
+							/>
+
+							<!-- 信息区 -->
+							<view class="info-section">
+								<view class="top-row">
+									<view class="name-area">
+										<text class="name">{{ lawyer.name }}</text>
+										<view class="grade-badge">
+											<text class="grade-text">{{ lawyer.grade_name }}</text>
+										</view>
+									</view>
+									<view class="online-indicator" :class="{ online: lawyer.online }">
+										<view class="online-dot"></view>
+									</view>
+								</view>
+
+								<view class="stats-row">
+									<text class="stat">执业 {{ lawyer.practice_years }} 年</text>
+									<text class="stat-divider">|</text>
+									<text class="stat">案例 {{ lawyer.case_count }} 例</text>
+								</view>
+
+								<view class="rating-row">
+									<text class="rating-label">评价：</text>
+									<view class="stars">
+										<cl-icon
+											v-for="i in renderStars(lawyer.rating).full"
+											:key="'f' + i"
+											name="star-fill"
+											size="14px"
+											color="#fbbf24"
+										/>
+										<cl-icon
+											v-if="renderStars(lawyer.rating).half"
+											name="star-half-fill"
+											size="14px"
+											color="#fbbf24"
+										/>
+										<cl-icon
+											v-for="i in renderStars(lawyer.rating).empty"
+											:key="'e' + i"
+											name="star-line"
+											size="14px"
+											color="#d1d5db"
+										/>
+									</view>
+									<text class="rating-value">{{ lawyer.rating.toFixed(1) }}</text>
+								</view>
+
+								<view class="expertise-row">
+									<text class="expertise-label">擅长：</text>
+									<text class="expertise-value">{{ lawyer.expertise }}</text>
+								</view>
+							</view>
+						</view>
+					</view>
+				</scroll-view>
+			</view>
+		</template>
+	</app-page>
+</template>
+
+<style lang="scss" scoped>
+.page-wrapper {
+	@apply w-full h-full flex flex-col;
+	background-color: #f9fafb;
+}
+
+.sort-bar {
+	@apply flex flex-row items-center justify-center py-3 bg-white;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.sort-item {
+	@apply px-4 py-2 mx-2 rounded-full;
+	transition: all 0.2s;
+}
+
+.sort-item.active {
+	background-color: #eff6ff;
+}
+
+.sort-text {
+	@apply text-sm;
+	color: #6b7280;
+}
+
+.sort-item.active .sort-text {
+	color: #3b82f6;
+	font-weight: 500;
+}
+
+.lawyer-scroll {
+	@apply flex-1;
+}
+
+.loading-wrapper,
+.empty-wrapper {
+	@apply flex flex-col items-center justify-center py-20;
+}
+
+.loading-spinner {
+	width: 32px;
+	height: 32px;
+	border: 3px solid #e5e7eb;
+	border-top-color: #3b82f6;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+.loading-text,
+.empty-text {
+	@apply text-sm mt-3;
+	color: #9ca3af;
+}
+
+.lawyer-list {
+	@apply p-4;
+}
+
+.lawyer-card {
+	@apply flex flex-row p-4 mb-3 bg-white rounded-2xl;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.avatar {
+	width: 72px;
+	height: 72px;
+	border-radius: 16px;
+	background-color: #f3f4f6;
+	flex-shrink: 0;
+	margin-right: 14px;
+}
+
+.info-section {
+	@apply flex flex-col flex-1;
+	min-width: 0;
+}
+
+.top-row {
+	@apply flex flex-row items-center justify-between mb-2;
+}
+
+.name-area {
+	@apply flex flex-row items-center;
+}
+
+.name {
+	@apply text-base font-semibold mr-2;
+	color: #1f2937;
+}
+
+.grade-badge {
+	@apply px-2 py-0.5 rounded;
+	background-color: #eff6ff;
+}
+
+.grade-text {
+	@apply text-xs;
+	color: #3b82f6;
+}
+
+.online-indicator {
+	@apply flex items-center;
+}
+
+.online-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: #d1d5db;
+}
+
+.online-indicator.online .online-dot {
+	background-color: #22c55e;
+}
+
+.stats-row {
+	@apply flex flex-row items-center mb-1.5;
+}
+
+.stat {
+	@apply text-xs;
+	color: #6b7280;
+}
+
+.stat-divider {
+	@apply mx-2 text-xs;
+	color: #e5e7eb;
+}
+
+.rating-row {
+	@apply flex flex-row items-center mb-1.5;
+}
+
+.rating-label {
+	@apply text-xs mr-1;
+	color: #6b7280;
+}
+
+.stars {
+	@apply flex flex-row items-center;
+}
+
+.rating-value {
+	@apply text-xs ml-1 font-medium;
+	color: #f59e0b;
+}
+
+.expertise-row {
+	@apply flex flex-row items-center;
+}
+
+.expertise-label {
+	@apply text-xs;
+	color: #6b7280;
+}
+
+.expertise-value {
+	@apply text-xs;
+	color: #3b82f6;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+</style>

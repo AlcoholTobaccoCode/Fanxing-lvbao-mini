@@ -114,6 +114,13 @@
 						"navigationBarTitleText": "实时通话",
 						"navigationStyle": "custom"
 					}
+				},
+				{
+					"path": "consult/lawyer-list",
+					"style": {
+						"navigationBarTitleText": "更多律师",
+						"navigationStyle": "custom"
+					}
 				}
 			]
 		},

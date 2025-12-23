@@ -1,0 +1,203 @@
+<!--
+@description: 推荐律师卡片组件
+-->
+<script lang="ts" setup>
+import type { RecommendLawyerItem } from "@/api/consult";
+import { computed } from "vue";
+
+const props = defineProps<{
+	lawyer: RecommendLawyerItem;
+}>();
+
+const emit = defineEmits<{
+	(e: "click", lawyer: RecommendLawyerItem): void;
+}>();
+
+// 获取头像显示文字（姓名第一个字）
+const avatarText = computed(() => {
+	const name = props.lawyer.name || "";
+	return name.slice(0, 1) || "律";
+});
+
+// 生成随机头像背景色（基于名字生成固定颜色）
+const avatarBgColor = computed(() => {
+	const colors = [
+		"#3b82f6", // blue
+		"#8b5cf6", // violet
+		"#ec4899", // pink
+		"#f59e0b", // amber
+		"#10b981", // emerald
+		"#06b6d4", // cyan
+		"#6366f1" // indigo
+	];
+	const name = props.lawyer.name || "";
+	let hash = 0;
+	for (let i = 0; i < name.length; i++) {
+		hash = name.charCodeAt(i) + ((hash << 5) - hash);
+	}
+	return colors[Math.abs(hash) % colors.length];
+});
+
+const handleClick = () => {
+	emit("click", props.lawyer);
+};
+</script>
+
+<template>
+	<view class="lawyer-card" @click="handleClick">
+		<!-- 头像区域 -->
+		<view class="avatar-section">
+			<view class="avatar" :style="{ backgroundColor: avatarBgColor }">
+				<text class="avatar-text">{{ avatarText }}</text>
+			</view>
+			<view v-if="lawyer.online" class="online-badge"></view>
+		</view>
+
+		<!-- 信息区域 -->
+		<view class="info-section">
+			<!-- 姓名 + 职级 -->
+			<view class="name-row">
+				<text class="name">{{ lawyer.name }}</text>
+				<view class="grade-badge">
+					<text class="grade-text">{{ lawyer.grade_name }}</text>
+				</view>
+			</view>
+
+			<!-- 数据统计行 -->
+			<view class="stats-row">
+				<view class="stat-item">
+					<text class="stat-value">{{ lawyer.practice_years }}</text>
+					<text class="stat-label">年经验</text>
+				</view>
+				<view class="stat-divider"></view>
+				<view class="stat-item">
+					<text class="stat-value">{{ lawyer.case_count }}</text>
+					<text class="stat-label">案例</text>
+				</view>
+				<view class="stat-divider"></view>
+				<view class="stat-item">
+					<text class="stat-value">{{
+						lawyer.rating?.toFixed?.(1) || lawyer.rating
+					}}</text>
+					<text class="stat-label">评分</text>
+				</view>
+			</view>
+
+			<!-- 擅长领域 -->
+			<view class="expertise-row">
+				<view class="online-dot" v-if="lawyer.online"></view>
+				<cl-icon name="briefcase-line" size="12px" color="#6b7280" />
+				<text class="expertise-text">{{ lawyer.expertise }}</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.lawyer-card {
+	@apply h-full flex flex-row p-3 bg-white rounded-xl;
+	width: 220px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	border: 1px solid #f3f4f6;
+}
+
+.avatar-section {
+	@apply relative mr-3;
+	flex-shrink: 0;
+}
+
+.avatar {
+	width: 56px;
+	height: 56px;
+	border-radius: 12px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.avatar-text {
+	color: #fff;
+	font-size: 24px;
+	font-weight: 600;
+}
+
+.online-badge {
+	@apply absolute;
+	bottom: 2px;
+	right: 2px;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background-color: #22c55e;
+	border: 2px solid #fff;
+}
+
+.info-section {
+	@apply flex flex-col flex-1;
+	min-width: 0;
+}
+
+.name-row {
+	@apply flex flex-row items-center mb-1;
+}
+
+.name {
+	@apply text-base font-semibold mr-2;
+	color: #1f2937;
+}
+
+.grade-badge {
+	@apply px-1.5 py-0.5 rounded;
+	background-color: #eff6ff;
+}
+
+.grade-text {
+	@apply text-xs;
+	color: #3b82f6;
+}
+
+.stats-row {
+	@apply flex flex-row items-center mb-2;
+}
+
+.stat-item {
+	@apply flex flex-row items-baseline;
+}
+
+.stat-value {
+	@apply text-sm font-semibold mr-0.5;
+	color: #1f2937;
+}
+
+.stat-label {
+	@apply text-xs;
+	color: #9ca3af;
+}
+
+.stat-divider {
+	width: 1px;
+	height: 12px;
+	background-color: #e5e7eb;
+	margin: 0 8px;
+}
+
+.expertise-row {
+	@apply flex flex-row items-center;
+}
+
+.online-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background-color: #22c55e;
+	margin-right: 6px;
+}
+
+.expertise-text {
+	@apply text-xs ml-1;
+	color: #6b7280;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+</style>

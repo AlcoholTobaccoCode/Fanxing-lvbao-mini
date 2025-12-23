@@ -1,0 +1,139 @@
+<!--
+@description: 推荐律师列表组件（聊天页内嵌）
+-->
+<script lang="ts" setup>
+import type { RecommendLawyerItem } from "@/api/consult";
+import LawyerCard from "./lawyer-card.uvue";
+import { computed } from "vue";
+
+const props = defineProps<{
+	lawyers: RecommendLawyerItem[];
+	sessionId: string;
+	loading?: boolean;
+}>();
+
+const emit = defineEmits<{
+	(e: "lawyer-click", lawyer: RecommendLawyerItem): void;
+	(e: "more-click"): void;
+}>();
+
+const handleLawyerClick = (lawyer: RecommendLawyerItem) => {
+	emit("lawyer-click", lawyer);
+};
+
+const handleMoreClick = () => {
+	emit("more-click");
+};
+
+// 最多显示 5 个律师
+const displayLawyers = computed(() => {
+	return props.lawyers.slice(0, 5);
+});
+
+const hasMore = computed(() => {
+	return props.lawyers.length > 5;
+});
+</script>
+
+<template>
+	<view class="lawyer-recommend-wrapper">
+		<!-- 标题栏 -->
+		<view class="header">
+			<view class="title-section">
+				<cl-icon name="user-star-line" size="16px" color="#3b82f6" />
+				<text class="title">为您推荐专业律师</text>
+			</view>
+			<view v-if="hasMore && !loading" class="more-btn" @click="handleMoreClick">
+				<text class="more-text">更多</text>
+				<cl-icon name="arrow-right-s-line" size="14px" color="#3b82f6" />
+			</view>
+		</view>
+
+		<!-- Loading 状态 -->
+		<view v-if="loading" class="loading-container">
+			<view class="loading-spinner rounded-full mr-3"></view>
+			<text class="loading-text">正在为您匹配专业律师...</text>
+		</view>
+
+		<!-- 律师卡片列表 - 横向滚动 -->
+		<view v-else class="lawyer-list">
+			<scroll-view scroll-x :enable-flex="true" class="lawyer-scroll" :show-scrollbar="false">
+				<view v-for="lawyer in displayLawyers" :key="lawyer.user_id" class="lawyer-item">
+					<lawyer-card :lawyer="lawyer" @click="handleLawyerClick" />
+				</view>
+			</scroll-view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.lawyer-recommend-wrapper {
+	@apply mt-4 py-3;
+	background: linear-gradient(135deg, #f0f9ff 0%, #faf5ff 100%);
+	border-radius: 16px;
+	border: 1px solid #e0f2fe;
+	overflow: hidden;
+}
+
+.header {
+	@apply flex flex-row items-center justify-between px-3 mb-3;
+}
+
+.title-section {
+	@apply flex flex-row items-center;
+}
+
+.title {
+	@apply text-sm font-medium ml-1.5;
+	color: #1f2937;
+}
+
+.more-btn {
+	@apply flex flex-row items-center;
+}
+
+.more-text {
+	@apply text-sm;
+	color: #3b82f6;
+}
+
+.loading-container {
+	@apply flex flex-row items-center justify-center py-6 px-4;
+}
+
+.loading-spinner {
+	width: 20px;
+	height: 20px;
+	border: 2px solid #e5e7eb;
+	border-top-color: #3b82f6;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.loading-text {
+	@apply text-sm;
+	color: #6b7280;
+}
+
+.lawyer-list {
+	@apply w-full;
+}
+
+.lawyer-scroll {
+	@apply inline-flex px-3 flex-row whitespace-nowrap box-border;
+	height: 86px;
+}
+
+.lawyer-item {
+	@apply h-fit inline-block flex-shrink-0 mr-3;
+}
+
+.lawyer-item:last-child {
+	@apply mr-0;
+}
+</style>

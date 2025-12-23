@@ -4,6 +4,7 @@ import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
 import type { SendData, Tools } from "@/cool/types/chat-input";
+import type { RecommendLawyerItem } from "@/api/consult";
 import { createConsultTtsController } from "@/utils/aliyun/tts-stream";
 import { showLoginModal } from "@/cool/store/login-modal";
 import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store";
@@ -12,14 +13,24 @@ import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue";
 import AudioBubble from "@/ai-chat-module/components/chat-input/audio-bubble.uvue";
 import ZeroMarkdownView from "../components/zero-markdown-view/components/zero-markdown-view/zero-markdown-view.vue";
+import LawyerList from "../components/lawyer-recommend/lawyer-list.uvue";
 
 const log = new Logger("ConsultChatPage");
 const ui = useUi();
 const { user } = useStore();
 
+// 对话输入内容
+const inputValue = ref("");
+
+// 获取当前 sessionId
+const sessionId = computed(() => consultSessionStore.sessionId.value || "");
+
+// 消息列表
 const messages = consultSessionStore.messages;
 // 是否正在生成 AI 回复
 const isGenerating = computed(() => consultSessionStore.loading.value);
+// 推荐律师加载中
+const isRecommendLoading = computed(() => consultSessionStore.recommendLoading.value);
 
 // 当前流式阶段状态文案（例如：正在思考中 / 正在为您检索相关司法判例...）
 const streamStatus = computed(() => consultSessionStore.streamStatus.value);
@@ -27,6 +38,8 @@ const streamStatus = computed(() => consultSessionStore.streamStatus.value);
 // 深度思考展开状态：按消息索引记录“收起”的条目（默认全部展开）
 const collapsedDeepThinkIndexes = ref<number[]>([]);
 
+//#region 深度思考
+// 指定 ai 回复的深度思考是否展开
 const isDeepThinkExpanded = (idx: number) => {
 	// 不在收起列表中即视为展开
 	return !collapsedDeepThinkIndexes.value.includes(idx);
@@ -58,8 +71,9 @@ const getDeepThinkTimeText = (msg: any) => {
 	// 否则显示思考中
 	return "思考中...";
 };
+//#endregion
 
-// 聊天列表自动滚动控制
+//#region 聊天列表自动滚动控制
 const scrollIntoViewId = ref("chat-bottom-a");
 const autoScroll = ref(true);
 const lastScrollTop = ref(0);
@@ -95,7 +109,7 @@ watch(
 // 用户滚动聊天列表：一旦有向上滚动，就关闭自动滚动并取消锚点
 const handleScroll = (e: any) => {
 	const top = e?.detail?.scrollTop ?? 0;
-	console.info("用户滑动 top ===> ", top);
+	log.debug("用户滑动 top ===> ", top);
 	if (top < lastScrollTop.value) {
 		autoScroll.value = false;
 		// 清空 scroll-into-view，避免继续被强制拉到底部
@@ -112,6 +126,29 @@ const handleScrollToLower = () => {
 		scrollToBottom();
 	}
 };
+
+//#endregion
+
+//#region 推荐律师相关
+
+// 点击律师卡片 - 跳转到律师详情页
+const handleLawyerClick = (lawyer: RecommendLawyerItem) => {
+	log.debug("点击律师卡片", lawyer);
+	uni.navigateTo({
+		url: `/pages/lawyer/detail?id=${lawyer.user_id}`
+	});
+};
+
+// 点击更多 - 跳转到更多律师列表页
+const handleMoreLawyers = () => {
+	log.debug("点击更多律师");
+	uni.navigateTo({
+		url: `/ai-chat-module/consult/lawyer-list?sessionId=${sessionId.value}`
+	});
+};
+
+//#endregion
+
 const hasValidLaunch = computed(() => {
 	const launch = chatFlowStore.launchPayload.value;
 	const cfg = chatFlowStore.currentConfig.value;
@@ -122,7 +159,7 @@ onLoad(() => {
 	const launch = chatFlowStore.launchPayload.value;
 	const cfg = chatFlowStore.currentConfig.value;
 
-	log.info("[consult/chat] onLoad launch =>", launch, "cfg =>", cfg);
+	log.debug("[consult/chat] onLoad launch =>", launch, "cfg =>", cfg);
 
 	if (!launch || !cfg || launch.moduleKey !== "consult") {
 		log.warn("[consult/chat] 无有效启动参数，停留在空状态");
@@ -164,7 +201,7 @@ onUnload(() => {
 // 详情页内发送咨询问题（集成 /law/consult 流式接口）
 const handleSend = async (data: SendData) => {
 	log.group("consult detail send");
-	log.info("payload ==> ", data);
+	log.debug("payload ==> ", data);
 	log.groupEnd();
 
 	// 检查登录状态
@@ -199,12 +236,14 @@ const handleSend = async (data: SendData) => {
 		// TODO - 创建流式语音合成
 		// const ttsController = await createConsultTtsController();
 		try {
+			inputValue.value = "";
+
 			await consultSessionStore.sendTextQuestion(
 				questionText,
 				chatInputStore.tools.value,
 				{
 					onTextChunk: async (chunk: string) => {
-						console.info("chunk ===> ", chunk);
+						console.debug("chunk ===> ", chunk);
 						// await ttsController.feedText(chunk);
 					}
 				},
@@ -314,6 +353,16 @@ const handleSend = async (data: SendData) => {
 										:aiMode="true"
 									></zero-markdown-view>
 								</template>
+
+								<!-- 推荐律师展示 -->
+								<lawyer-list
+									v-if="item.haveRecommendLawyer"
+									:lawyers="item.recommendedLawyers || []"
+									:session-id="sessionId"
+									:loading="isRecommendLoading && !item.recommendedLawyers?.length"
+									@lawyer-click="handleLawyerClick"
+									@more-click="handleMoreLawyers"
+								/>
 							</template>
 						</view>
 						<!-- 当前轮 AI 回复阶段性状态展示 -->
@@ -335,7 +384,8 @@ const handleSend = async (data: SendData) => {
 				</view>
 
 				<chat-input
-					:input-mode="chatInputStore.inputMode.value"
+					v-model:model-value="inputValue"
+					v-model:input-mode="chatInputStore.inputMode.value"
 					:tools="chatInputStore.tools.value"
 					:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
 					:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"

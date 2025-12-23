@@ -2,13 +2,27 @@ import { generateUUID, generateRandomString } from "./util";
 
 export const MODULE_SESSION_NAME = {
 	// 咨询
-	consult: "ai-session_consult_",
-	// 合同
-	contract: "ai-session_contract_",
-	// 文书
-	doc: "ai-session_doc_",
+	consult: "ai_consult_",
 	// 检索
-	retrieve: "ai-session_retrieve_",
+	retrieve: "ai_retrieve_",
+	// 法条检索
+	retrieveLaw: "ai_retrieve_law_",
+	// 案例检索
+	retrieveCase: "ai_retrieve_case_",
+	// TODO
+	// 文书
+	doc: "ai_doc_",
+	// 起诉状
+	lawsuit: "ai_indictment_",
+	// 答辩状
+	defense: "ai_defense_",
+	// TODO
+	// 合同
+	contract: "ai_contract_",
+	// 合同审查
+	contractReview: "ai_contract_review_",
+	// 合同生成
+	contractGenerate: "ai_contract_generate_",
 	// 律师对话
 	lawyerChat: ""
 };

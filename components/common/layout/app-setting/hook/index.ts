@@ -33,7 +33,7 @@ export const getBizMetaBySessionId = (sessionId: string): HistoryBizMeta => {
 		};
 	}
 
-	if (sessionId.startsWith("ai-session_retrieve")) {
+	if (sessionId.startsWith("ai_retrieve_")) {
 		return {
 			bizType: "retrieve",
 			tagLabel: "检索",
@@ -41,7 +41,7 @@ export const getBizMetaBySessionId = (sessionId: string): HistoryBizMeta => {
 		};
 	}
 
-	if (sessionId.startsWith("ai-session_doc")) {
+	if (sessionId.startsWith("ai_doc_")) {
 		return {
 			bizType: "document",
 			tagLabel: "文书",
@@ -49,7 +49,7 @@ export const getBizMetaBySessionId = (sessionId: string): HistoryBizMeta => {
 		};
 	}
 
-	if (sessionId.startsWith("ai-session_contract")) {
+	if (sessionId.startsWith("ai_contract_")) {
 		return {
 			bizType: "contract_generate",
 			tagLabel: "生成",
@@ -57,7 +57,7 @@ export const getBizMetaBySessionId = (sessionId: string): HistoryBizMeta => {
 		};
 	}
 
-	if (sessionId.startsWith("ai-session_consult")) {
+	if (sessionId.startsWith("ai_consult_")) {
 		return {
 			bizType: "consult",
 			tagLabel: "咨询",

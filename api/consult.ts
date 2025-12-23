@@ -19,6 +19,7 @@ export interface RecommendLawyerItem {
 	practice_years: number;
 	case_count: number;
 	rating: number;
+	online?: boolean;
 }
 
 export interface RecommendLawyerParams {
@@ -30,8 +31,7 @@ export interface RecommendLawyerParams {
 
 export type RecommendLawyerResponse = RecommendLawyerItem[];
 
-// POST /lawyer/recommend
-export const recommendLawyers = (
+export const RecommendLawyers = (
 	data: RecommendLawyerParams
 ): Promise<ApiResponse<RecommendLawyerResponse>> => {
 	return request({

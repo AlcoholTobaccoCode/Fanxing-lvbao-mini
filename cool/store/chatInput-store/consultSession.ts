@@ -1,12 +1,15 @@
 import { ref } from "vue";
 import { config } from "@/config";
 import { useStore } from "@/cool";
-import { recommendLawyers, type RecommendLawyerItem } from "@/api/consult";
+import { RecommendLawyers, type RecommendLawyerItem } from "@/api/consult";
 import { createModelSessionId } from "@/utils/assetsConfig";
 import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID } from "@/utils/util";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
+
+// MOCK
+import { LawyerList } from "./mockData";
 
 export interface ConsultMessageReferences {
 	searchList?: Array<{
@@ -58,9 +61,11 @@ export class ConsultSessionStore {
 	messages = ref<ConsultMessage[]>([]);
 	sessionId = ref<string | null>(null);
 	loading = ref(false);
-	// 当前这轮流式回答的阶段状态文案，例如“正在思考中…”、“正在为您检索相关司法判例…”。
+	// 推荐律师加载中状态
+	recommendLoading = ref(false);
+	// 当前这轮流式回答的阶段状态文案，例如"正在思考中…"、"正在为您检索相关司法判例…"。
 	streamStatus = ref<string | null>(null);
-	// 深度思考过程文本（如果开启深度思考）。暂时只存不展示，后续用于“思考过程”折叠面板。
+	// 深度思考过程文本（如果开启深度思考）。暂时只存不展示，后续用于"思考过程"折叠面板。
 	deepThinkContent = ref<string>("");
 
 	initFromLaunch(launch: ChatLaunchPayload) {
@@ -161,7 +166,7 @@ export class ConsultSessionStore {
 			voiceLength: options?.voiceLength
 		});
 
-		// 1. 用户点击问题进入聊天页时保存一次（只有用户消息）
+		// 1. 用户点击问题进入聊天页时保存一次
 		await this.saveCurrentSessionSnapshot();
 
 		const onlineSearch = tools?.some((t) => t.text === "联网搜索" && t.enable);
@@ -219,7 +224,7 @@ export class ConsultSessionStore {
 					};
 					const contents = evt.contents || [];
 
-					// 原始正文片段（可能包含推荐律师标记）
+					// 原始正文片段
 					const textChunkRaw = contents
 						.filter((c) => c.contentType === "text" && typeof c.content === "string")
 						.map((c) => c.content as string)
@@ -245,11 +250,7 @@ export class ConsultSessionStore {
 						textChunkRaw.includes("正在为您推荐律师...");
 
 					// 清理推荐律师提示文案：
-					// 1. 先去掉整段 "正在为您推荐律师...<推荐律师>"
-					// 2. 再兜底去掉单独的 "<推荐律师>"
-					let textChunk = textChunkRaw
-						.replace(/正在为您推荐律师.*?<推荐律师>/g, "")
-						.replace(/<推荐律师>/g, "");
+					let textChunk = textChunkRaw.replace(/<推荐律师>/g, "");
 
 					if (textChunk) {
 						aiMsg.content = textChunk;
@@ -382,17 +383,17 @@ export class ConsultSessionStore {
 				aiMsg.deepThinkEndTime = Date.now();
 			}
 
-			// 2. AI 回复完成后保存一次（包含用户消息 + AI 回复）
+			// 2. AI 回复完成后保存一次
 			await this.saveCurrentSessionSnapshot();
-			// 再根据 AI 文本中的推荐标记触发推荐律师逻辑（内部会在挂载结果后再保存一次）
-			await this.fetchRecommendLawyersIfNeeded(aiMsg);
+			// 再根据 AI 文本中的推荐标记触发推荐律师逻辑
+			await this.fetchRecommendLawyers(aiMsg);
 		} finally {
 			this.loading.value = false;
 		}
 	}
 
 	// 根据当前 AI 消息内容决定是否请求推荐律师，并将结果挂载回消息对象
-	private async fetchRecommendLawyersIfNeeded(aiMsg: ConsultMessage) {
+	private async fetchRecommendLawyers(aiMsg: ConsultMessage) {
 		try {
 			const { user } = useStore();
 			const userId = (user as any)?.info?.value?.id as number | undefined;
@@ -400,14 +401,19 @@ export class ConsultSessionStore {
 				return;
 			}
 
-			const res = await recommendLawyers({
+			// 开始加载推荐律师
+			this.recommendLoading.value = true;
+
+			const res = await RecommendLawyers({
 				session_id: this.sessionId.value,
 				// 默认按评分倒序
 				sort_by: "rating",
 				order: "desc",
 				limit: 5
 			});
-			const list = (res as any)?.data as RecommendLawyerItem[] | undefined;
+			const resList = (res as any)?.data as RecommendLawyerItem[] | undefined;
+			const list = resList ? [...resList] : [...LawyerList];
+
 			if (Array.isArray(list) && list.length) {
 				aiMsg.haveRecommendLawyer = true;
 				aiMsg.recommendedLawyerIds = list.map((i) => i.user_id);
@@ -417,6 +423,8 @@ export class ConsultSessionStore {
 			}
 		} catch (err) {
 			console.error("[ConsultSession] 推荐律师失败", err);
+		} finally {
+			this.recommendLoading.value = false;
 		}
 	}
 
