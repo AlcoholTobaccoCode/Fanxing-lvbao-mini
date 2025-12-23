@@ -181,7 +181,7 @@ const iconVisible = ref(false);
 			</view>
 
 			<!-- 测试阶段使用 - icon  -->
-			<cl-float-view v-if="openIconPicker" :bottom="300">
+			<cl-float-view v-if="openIconPicker && !isHistoryOpen" :bottom="300">
 				<view
 					class="w-[40px] h-[40px] bg-primary-500 flex flex-row items-center justify-center rounded"
 					@click="iconVisible = true"
@@ -189,6 +189,8 @@ const iconVisible = ref(false);
 					<cl-icon name="heart-fill" color="white"></cl-icon>
 				</view>
 			</cl-float-view>
+
+			<!-- 测试阶段使用 - icon 选择器 -->
 			<cl-popup v-model="iconVisible" title="RemixIcon">
 				<view class="h-[500px]">
 					<remix-icon v-model:icon-visible="iconVisible"></remix-icon>
@@ -224,6 +226,7 @@ const iconVisible = ref(false);
 			</view>
 		</DragButton>
 
+		<!-- 登录模态窗 -->
 		<cl-popup
 			v-model="loginModalVisible"
 			title=""

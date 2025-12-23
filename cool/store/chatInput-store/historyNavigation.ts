@@ -59,8 +59,6 @@ export async function navigateToHistorySession(item: HistorySessionItem): Promis
 			session_id: item.session_id
 		});
 
-		console.info("res =====> ", JSON.stringify(res));
-
 		const sessionData = (res as any)?.message ?? {};
 
 		// 根据模块类型分发处理
