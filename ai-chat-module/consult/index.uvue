@@ -15,6 +15,7 @@ import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue
 import AudioBubble from "@/ai-chat-module/components/chat-input/audio-bubble.uvue";
 import ZeroMarkdownView from "../components/zero-markdown-view/components/zero-markdown-view/zero-markdown-view.vue";
 import LawyerList from "../components/lawyer-recommend/lawyer-list.uvue";
+import ReferencesPanel from "../components/references/index.uvue";
 
 const log = new Logger("ConsultChatPage");
 const ui = useUi();
@@ -397,6 +398,12 @@ const handleSend = async (data: SendData) => {
 									@lawyer-click="handleLawyerClick"
 									@more-click="handleMoreLawyers"
 								></lawyer-list>
+
+								<!-- 参考引用展示（法规、案例、数据来源） -->
+								<references-panel
+									v-if="item.references"
+									:references="item.references"
+								/>
 							</template>
 						</view>
 						<!-- 当前轮 AI 回复阶段性状态展示 -->

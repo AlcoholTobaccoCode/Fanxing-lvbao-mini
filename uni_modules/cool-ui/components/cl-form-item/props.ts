@@ -18,5 +18,5 @@ export type ClFormItemProps = {
 	labelWidth?: string | any;
 	showAsterisk?: boolean | any;
 	showMessage?: boolean | any;
-	required?: boolean;
+	required?: boolean | any;
 };

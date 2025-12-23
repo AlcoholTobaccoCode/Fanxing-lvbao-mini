@@ -1,0 +1,172 @@
+<!--
+@description: 数据来源（联网搜索）展示组件
+-->
+<script lang="ts" setup>
+import { ref } from "vue";
+
+export interface SearchItem {
+	title: string;
+	link: string;
+	date?: string;
+}
+
+const props = defineProps<{
+	searchList: SearchItem[];
+}>();
+
+// 模块展开状态
+const isExpanded = ref(false);
+
+// 是否展开模块
+const toggleExpand = () => {
+	isExpanded.value = !isExpanded.value;
+};
+
+// 复制链接到剪贴板
+const copyLink = (item: SearchItem) => {
+	if (!item.link) {
+		uni.showToast({
+			title: "链接不可用",
+			icon: "none"
+		});
+		return;
+	}
+
+	uni.setClipboardData({
+		data: item.link,
+		success: () => {
+			uni.showToast({
+				title: "链接已复制",
+				icon: "success"
+			});
+		},
+		fail: () => {
+			uni.showToast({
+				title: "复制失败",
+				icon: "none"
+			});
+		}
+	});
+};
+</script>
+
+<template>
+	<view class="search-reference">
+		<!-- 标题栏 -->
+		<view class="header" @click="toggleExpand">
+			<view class="header-left">
+				<view class="icon-wrapper">
+					<cl-icon name="fxzh-network-layout" size="18px" color="#3b82f6" />
+				</view>
+				<text class="title">数据来源</text>
+			</view>
+			<view class="header-right">
+				<cl-icon
+					:name="isExpanded ? 'arrow-down-s-line' : 'arrow-right-s-line'"
+					size="20px"
+					color="#9ca3af"
+				/>
+			</view>
+		</view>
+
+		<!-- 内容区域 -->
+		<view v-if="isExpanded" class="content">
+			<!-- 搜索结果列表 -->
+			<view v-if="searchList && searchList.length" class="search-list">
+				<view
+					v-for="(item, index) in searchList"
+					:key="index"
+					class="search-item"
+					@click="copyLink(item)"
+				>
+					<text class="search-index">{{ index + 1 }}</text>
+					<view class="search-content">
+						<text class="search-title">{{ item.title }}</text>
+						<text v-if="item.date" class="search-date">[{{ item.date }}]</text>
+					</view>
+				</view>
+			</view>
+
+			<!-- 空状态 -->
+			<view v-else class="empty-wrapper">
+				<text class="empty-text">暂无数据来源</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.search-reference {
+	@apply mt-3 bg-white rounded-xl overflow-hidden;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	border: 1px solid #f3f4f6;
+}
+
+.header {
+	@apply flex flex-row items-center justify-between px-4 py-3;
+	background-color: #fafbfc;
+}
+
+.header-left {
+	@apply flex flex-row items-center;
+}
+
+.icon-wrapper {
+	@apply mr-2;
+}
+
+.title {
+	@apply text-base font-semibold;
+	color: #3b82f6;
+}
+
+.header-right {
+	@apply flex items-center;
+}
+
+.content {
+	@apply px-4 pb-4;
+}
+
+.search-list {
+	@apply mt-2;
+}
+
+.search-item {
+	@apply flex flex-row items-start py-3;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.search-item:last-child {
+	border-bottom: none;
+}
+
+.search-index {
+	@apply text-sm mr-3;
+	color: #6b7280;
+}
+
+.search-content {
+	@apply flex-1 flex flex-row items-center flex-wrap;
+}
+
+.search-title {
+	@apply text-sm;
+	color: #3b82f6;
+	text-decoration: underline;
+}
+
+.search-date {
+	@apply text-xs ml-2;
+	color: #9ca3af;
+}
+
+.empty-wrapper {
+	@apply py-4 flex items-center justify-center;
+}
+
+.empty-text {
+	@apply text-sm;
+	color: #9ca3af;
+}
+</style>

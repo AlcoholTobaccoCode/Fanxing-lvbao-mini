@@ -1,4 +1,10 @@
 export const fxzxiconfont = {
+	"fxzh-falvfagui": "e60b",
+	"fxzh-suyaniconchanpinleibufenzuodaohangbufen85-copy": "e740",
+	"fxzh-wangluo": "e617",
+	"fxzh-falvfagui1": "e630",
+	"fxzh-network-layout": "e9fc",
+	"fxzh-a-fagui1": "e88c",
 	"fxzh-saying": "e62f",
 	"fxzh-yuyin": "e6f6",
 	"fxzh-yuyin1": "e66c",

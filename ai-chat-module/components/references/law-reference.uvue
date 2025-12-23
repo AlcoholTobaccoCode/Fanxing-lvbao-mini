@@ -1,0 +1,457 @@
+<!--
+@description: 参考法规展示组件
+-->
+<script lang="ts" setup>
+import { ref, computed } from "vue";
+import type { LawDetailResponse, LawHistoryItem } from "@/api/references";
+import dayjs from "dayjs";
+
+const props = defineProps<{
+	laws: LawDetailResponse[];
+	loading?: boolean;
+}>();
+
+// 模块展开状态
+const isExpanded = ref(false);
+
+// 每条法规的展开状态
+const expandedLawIndexes = ref<number[]>([]);
+
+// 每条法规当前选中的 tab
+const activeTabs = ref<Record<number, string>>({});
+
+// 每条法规的内容展开状态
+const expandedContentIndexes = ref<number[]>([]);
+
+// 是否展开模块
+const toggleExpand = () => {
+	isExpanded.value = !isExpanded.value;
+};
+
+// 是否展开某条法规
+const isLawExpanded = (index: number) => {
+	return expandedLawIndexes.value.includes(index);
+};
+
+// 切换某条法规的展开状态
+const toggleLawExpand = (index: number) => {
+	const arr = expandedLawIndexes.value.slice();
+	const i = arr.indexOf(index);
+	if (i >= 0) {
+		arr.splice(i, 1);
+	} else {
+		arr.push(index);
+		// 默认选中"法条内容"tab
+		if (!activeTabs.value[index]) {
+			activeTabs.value[index] = "content";
+		}
+	}
+	expandedLawIndexes.value = arr;
+};
+
+// 获取当前 tab
+const getActiveTab = (index: number) => {
+	return activeTabs.value[index] || "content";
+};
+
+// 切换 tab
+const setActiveTab = (index: number, tab: string) => {
+	activeTabs.value[index] = tab;
+};
+
+// 是否展开内容
+const isContentExpanded = (index: number) => {
+	return expandedContentIndexes.value.includes(index);
+};
+
+// 切换内容展开
+const toggleContentExpand = (index: number) => {
+	const arr = expandedContentIndexes.value.slice();
+	const i = arr.indexOf(index);
+	if (i >= 0) {
+		arr.splice(i, 1);
+	} else {
+		arr.push(index);
+	}
+	expandedContentIndexes.value = arr;
+};
+
+// 获取时效性标签颜色
+const getTimelinessColor = (timeliness: string) => {
+	if (timeliness === "现行有效") {
+		return { bg: "#dcfce7", text: "#16a34a" };
+	}
+	return { bg: "#fef3c7", text: "#d97706" };
+};
+
+// 格式化法条沿革列表（时间倒序）
+const getSortedHistoryLine = (historyLine: LawHistoryItem[]) => {
+	if (!historyLine || !historyLine.length) return [];
+	return [...historyLine].sort((a, b) => {
+		const dateA = dayjs(a.releaseYearMonthDate);
+		const dateB = dayjs(b.releaseYearMonthDate);
+		return dateB.valueOf() - dateA.valueOf();
+	});
+};
+
+// 格式化日期
+const formatDate = (dateStr: string) => {
+	if (!dateStr) return "";
+	return dayjs(dateStr).format("YYYY年MM月DD日");
+};
+</script>
+
+<template>
+	<view class="law-reference">
+		<!-- 标题栏 -->
+		<view class="header" @click="toggleExpand">
+			<view class="header-left">
+				<view class="icon-wrapper">
+					<cl-icon name="fxzh-falvfagui" size="18px" color="#3b82f6" />
+				</view>
+				<text class="title">参考法规</text>
+			</view>
+			<view class="header-right">
+				<cl-icon
+					:name="isExpanded ? 'arrow-down-s-line' : 'arrow-right-s-line'"
+					size="20px"
+					color="#9ca3af"
+				/>
+			</view>
+		</view>
+
+		<!-- 内容区域 -->
+		<view v-if="isExpanded" class="content">
+			<!-- 加载状态 -->
+			<view v-if="loading" class="loading-wrapper">
+				<view class="loading-spinner"></view>
+				<text class="loading-text">正在加载引用法规...</text>
+			</view>
+
+			<!-- 法规列表 -->
+			<view v-else-if="laws && laws.length" class="law-list">
+				<view v-for="(law, index) in laws" :key="index" class="law-item">
+					<!-- 法规标题行 -->
+					<view class="law-header" @click="toggleLawExpand(index)">
+						<view class="law-header-left">
+							<text class="law-index">{{ index + 1 }}</text>
+							<text class="law-title">{{ law.lawOrder || law.lawName }}</text>
+							<view
+								class="timeliness-badge"
+								:style="{
+									backgroundColor: getTimelinessColor(law.timeliness).bg
+								}"
+							>
+								<text
+									class="timeliness-text"
+									:style="{ color: getTimelinessColor(law.timeliness).text }"
+								>
+									{{ law.timeliness }}
+								</text>
+							</view>
+						</view>
+						<cl-icon
+							:name="
+								isLawExpanded(index) ? 'arrow-down-s-line' : 'arrow-right-s-line'
+							"
+							size="18px"
+							color="#9ca3af"
+						/>
+					</view>
+
+					<!-- 法规详情 -->
+					<view v-if="isLawExpanded(index)" class="law-detail">
+						<!-- Tab 切换 -->
+						<view class="tabs">
+							<view
+								class="tab"
+								:class="{ active: getActiveTab(index) === 'content' }"
+								@click="setActiveTab(index, 'content')"
+							>
+								<text
+									class="tab-text"
+									:class="{ active: getActiveTab(index) === 'content' }"
+								>
+									法条内容
+								</text>
+							</view>
+							<view
+								class="tab"
+								:class="{ active: getActiveTab(index) === 'history' }"
+								@click="setActiveTab(index, 'history')"
+							>
+								<text
+									class="tab-text"
+									:class="{ active: getActiveTab(index) === 'history' }"
+								>
+									法条沿革
+								</text>
+							</view>
+						</view>
+
+						<!-- 法条内容 -->
+						<view v-if="getActiveTab(index) === 'content'" class="tab-content">
+							<text
+								class="law-content-text"
+								:class="{ expanded: isContentExpanded(index) }"
+							>
+								{{ law.lawSourceContent }}
+							</text>
+							<view
+								v-if="law.lawSourceContent && law.lawSourceContent.length > 200"
+								class="expand-btn"
+								@click="toggleContentExpand(index)"
+							>
+								<text class="expand-btn-text">
+									{{ isContentExpanded(index) ? "收起" : "展开全部" }}
+								</text>
+							</view>
+							<view class="release-date">
+								<text class="release-date-text">
+									发文时间：{{ formatDate(law.releaseYearMonthDate) }}
+								</text>
+							</view>
+						</view>
+
+						<!-- 法条沿革 -->
+						<view v-if="getActiveTab(index) === 'history'" class="tab-content">
+							<view
+								v-for="(history, hIndex) in getSortedHistoryLine(law.historyLine)"
+								:key="hIndex"
+								class="history-item"
+							>
+								<view class="history-dot"></view>
+								<view class="history-content">
+									<text class="history-name">{{ history.lawName }}</text>
+									<text class="history-date">
+										{{ formatDate(history.releaseYearMonthDate) }}
+									</text>
+								</view>
+							</view>
+							<view
+								v-if="!law.historyLine || !law.historyLine.length"
+								class="empty-history"
+							>
+								<text class="empty-text">暂无法条沿革信息</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 空状态 -->
+			<view v-else class="empty-wrapper">
+				<text class="empty-text">暂无参考法规</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.law-reference {
+	@apply mt-3 bg-white rounded-xl overflow-hidden;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	border: 1px solid #f3f4f6;
+}
+
+.header {
+	@apply flex flex-row items-center justify-between px-4 py-3;
+	background-color: #fafbfc;
+}
+
+.header-left {
+	@apply flex flex-row items-center;
+}
+
+.icon-wrapper {
+	@apply mr-2;
+}
+
+.title {
+	@apply text-base font-semibold;
+	color: #3b82f6;
+}
+
+.header-right {
+	@apply flex items-center;
+}
+
+.content {
+	@apply px-4 pb-4;
+}
+
+.loading-wrapper {
+	@apply flex flex-row items-center py-4;
+}
+
+.loading-spinner {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 2px solid #e5e7eb;
+	border-top-color: #3b82f6;
+	animation: spin 1s linear infinite;
+}
+
+.loading-text {
+	@apply text-sm ml-2;
+	color: #9ca3af;
+}
+
+.law-list {
+	@apply mt-2;
+}
+
+.law-item {
+	@apply mb-3 last:mb-0;
+	border: 1px solid #f3f4f6;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.law-header {
+	@apply flex flex-row items-center justify-between px-3 py-2;
+	background-color: #fafbfc;
+}
+
+.law-header-left {
+	@apply flex flex-row items-center flex-1;
+	min-width: 0;
+}
+
+.law-index {
+	@apply text-sm font-semibold mr-2;
+	color: #3b82f6;
+}
+
+.law-title {
+	@apply text-sm font-medium flex-1;
+	color: #1f2937;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.timeliness-badge {
+	@apply px-2 py-0.5 rounded ml-2;
+	flex-shrink: 0;
+}
+
+.timeliness-text {
+	@apply text-xs;
+}
+
+.law-detail {
+	@apply px-3 pb-3;
+}
+
+.tabs {
+	@apply flex flex-row items-center mt-2 mb-3;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.tab {
+	@apply mr-6 pb-2;
+	border-bottom: 2px solid transparent;
+}
+
+.tab.active {
+	border-bottom-color: #3b82f6;
+}
+
+.tab-text {
+	@apply text-sm;
+	color: #6b7280;
+}
+
+.tab-text.active {
+	color: #3b82f6;
+	font-weight: 500;
+}
+
+.tab-content {
+	@apply mt-2;
+}
+
+.law-content-text {
+	@apply text-sm leading-relaxed;
+	color: #374151;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 6;
+	overflow: hidden;
+}
+
+.law-content-text.expanded {
+	-webkit-line-clamp: unset;
+	overflow: visible;
+}
+
+.expand-btn {
+	@apply mt-2 py-2 flex items-center justify-center;
+	border: 1px solid #e5e7eb;
+	border-radius: 20px;
+}
+
+.expand-btn-text {
+	@apply text-sm;
+	color: #6b7280;
+}
+
+.release-date {
+	@apply mt-3 pt-3;
+	border-top: 1px solid #f3f4f6;
+}
+
+.release-date-text {
+	@apply text-xs;
+	color: #9ca3af;
+}
+
+.history-item {
+	@apply flex flex-row items-start mb-3 last:mb-0;
+}
+
+.history-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background-color: #3b82f6;
+	margin-top: 6px;
+	margin-right: 12px;
+	flex-shrink: 0;
+}
+
+.history-content {
+	@apply flex-1;
+}
+
+.history-name {
+	@apply text-sm block;
+	color: #374151;
+}
+
+.history-date {
+	@apply text-xs block mt-1;
+	color: #9ca3af;
+}
+
+.empty-wrapper,
+.empty-history {
+	@apply py-4 flex items-center justify-center;
+}
+
+.empty-text {
+	@apply text-sm;
+	color: #9ca3af;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+</style>

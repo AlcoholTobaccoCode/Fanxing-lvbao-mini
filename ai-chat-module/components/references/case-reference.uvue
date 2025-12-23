@@ -1,0 +1,391 @@
+<!--
+@description: 参考案例展示组件
+-->
+<script lang="ts" setup>
+import { ref } from "vue";
+import type { CaseDetailResponse } from "@/api/references";
+import dayjs from "dayjs";
+
+const props = defineProps<{
+	cases: CaseDetailResponse[];
+	loading?: boolean;
+}>();
+
+// 模块展开状态
+const isExpanded = ref(false);
+
+// 每条案例的展开状态
+const expandedCaseIndexes = ref<number[]>([]);
+
+// 每条案例当前选中的 tab
+const activeTabs = ref<Record<number, string>>({});
+
+// 每条案例的内容展开状态
+const expandedContentIndexes = ref<number[]>([]);
+
+// Tab 配置
+const tabConfig = [
+	{ key: "summary", label: "案例概要", field: "caseSummary" },
+	{ key: "courtThink", label: "本院认为", field: "courtThink" },
+	{ key: "rule", label: "裁判规则", field: "courtFindOut" },
+	{ key: "verdict", label: "判决", field: "verdict" }
+];
+
+// 是否展开模块
+const toggleExpand = () => {
+	isExpanded.value = !isExpanded.value;
+};
+
+// 是否展开某条案例
+const isCaseExpanded = (index: number) => {
+	return expandedCaseIndexes.value.includes(index);
+};
+
+// 切换某条案例的展开状态
+const toggleCaseExpand = (index: number) => {
+	const arr = expandedCaseIndexes.value.slice();
+	const i = arr.indexOf(index);
+	if (i >= 0) {
+		arr.splice(i, 1);
+	} else {
+		arr.push(index);
+		// 默认选中"案例概要"tab
+		if (!activeTabs.value[index]) {
+			activeTabs.value[index] = "summary";
+		}
+	}
+	expandedCaseIndexes.value = arr;
+};
+
+// 获取当前 tab
+const getActiveTab = (index: number) => {
+	return activeTabs.value[index] || "summary";
+};
+
+// 切换 tab
+const setActiveTab = (index: number, tab: string) => {
+	activeTabs.value[index] = tab;
+};
+
+// 是否展开内容
+const isContentExpanded = (index: number) => {
+	return expandedContentIndexes.value.includes(index);
+};
+
+// 切换内容展开
+const toggleContentExpand = (index: number) => {
+	const arr = expandedContentIndexes.value.slice();
+	const i = arr.indexOf(index);
+	if (i >= 0) {
+		arr.splice(i, 1);
+	} else {
+		arr.push(index);
+	}
+	expandedContentIndexes.value = arr;
+};
+
+// 获取当前 tab 对应的内容
+const getTabContent = (caseItem: CaseDetailResponse, tabKey: string) => {
+	const domain = caseItem.caseDomain;
+	switch (tabKey) {
+		case "summary":
+			return domain.caseSummary || "";
+		case "courtThink":
+			return domain.courtThink || "";
+		case "rule":
+			return domain.courtFindOut || "";
+		case "verdict":
+			return domain.verdict || "";
+		default:
+			return "";
+	}
+};
+
+// 格式化日期
+const formatDate = (dateStr: string) => {
+	if (!dateStr) return "";
+	return dayjs(dateStr).format("YYYY-MM-DD");
+};
+</script>
+
+<template>
+	<view class="case-reference">
+		<!-- 标题栏 -->
+		<view class="header" @click="toggleExpand">
+			<view class="header-left">
+				<view class="icon-wrapper">
+					<cl-icon name="fxzh-falvfagui1" size="18px" color="#3b82f6" />
+				</view>
+				<text class="title">参考案例</text>
+			</view>
+			<view class="header-right">
+				<cl-icon
+					:name="isExpanded ? 'arrow-down-s-line' : 'arrow-right-s-line'"
+					size="20px"
+					color="#9ca3af"
+				/>
+			</view>
+		</view>
+
+		<!-- 内容区域 -->
+		<view v-if="isExpanded" class="content">
+			<!-- 加载状态 -->
+			<view v-if="loading" class="loading-wrapper">
+				<view class="loading-spinner"></view>
+				<text class="loading-text">正在加载参考案例...</text>
+			</view>
+
+			<!-- 案例列表 -->
+			<view v-else-if="cases && cases.length" class="case-list">
+				<view v-for="(caseItem, index) in cases" :key="index" class="case-item">
+					<!-- 案例标题行 -->
+					<view class="case-header" @click="toggleCaseExpand(index)">
+						<view class="case-header-left">
+							<text class="case-index">{{ index + 1 }}</text>
+							<text class="case-title">{{
+								caseItem.caseDomain?.caseTitle || caseItem.caseDomain?.caseNo
+							}}</text>
+						</view>
+						<cl-icon
+							:name="
+								isCaseExpanded(index) ? 'arrow-down-s-line' : 'arrow-right-s-line'
+							"
+							size="18px"
+							color="#9ca3af"
+						/>
+					</view>
+
+					<!-- 案例详情 -->
+					<view v-if="isCaseExpanded(index)" class="case-detail">
+						<!-- 法院和日期 -->
+						<view class="case-meta">
+							<text class="court-name">{{
+								caseItem.caseDomain?.trialCourt?.name || "未知法院"
+							}}</text>
+							<text class="trial-date">{{
+								formatDate(caseItem.caseDomain?.trialDate)
+							}}</text>
+						</view>
+
+						<!-- Tab 切换 -->
+						<view class="tabs">
+							<view
+								v-for="tab in tabConfig"
+								:key="tab.key"
+								class="tab"
+								:class="{ active: getActiveTab(index) === tab.key }"
+								@click="setActiveTab(index, tab.key)"
+							>
+								<text
+									class="tab-text"
+									:class="{ active: getActiveTab(index) === tab.key }"
+								>
+									{{ tab.label }}
+								</text>
+							</view>
+						</view>
+
+						<!-- Tab 内容 -->
+						<view class="tab-content">
+							<text
+								class="content-text"
+								:class="{ expanded: isContentExpanded(index) }"
+							>
+								{{ getTabContent(caseItem, getActiveTab(index)) }}
+							</text>
+							<view
+								v-if="getTabContent(caseItem, getActiveTab(index)).length > 200"
+								class="expand-btn"
+								@click="toggleContentExpand(index)"
+							>
+								<text class="expand-btn-text">
+									{{ isContentExpanded(index) ? "收起" : "展开全部" }}
+								</text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</view>
+
+			<!-- 空状态 -->
+			<view v-else class="empty-wrapper">
+				<text class="empty-text">暂无参考案例</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.case-reference {
+	@apply mt-3 bg-white rounded-xl overflow-hidden;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	border: 1px solid #f3f4f6;
+}
+
+.header {
+	@apply flex flex-row items-center justify-between px-4 py-3;
+	background-color: #fffbeb;
+}
+
+.header-left {
+	@apply flex flex-row items-center;
+}
+
+.icon-wrapper {
+	@apply mr-2;
+}
+
+.title {
+	@apply text-base font-semibold;
+	color: #3b82f6;
+}
+
+.header-right {
+	@apply flex items-center;
+}
+
+.content {
+	@apply px-4 pb-4;
+}
+
+.loading-wrapper {
+	@apply flex flex-row items-center py-4;
+}
+
+.loading-spinner {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 2px solid #e5e7eb;
+	border-top-color: #3b82f6;
+	animation: spin 1s linear infinite;
+}
+
+.loading-text {
+	@apply text-sm ml-2;
+	color: #9ca3af;
+}
+
+.case-list {
+	@apply mt-2;
+}
+
+.case-item {
+	@apply mb-3 last:mb-0;
+	border: 1px solid #f3f4f6;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.case-header {
+	@apply flex flex-row items-center justify-between px-3 py-2;
+	background-color: #fafbfc;
+}
+
+.case-header-left {
+	@apply flex flex-row items-center flex-1;
+	min-width: 0;
+}
+
+.case-index {
+	@apply text-sm font-semibold mr-2;
+	color: #3b82f6;
+}
+
+.case-title {
+	@apply text-sm font-medium flex-1;
+	color: #1f2937;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.case-detail {
+	@apply px-3 pb-3;
+}
+
+.case-meta {
+	@apply flex flex-row items-center mt-2;
+}
+
+.court-name {
+	@apply text-xs;
+	color: #6b7280;
+}
+
+.trial-date {
+	@apply text-xs ml-3;
+	color: #9ca3af;
+}
+
+.tabs {
+	@apply flex flex-row items-center mt-3 mb-2;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.tab {
+	@apply mr-4 pb-2;
+	border-bottom: 2px solid transparent;
+}
+
+.tab.active {
+	border-bottom-color: #3b82f6;
+}
+
+.tab-text {
+	@apply text-sm;
+	color: #6b7280;
+}
+
+.tab-text.active {
+	color: #3b82f6;
+	font-weight: 500;
+}
+
+.tab-content {
+	@apply mt-2;
+}
+
+.content-text {
+	@apply text-sm leading-relaxed;
+	color: #374151;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 6;
+	overflow: hidden;
+}
+
+.content-text.expanded {
+	-webkit-line-clamp: unset;
+	overflow: visible;
+}
+
+.expand-btn {
+	@apply mt-2 py-2 flex items-center justify-center;
+	border: 1px solid #e5e7eb;
+	border-radius: 20px;
+}
+
+.expand-btn-text {
+	@apply text-sm;
+	color: #6b7280;
+}
+
+.empty-wrapper {
+	@apply py-4 flex items-center justify-center;
+}
+
+.empty-text {
+	@apply text-sm;
+	color: #9ca3af;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+</style>

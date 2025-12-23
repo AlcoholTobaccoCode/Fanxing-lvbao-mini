@@ -1,0 +1,100 @@
+<!--
+@description: 引用面板组合组件 - 整合法规、案例、数据来源展示
+-->
+<script lang="ts" setup>
+import { computed } from "vue";
+import LawReference from "./law-reference.uvue";
+import CaseReference from "./case-reference.uvue";
+import SearchReference from "./search-reference.uvue";
+import type { LawDetailResponse, CaseDetailResponse } from "@/api/references";
+
+// 与 ConsultMessageReferences 兼容的搜索项类型
+interface SearchListItem {
+	hostName?: string;
+	hostLogo?: string;
+	indexId?: number;
+	time?: string;
+	title?: string;
+	body?: string;
+	url?: string;
+}
+
+export interface ReferencesData {
+	searchList?: SearchListItem[];
+	lawList?: Array<{ lawId?: string; lawItemId?: string }>;
+	caseList?: string[];
+	// 详情数据（API 返回后填充）
+	lawDetails?: LawDetailResponse[];
+	caseDetails?: CaseDetailResponse[];
+	// 加载状态
+	loadingLaw?: boolean;
+	loadingCase?: boolean;
+}
+
+const props = defineProps<{
+	references: ReferencesData;
+}>();
+
+// 是否有法规数据
+const hasLawData = computed(() => {
+	return (
+		(props.references?.lawList || []).length > 0 ||
+		(props.references?.lawDetails || []).length > 0
+	);
+});
+
+// 是否有案例数据
+const hasCaseData = computed(() => {
+	return (
+		(props.references?.caseList || []).length > 0 ||
+		(props.references?.caseDetails || []).length > 0
+	);
+});
+
+// 是否有搜索数据
+const hasSearchData = computed(() => {
+	return (props.references?.searchList || []).length > 0;
+});
+
+// 是否有任何引用数据
+const hasAnyData = computed(() => {
+	return hasLawData.value || hasCaseData.value || hasSearchData.value;
+});
+
+// 格式化搜索列表
+const formattedSearchList = computed(() => {
+	if (!props.references?.searchList) return [];
+	return props.references.searchList.map((item) => ({
+		title: item.title || "",
+		link: item.url || "",
+		date: item.time || ""
+	}));
+});
+</script>
+
+<template>
+	<view v-if="hasAnyData" class="references-panel">
+		<!-- 参考法规 -->
+		<LawReference
+			v-if="hasLawData"
+			:laws="references.lawDetails || []"
+			:loading="references.loadingLaw"
+		/>
+
+		<!-- 参考案例 -->
+		<CaseReference
+			v-if="hasCaseData"
+			:cases="references.caseDetails || []"
+			:loading="references.loadingCase"
+		/>
+
+		<!-- 数据来源 -->
+		<SearchReference v-if="hasSearchData" :search-list="formattedSearchList" />
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.references-panel {
+	@apply mt-2;
+}
+</style>

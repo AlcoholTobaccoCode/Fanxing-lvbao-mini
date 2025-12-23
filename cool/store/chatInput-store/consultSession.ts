@@ -7,6 +7,12 @@ import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID } from "@/utils/util";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
+import {
+	GetLawCardDetail,
+	GetCaseCardDetail,
+	type LawDetailResponse,
+	type CaseDetailResponse
+} from "@/api/references";
 
 // MOCK
 import { LawyerList } from "./mockData";
@@ -26,6 +32,11 @@ export interface ConsultMessageReferences {
 		lawItemId?: string;
 	}>;
 	caseList?: string[];
+	lawDetails?: LawDetailResponse[];
+	caseDetails?: CaseDetailResponse[];
+	// 加载状态
+	loadingLaw?: boolean;
+	loadingCase?: boolean;
 }
 
 export interface ConsultMessage {
@@ -385,10 +396,77 @@ export class ConsultSessionStore {
 
 			// 2. AI 回复完成后保存一次
 			await this.saveCurrentSessionSnapshot();
+			// 获取法规/案例详情（并行请求）
+			await this.fetchReferencesDetail(aiMsg);
 			// 再根据 AI 文本中的推荐标记触发推荐律师逻辑
 			await this.fetchRecommendLawyers(aiMsg);
 		} finally {
 			this.loading.value = false;
+		}
+	}
+
+	// 获取法规/案例详情
+	private async fetchReferencesDetail(aiMsg: ConsultMessage) {
+		try {
+			const refs = aiMsg.references;
+			if (!refs) return;
+
+			const promises: Promise<void>[] = [];
+
+			// 获取法规详情
+			if (refs.lawList && refs.lawList.length > 0) {
+				refs.loadingLaw = true;
+				const lawDetailList = refs.lawList
+					.filter((item) => item.lawId && item.lawItemId)
+					.map((item) => ({
+						lawId: item.lawId!,
+						lawItemId: item.lawItemId!
+					}));
+
+				if (lawDetailList.length > 0) {
+					promises.push(
+						GetLawCardDetail(lawDetailList)
+							.then((res) => {
+								refs.lawDetails = res.data || [];
+							})
+							.catch((err) => {
+								console.error("[ConsultSession] 获取法规详情失败", err);
+								refs.lawDetails = [];
+							})
+							.finally(() => {
+								refs.loadingLaw = false;
+							})
+					);
+				} else {
+					refs.loadingLaw = false;
+				}
+			}
+
+			// 获取案例详情
+			if (refs.caseList && refs.caseList.length > 0) {
+				refs.loadingCase = true;
+				promises.push(
+					GetCaseCardDetail(refs.caseList)
+						.then((res) => {
+							refs.caseDetails = res.data || [];
+						})
+						.catch((err) => {
+							console.error("[ConsultSession] 获取案例详情失败", err);
+							refs.caseDetails = [];
+						})
+						.finally(() => {
+							refs.loadingCase = false;
+						})
+				);
+			}
+
+			// 并行请求
+			if (promises.length > 0) {
+				await Promise.all(promises);
+				await this.saveCurrentSessionSnapshot();
+			}
+		} catch (err) {
+			console.error("[ConsultSession] 获取引用详情失败", err);
 		}
 	}
 
@@ -440,6 +518,26 @@ export class ConsultSessionStore {
 		this.recommendLoading.value = false;
 		this.streamStatus.value = null;
 		this.deepThinkContent.value = "";
+
+		// 加载引用详情
+		this.loadMissingReferencesDetail();
+	}
+
+	/**
+	 * 从历史记录进入时加载引用详情
+	 */
+	private async loadMissingReferencesDetail() {
+		for (const msg of this.messages.value) {
+			if (msg.role !== "system" || !msg.references) continue;
+
+			const refs = msg.references;
+			const needLoadLaw = refs.lawList?.length && !refs.lawDetails?.length;
+			const needLoadCase = refs.caseList?.length && !refs.caseDetails?.length;
+
+			if (needLoadLaw || needLoadCase) {
+				await this.fetchReferencesDetail(msg);
+			}
+		}
 	}
 
 	clear() {
