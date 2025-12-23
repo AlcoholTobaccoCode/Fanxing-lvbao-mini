@@ -2,13 +2,13 @@ import { generateUUID, generateRandomString } from "./util";
 
 export const MODULE_SESSION_NAME = {
 	// 咨询
-	consult: "ai_consult_",
+	consult: "ai-session_consult_",
 	// 合同
-	contract: "ai_contract_",
+	contract: "ai-session_contract_",
 	// 文书
-	doc: "ai_doc_",
+	doc: "ai-session_doc_",
 	// 检索
-	retrieve: "ai_retrieve_",
+	retrieve: "ai-session_retrieve_",
 	// 律师对话
 	lawyerChat: ""
 };

@@ -8,6 +8,23 @@ import { generateUUID } from "@/utils/util";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
 
+export interface ConsultMessageReferences {
+	searchList?: Array<{
+		hostName?: string;
+		hostLogo?: string;
+		indexId?: number;
+		time?: string;
+		title?: string;
+		body?: string;
+		url?: string;
+	}>;
+	lawList?: Array<{
+		lawId?: string;
+		lawItemId?: string;
+	}>;
+	caseList?: string[];
+}
+
 export interface ConsultMessage {
 	role: "user" | "system";
 	content: string;
@@ -29,6 +46,8 @@ export interface ConsultMessage {
 	recommendedLawyerIds?: number[];
 	// 推荐律师详细信息列表
 	recommendedLawyers?: RecommendLawyerItem[];
+	// AI 引用列表（互联网搜索、法条、案例）
+	references?: ConsultMessageReferences;
 }
 
 export interface ConsultStreamHooks {
@@ -57,19 +76,28 @@ export class ConsultSessionStore {
 		const now = Date.now();
 		const date = new Date(now);
 		const pad = (n: number) => n.toString().padStart(2, "0");
-		const timeStr = `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(
-			date.getSeconds()
-		)}`;
+		// 完整日期时间格式：YYYY-MM-DD HH:mm:ss
+		const dateTimeStr = `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
+			date.getDate()
+		)} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 
 		const mappedMessages = list.map((m) => {
+			// 计算思考用时（秒）
+			let thinkingTime: number | undefined;
+			if (m.deepThinkEndTime && m.deepThinkStartTime) {
+				thinkingTime = Math.round((m.deepThinkEndTime - m.deepThinkStartTime) / 1000);
+			}
+
 			return {
 				id: generateUUID(),
 				content: m.content,
 				sender: m.role === "user" ? "user" : "ai",
-				timestamp: timeStr,
+				timestamp: dateTimeStr,
 				// 小程序端目前没有流式中断的概念，这里统一按已完成落库
 				isStreaming: false,
 				deepThink: m.deepThink,
+				thinkingTime,
+				references: m.references,
 				haveRecommendLawyer: m.haveRecommendLawyer,
 				recommendedLawyerIds: m.recommendedLawyerIds,
 				recommendedLawyers: m.recommendedLawyers
@@ -132,6 +160,9 @@ export class ConsultSessionStore {
 			voiceUrl: options?.voiceUrl,
 			voiceLength: options?.voiceLength
 		});
+
+		// 1. 用户点击问题进入聊天页时保存一次（只有用户消息）
+		await this.saveCurrentSessionSnapshot();
 
 		const onlineSearch = tools?.some((t) => t.text === "联网搜索" && t.enable);
 		const deepThink = tools?.some((t) => t.text === "深度思考" && t.enable);
@@ -242,6 +273,28 @@ export class ConsultSessionStore {
 					if (hasRecommendMarker) {
 						(aiMsg as any).haveRecommendLawyer = true;
 					}
+
+					// 解析并保存 references（searchList、lawList、caseList）
+					for (const c of contents) {
+						if (c.searchList && Array.isArray(c.searchList) && c.searchList.length) {
+							if (!aiMsg.references) {
+								aiMsg.references = {};
+							}
+							aiMsg.references.searchList = c.searchList;
+						}
+						if (c.lawList && Array.isArray(c.lawList) && c.lawList.length) {
+							if (!aiMsg.references) {
+								aiMsg.references = {};
+							}
+							aiMsg.references.lawList = c.lawList;
+						}
+						if (c.caseList && Array.isArray(c.caseList) && c.caseList.length) {
+							if (!aiMsg.references) {
+								aiMsg.references = {};
+							}
+							aiMsg.references.caseList = c.caseList;
+						}
+					}
 				} catch (err) {
 					console.error("解析咨询响应失败", err);
 				}
@@ -329,7 +382,7 @@ export class ConsultSessionStore {
 				aiMsg.deepThinkEndTime = Date.now();
 			}
 
-			// 每轮 AI 回复完成后，先保存当前会话快照
+			// 2. AI 回复完成后保存一次（包含用户消息 + AI 回复）
 			await this.saveCurrentSessionSnapshot();
 			// 再根据 AI 文本中的推荐标记触发推荐律师逻辑（内部会在挂载结果后再保存一次）
 			await this.fetchRecommendLawyersIfNeeded(aiMsg);

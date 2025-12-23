@@ -112,9 +112,11 @@ const requestPayment = () => {
 	addLog("开始发起微信支付...");
 	addLog(`orderInfo: ${JSON.stringify(orderInfo)}`);
 
+	//@ts-ignore
 	uni.requestPayment({
 		provider: "wxpay",
-		orderInfo: orderInfo,
+		// orderInfo: orderInfo,
+		...orderInfo,
 		success: (res) => {
 			addLog(`✅ 支付成功: ${JSON.stringify(res)}`);
 			log.info(`✅ 支付成功: ${JSON.stringify(res)}`);

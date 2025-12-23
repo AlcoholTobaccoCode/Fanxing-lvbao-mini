@@ -102,14 +102,7 @@ const handleOpenNewChat = () => {
 //#region 通话
 
 const toTestPage = () => {
-	// 登录
-	for (let i = 0; i < 6; i++) {
-		uni.login({
-			success: (res) => {
-				console.info(res);
-			}
-		});
-	}
+	router.to("/test-pages/setting/index");
 };
 
 //#endregion
@@ -123,7 +116,9 @@ const toTestPage = () => {
 					<view class="flex-1 p-4 !px-8">
 						<Consult @preset-select="handlePresetSelect" />
 					</view>
-					<!-- <cl-button @click="toTestPage">toTestPage</cl-button> -->
+					<view class="p-4">
+						<cl-button @click="toTestPage">前往测试页面</cl-button>
+					</view>
 					<chat-input
 						v-model:model-value="inputValue"
 						v-model:input-mode="chatInputStore.inputMode.value"
