@@ -1,0 +1,732 @@
+<script lang="ts" setup>
+import { ref, reactive } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
+import { parseClass } from "@/cool";
+
+import AppPage from "@/components/common/layout/app-page.uvue";
+import {
+	PermissionScope,
+	requestPermission,
+	checkPermission,
+	checkMultiplePermissions,
+	requestMultiplePermissions
+} from "@/utils/permission";
+import { router } from "@/cool";
+
+const log = new Logger("TestPage-Setting");
+const ui = useUi();
+
+// ==================== 折叠面板状态 ====================
+const collapseState = reactive({
+	wxPay: false,
+	permission: false
+});
+
+// ==================== 微信支付测试 ====================
+const wxLoginCode = ref("");
+const wxLoginLoading = ref(false);
+
+// 支付参数
+const payParams = reactive({
+	timeStamp: "",
+	nonceStr: "",
+	package: "",
+	signType: "RSA",
+	paySign: ""
+});
+
+// JSON 解析输入
+const jsonInput = ref("");
+
+// 获取微信登录 code
+const getWxLoginCode = () => {
+	wxLoginLoading.value = true;
+	uni.login({
+		provider: "weixin",
+		success: (res) => {
+			wxLoginCode.value = res.code ?? "";
+			addLog(`✅ 获取 code 成功: ${wxLoginCode.value}`);
+		},
+		fail: (err) => {
+			addLog(`❌ 获取 code 失败: ${JSON.stringify(err)}`);
+			ui.showToast({ message: "获取 code 失败" });
+		},
+		complete: () => {
+			wxLoginLoading.value = false;
+		}
+	});
+};
+
+// 复制 code
+const copyCode = () => {
+	if (!wxLoginCode.value) {
+		// ui.showToast({ message: "请先获取 code" });
+		return;
+	}
+	uni.setClipboardData({
+		data: wxLoginCode.value,
+		success: () => {
+			// ui.showToast({ message: "复制成功" });
+		}
+	});
+};
+
+// 解析 JSON 填充参数
+const parseJsonParams = () => {
+	if (!jsonInput.value.trim()) {
+		// ui.showToast({ message: "请先粘贴 JSON" });
+		return;
+	}
+	try {
+		const parsed = JSON.parse(jsonInput.value.trim());
+		if (parsed.timeStamp) payParams.timeStamp = String(parsed.timeStamp);
+		if (parsed.nonceStr) payParams.nonceStr = parsed.nonceStr;
+		if (parsed.package) payParams.package = parsed.package;
+		if (parsed.signType) payParams.signType = parsed.signType;
+		if (parsed.paySign) payParams.paySign = parsed.paySign;
+		addLog("✅ JSON 解析成功");
+		ui.showToast({ message: "解析成功" });
+	} catch (err) {
+		addLog(`❌ JSON 解析失败: ${err}`);
+		ui.showToast({ message: "JSON 格式错误" });
+	}
+};
+
+// 发起支付请求
+const requestPayment = () => {
+	if (!payParams.timeStamp || !payParams.nonceStr || !payParams.package || !payParams.paySign) {
+		ui.showToast({ message: "请填写完整支付参数" });
+		return;
+	}
+
+	// 先提取参数值，避免 reactive 对象传递问题
+	const orderInfo = {
+		timeStamp: String(payParams.timeStamp),
+		nonceStr: String(payParams.nonceStr),
+		package: String(payParams.package),
+		signType: String(payParams.signType),
+		paySign: String(payParams.paySign)
+	};
+
+	addLog("开始发起微信支付...");
+	addLog(`orderInfo: ${JSON.stringify(orderInfo)}`);
+
+	uni.requestPayment({
+		provider: "wxpay",
+		orderInfo: orderInfo,
+		success: (res) => {
+			addLog(`✅ 支付成功: ${JSON.stringify(res)}`);
+			log.info(`✅ 支付成功: ${JSON.stringify(res)}`);
+			ui.showToast({ message: "支付成功" });
+		},
+		fail: (res) => {
+			addLog(`❌ 支付失败: ${JSON.stringify(res)}`);
+			log.error(`❌ 支付失败: ${JSON.stringify(res)}`);
+			ui.showToast({ message: `支付失败: ${JSON.stringify(res)}` });
+		},
+		complete: (res) => {
+			addLog(`支付完成: ${JSON.stringify(res)}`);
+			log.info(`支付完成: ${JSON.stringify(res)}`);
+		}
+	});
+};
+
+// ==================== 日志系统 ====================
+const testLog = ref<string[]>([]);
+
+const addLog = (message: string) => {
+	const time = new Date().toLocaleTimeString();
+	testLog.value.unshift(`[${time}] ${message}`);
+	if (testLog.value.length > 30) {
+		testLog.value.pop();
+	}
+};
+
+const clearLog = () => {
+	testLog.value = [];
+};
+
+// ==================== 权限测试 ====================
+const testCameraPermission = async () => {
+	addLog("开始申请相机权限...");
+	const result = await requestPermission({
+		scope: PermissionScope.CAMERA,
+		onSuccess: () => {
+			addLog("✅ 相机权限申请成功！");
+		},
+		onDenied: () => {
+			addLog("❌ 相机权限被拒绝");
+		}
+	});
+	addLog(`结果: ${JSON.stringify(result)}`);
+};
+
+const testRecordPermission = async () => {
+	addLog("开始申请录音权限...");
+	const result = await requestPermission({
+		scope: PermissionScope.RECORD,
+		onSuccess: () => {
+			addLog("✅ 录音权限申请成功！");
+		},
+		onDenied: () => {
+			addLog("❌ 录音权限被拒绝");
+		}
+	});
+	addLog(`结果: ${JSON.stringify(result)}`);
+};
+
+const testLocationPermission = async () => {
+	addLog("开始申请位置权限...");
+	const result = await requestPermission({
+		scope: PermissionScope.LOCATION,
+		onSuccess: () => {
+			addLog("✅ 位置权限申请成功！");
+		},
+		onDenied: () => {
+			addLog("❌ 位置权限被拒绝");
+		}
+	});
+	addLog(`结果: ${JSON.stringify(result)}`);
+};
+
+const testAlbumPermission = async () => {
+	addLog("开始申请相册权限...");
+	const result = await requestPermission({
+		scope: PermissionScope.ALBUM,
+		onSuccess: () => {
+			addLog("✅ 相册权限申请成功！");
+		},
+		onDenied: () => {
+			addLog("❌ 相册权限被拒绝");
+		}
+	});
+	addLog(`结果: ${JSON.stringify(result)}`);
+};
+
+const testCustomPermission = async () => {
+	addLog("开始申请自定义权限（无确认弹窗）...");
+	const result = await requestPermission({
+		scope: PermissionScope.CAMERA,
+		customName: "自定义相机权限",
+		customDescription: "这是一个自定义的权限描述",
+		showConfirm: false,
+		onSuccess: () => {
+			addLog("✅ 自定义权限申请成功！");
+		},
+		onDenied: () => {
+			addLog("❌ 自定义权限被拒绝");
+		}
+	});
+	addLog(`结果: ${JSON.stringify(result)}`);
+};
+
+const toTestPage = () => {
+	router.to("/ai-chat-module/voice-call/index");
+};
+</script>
+
+<template>
+	<app-page title="测试模块" back-top>
+		<template #content>
+			<view class="test-container">
+				<!-- 微信支付测试 -->
+				<view class="section">
+					<view class="section-header" @tap="collapseState.wxPay = !collapseState.wxPay">
+						<view class="section-title">
+							<cl-icon
+								name="money-cny-circle-line"
+								:size="40"
+								color="primary"
+							></cl-icon>
+							<cl-text size="lg" bold>微信支付测试</cl-text>
+						</view>
+						<cl-icon
+							name="arrow-down-s-line"
+							:size="36"
+							:pt="{
+								className: parseClass([
+									'text-surface-400 duration-200',
+									{ '-rotate-180': collapseState.wxPay }
+								])
+							}"
+						></cl-icon>
+					</view>
+
+					<cl-collapse v-model="collapseState.wxPay">
+						<view class="collapse-content">
+							<!-- Step 1: 获取 Code -->
+							<view class="step-card">
+								<view class="step-header">
+									<view class="step-badge">1</view>
+									<cl-text bold>获取登录 Code</cl-text>
+								</view>
+								<view class="step-content">
+									<view class="code-display">
+										<view class="code-box">
+											<cl-text
+												size="sm"
+												:color="wxLoginCode ? 'default' : 'info'"
+												:pt="{ className: 'break-all' }"
+											>
+												{{ wxLoginCode || "点击按钮获取 code" }}
+											</cl-text>
+										</view>
+									</view>
+									<view class="action-row">
+										<cl-button
+											type="primary"
+											size="small"
+											:loading="wxLoginLoading"
+											@tap="getWxLoginCode"
+										>
+											{{ wxLoginCode ? "重新获取" : "获取 Code" }}
+										</cl-button>
+										<cl-button
+											type="success"
+											size="small"
+											:disabled="!wxLoginCode"
+											@tap="copyCode"
+										>
+											复制
+										</cl-button>
+									</view>
+								</view>
+							</view>
+
+							<!-- Step 2: 支付参数 -->
+							<view class="step-card">
+								<view class="step-header">
+									<view class="step-badge">2</view>
+									<cl-text bold>填写支付参数</cl-text>
+								</view>
+								<view class="step-content">
+									<!-- JSON 快捷解析 -->
+									<view class="json-parse-area">
+										<cl-text size="sm" color="info"
+											>快捷填充：粘贴 JSON 一键解析</cl-text
+										>
+										<view class="json-input-wrapper">
+											<textarea
+												class="json-textarea"
+												v-model="jsonInput"
+												placeholder="粘贴包含 timeStamp, nonceStr, package, signType, paySign 的 JSON"
+												:maxlength="-1"
+											></textarea>
+											<cl-button
+												type="primary"
+												size="small"
+												:pt="{ className: 'parse-btn' }"
+												@tap="parseJsonParams"
+											>
+												解析
+											</cl-button>
+										</view>
+									</view>
+
+									<!-- 分隔线 -->
+									<view class="divider">
+										<view class="divider-line"></view>
+										<cl-text size="xs" color="info">或手动填写</cl-text>
+										<view class="divider-line"></view>
+									</view>
+
+									<!-- 参数输入 -->
+									<view class="param-list">
+										<view class="param-item">
+											<cl-text size="sm" :pt="{ className: 'param-label' }"
+												>timeStamp</cl-text
+											>
+											<cl-input
+												v-model="payParams.timeStamp"
+												placeholder="时间戳"
+												:border="false"
+												:pt="{ className: 'param-input' }"
+											></cl-input>
+										</view>
+										<view class="param-item">
+											<cl-text size="sm" :pt="{ className: 'param-label' }"
+												>nonceStr</cl-text
+											>
+											<cl-input
+												v-model="payParams.nonceStr"
+												placeholder="随机字符串"
+												:border="false"
+												:pt="{ className: 'param-input' }"
+											></cl-input>
+										</view>
+										<view class="param-item">
+											<cl-text size="sm" :pt="{ className: 'param-label' }"
+												>package</cl-text
+											>
+											<cl-input
+												v-model="payParams.package"
+												placeholder="prepay_id=xxx"
+												:border="false"
+												:pt="{ className: 'param-input' }"
+											></cl-input>
+										</view>
+										<view class="param-item">
+											<cl-text size="sm" :pt="{ className: 'param-label' }"
+												>signType</cl-text
+											>
+											<cl-input
+												v-model="payParams.signType"
+												placeholder="RSA"
+												:border="false"
+												:pt="{ className: 'param-input' }"
+											></cl-input>
+										</view>
+										<view class="param-item">
+											<cl-text size="sm" :pt="{ className: 'param-label' }"
+												>paySign</cl-text
+											>
+											<cl-input
+												v-model="payParams.paySign"
+												placeholder="签名"
+												:border="false"
+												:pt="{ className: 'param-input' }"
+											></cl-input>
+										</view>
+									</view>
+								</view>
+							</view>
+
+							<!-- Step 3: 发起支付 -->
+							<view class="step-card">
+								<view class="step-header">
+									<view class="step-badge">3</view>
+									<cl-text bold>发起支付</cl-text>
+								</view>
+								<view class="step-content">
+									<cl-button
+										type="primary"
+										:pt="{ className: '!rounded-xl' }"
+										@tap="requestPayment"
+									>
+										发起支付请求
+									</cl-button>
+								</view>
+							</view>
+						</view>
+					</cl-collapse>
+				</view>
+
+				<!-- 权限测试 -->
+				<view class="section">
+					<view
+						class="section-header"
+						@tap="collapseState.permission = !collapseState.permission"
+					>
+						<view class="section-title">
+							<cl-icon name="shield-check-line" :size="40" color="success"></cl-icon>
+							<cl-text size="lg" bold>权限申请测试</cl-text>
+						</view>
+						<cl-icon
+							name="arrow-down-s-line"
+							:size="36"
+							:pt="{
+								className: parseClass([
+									'text-surface-400 duration-200',
+									{ '-rotate-180': collapseState.permission }
+								])
+							}"
+						></cl-icon>
+					</view>
+
+					<cl-collapse v-model="collapseState.permission">
+						<view class="collapse-content">
+							<view class="button-grid">
+								<cl-button type="primary" @tap="testCameraPermission">
+									相机权限
+								</cl-button>
+								<cl-button type="success" @tap="testRecordPermission">
+									录音权限
+								</cl-button>
+								<cl-button type="warn" @tap="testLocationPermission">
+									位置权限
+								</cl-button>
+								<cl-button type="info" @tap="testAlbumPermission">
+									相册权限
+								</cl-button>
+								<cl-button type="info" @tap="testCustomPermission">
+									自定义权限
+								</cl-button>
+								<cl-button type="info" @tap="toTestPage"> 前往 WebView </cl-button>
+							</view>
+
+							<!-- 使用说明 -->
+							<view class="tips-box">
+								<cl-text size="sm" bold color="info">使用说明</cl-text>
+								<view class="tips-list">
+									<cl-text size="xs" color="info"
+										>1. 点击按钮测试不同权限申请</cl-text
+									>
+									<cl-text size="xs" color="info"
+										>2. 首次申请会弹出说明和授权框</cl-text
+									>
+									<cl-text size="xs" color="info"
+										>3. 如果拒绝过，会引导去设置页面</cl-text
+									>
+									<cl-text size="xs" color="info"
+										>4. 已授权的权限会直接返回成功</cl-text
+									>
+								</view>
+							</view>
+						</view>
+					</cl-collapse>
+				</view>
+
+				<!-- 日志显示区域 -->
+				<view class="section log-section">
+					<view class="log-header">
+						<view class="section-title">
+							<cl-icon name="file-list-3-line" :size="40" color="info"></cl-icon>
+							<cl-text size="lg" bold>执行日志</cl-text>
+						</view>
+						<cl-button size="small" type="info" @tap="clearLog">清空</cl-button>
+					</view>
+					<view class="log-container">
+						<view v-if="testLog.length === 0" class="log-empty">
+							<cl-icon name="inbox-line" :size="60" color="info"></cl-icon>
+							<cl-text color="info" size="sm">暂无日志，开始测试吧</cl-text>
+						</view>
+						<view v-for="(item, index) in testLog" :key="index" class="log-item">
+							<cl-text
+								size="xs"
+								:color="
+									item.includes('✅')
+										? 'success'
+										: item.includes('❌')
+											? 'error'
+											: 'white'
+								"
+								:pt="{ className: 'break-all' }"
+							>
+								{{ item }}
+							</cl-text>
+						</view>
+					</view>
+				</view>
+			</view>
+		</template>
+	</app-page>
+</template>
+
+<style lang="scss" scoped>
+.test-container {
+	padding: 24rpx;
+	min-height: 100vh;
+	background: linear-gradient(180deg, #f8f9fc 0%, #f0f2f5 100%);
+}
+
+.section {
+	background: white;
+	border-radius: 24rpx;
+	margin-bottom: 24rpx;
+	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+	overflow: hidden;
+}
+
+.section-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 28rpx 24rpx;
+	background: white;
+}
+
+.section-title {
+	display: flex;
+	align-items: center;
+	gap: 16rpx;
+}
+
+.collapse-content {
+	padding: 0 24rpx 24rpx;
+}
+
+// 步骤卡片
+.step-card {
+	background: #f8f9fc;
+	border-radius: 16rpx;
+	padding: 20rpx;
+	margin-bottom: 16rpx;
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.step-header {
+	display: flex;
+	align-items: center;
+	gap: 12rpx;
+	margin-bottom: 16rpx;
+}
+
+.step-badge {
+	width: 40rpx;
+	height: 40rpx;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	font-size: 24rpx;
+	font-weight: bold;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.step-content {
+	padding-left: 52rpx;
+}
+
+// Code 展示区
+.code-display {
+	margin-bottom: 16rpx;
+}
+
+.code-box {
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	padding: 20rpx;
+	min-height: 80rpx;
+}
+
+.action-row {
+	display: flex;
+	gap: 16rpx;
+}
+
+// JSON 解析区域
+.json-parse-area {
+	margin-bottom: 20rpx;
+}
+
+.json-input-wrapper {
+	position: relative;
+	margin-top: 12rpx;
+}
+
+.json-textarea {
+	width: 100%;
+	height: 160rpx;
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	padding: 16rpx;
+	padding-right: 120rpx;
+	font-size: 24rpx;
+	color: #333;
+	box-sizing: border-box;
+}
+
+.parse-btn {
+	position: absolute;
+	right: 12rpx;
+	bottom: 12rpx;
+}
+
+// 分隔线
+.divider {
+	display: flex;
+	align-items: center;
+	gap: 20rpx;
+	margin: 24rpx 0;
+}
+
+.divider-line {
+	flex: 1;
+	height: 2rpx;
+	background: #e8e8e8;
+}
+
+// 参数列表
+.param-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+}
+
+.param-item {
+	display: flex;
+	align-items: center;
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	overflow: hidden;
+}
+
+.param-label {
+	width: 180rpx;
+	padding: 0 20rpx;
+	color: #666;
+	flex-shrink: 0;
+}
+
+.param-input {
+	flex: 1;
+	height: 80rpx;
+	background: transparent;
+}
+
+// 按钮网格
+.button-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 16rpx;
+	margin-bottom: 20rpx;
+}
+
+// 提示框
+.tips-box {
+	background: #f0f9ff;
+	border-radius: 12rpx;
+	padding: 16rpx;
+	border: 2rpx solid #bae6fd;
+}
+
+.tips-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8rpx;
+	margin-top: 12rpx;
+}
+
+// 日志区域
+.log-section {
+	.log-header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 28rpx 24rpx;
+	}
+}
+
+.log-container {
+	background: #1a1a2e;
+	border-radius: 0 0 24rpx 24rpx;
+	padding: 20rpx;
+	max-height: 500rpx;
+	overflow-y: auto;
+}
+
+.log-empty {
+	padding: 60rpx 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 16rpx;
+}
+
+.log-item {
+	padding: 12rpx 16rpx;
+	border-bottom: 1rpx solid rgba(255, 255, 255, 0.1);
+
+	&:last-child {
+		border-bottom: none;
+	}
+}
+</style>

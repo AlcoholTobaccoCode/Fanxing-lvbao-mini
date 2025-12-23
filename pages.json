@@ -148,6 +148,13 @@
 						"navigationBarTitleText": "测试页面",
 						"navigationStyle": "custom"
 					}
+				},
+				{
+					"path": "setting/index",
+					"style": {
+						"navigationBarTitleText": "测试页面",
+						"navigationStyle": "custom"
+					}
 				}
 			]
 		}
@@ -155,7 +162,8 @@
 	],
 	"preloadRule": {
 		"pages/home/index": {
-			"network": "all","packages": [
+			"network": "all",
+			"packages": [
 				"ai-chat-module"
 			]
 		}
