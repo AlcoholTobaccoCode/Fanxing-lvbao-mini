@@ -309,7 +309,6 @@ const handleSend = async (data: SendData) => {
 								</view>
 
 								<template v-if="item.content">
-									<!-- <mp-html :content="item.content" /> -->
 									<zero-markdown-view
 										:markdown="item.content"
 										:aiMode="true"

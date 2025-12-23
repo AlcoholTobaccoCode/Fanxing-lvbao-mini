@@ -5,7 +5,7 @@
 import { LEGAL_QUICK_QUESTIONS, chunkArray, type chunkArrayType } from "@/utils/index";
 
 import SimpleCard from "@/components/card/simple-card.uvue";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
@@ -15,7 +15,7 @@ const questionPools = ref<chunkArrayType>([]);
 const currentPoolIndex = ref(0);
 const presetQuestions = ref<string[]>([]);
 
-onLoad(() => {
+onMounted(() => {
 	questionPools.value = chunkArray(LEGAL_QUICK_QUESTIONS, 3);
 	presetQuestions.value = questionPools.value[0] || [];
 });

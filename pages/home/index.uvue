@@ -103,11 +103,13 @@ const handleOpenNewChat = () => {
 
 const toTestPage = () => {
 	// 登录
-	uni.login({
-		success: (res) => {
-			console.info(res);
-		}
-	});
+	for (let i = 0; i < 6; i++) {
+		uni.login({
+			success: (res) => {
+				console.info(res);
+			}
+		});
+	}
 };
 
 //#endregion
