@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { ref, computed, watch, getCurrentInstance, onMounted, nextTick } from "vue";
-import type { VoiceResult } from "./types";
+import type { VoiceResult } from "@/cool/types/chat-input";
 import { useUi } from "@/uni_modules/cool-ui";
 
 import Recorder from "recorder-core";

@@ -6,7 +6,7 @@ import { ref, watch } from "vue";
 import { router, useStore } from "@/cool";
 import { requestMultiplePermissions, PermissionScope } from "@/utils/permission";
 import { showLoginModal } from "@/cool/store/login-modal";
-import { type ActionItems } from "./types";
+import { type ActionItems } from "@/cool/types/chat-input";
 
 interface Props {
 	isShow: boolean;
