@@ -4,7 +4,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
-import { useHistorySessions } from "./hook";
+import { useHistorySessions, type HistorySessionItem } from "./hook";
+import { navigateToHistorySession } from "@/cool/store/chatInput-store/historyNavigation";
 
 //#region tab 切换
 const tabValue = ref("ai");
@@ -31,6 +32,14 @@ const {
 
 const handleChangeEditMode = () => {
 	setEditMode(!isEditMode.value);
+};
+
+// 点击历史记录项
+const handleItemClick = async (item: HistorySessionItem) => {
+	// 编辑模式下不跳转
+	if (isEditMode.value) return;
+
+	await navigateToHistorySession(item);
 };
 
 defineExpose({
@@ -88,6 +97,7 @@ defineExpose({
 							:key="item.session_id"
 							class="app-setting-item"
 							hover-class="block-hover-class"
+							@click="handleItemClick(item)"
 						>
 							<view class="app-setting-item__main">
 								<cl-text class="app-setting-item__title" ellipsis>

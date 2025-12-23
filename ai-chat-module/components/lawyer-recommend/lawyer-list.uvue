@@ -56,13 +56,18 @@ const hasMore = computed(() => {
 		</view>
 
 		<!-- 律师卡片列表 - 横向滚动 -->
-		<view v-else class="lawyer-list">
+		<view v-else-if="lawyers.length > 0" class="lawyer-list">
 			<scroll-view scroll-x :enable-flex="true" class="lawyer-scroll" :show-scrollbar="false">
 				<view v-for="lawyer in displayLawyers" :key="lawyer.user_id" class="lawyer-item">
 					<lawyer-card :lawyer="lawyer" @click="handleLawyerClick" />
 				</view>
 			</scroll-view>
 		</view>
+		<template v-else>
+			<view class="flex items-center justify-center py-6">
+				<cl-text color="info" class="text-md">暂无合适律师</cl-text>
+			</view>
+		</template>
 	</view>
 </template>
 

@@ -428,6 +428,20 @@ export class ConsultSessionStore {
 		}
 	}
 
+	/**
+	 * 从历史记录恢复会话
+	 * @param sessionId 会话 ID
+	 * @param messages 历史消息列表
+	 */
+	restoreFromHistory(sessionId: string, messages: ConsultMessage[]) {
+		this.sessionId.value = sessionId;
+		this.messages.value = messages;
+		this.loading.value = false;
+		this.recommendLoading.value = false;
+		this.streamStatus.value = null;
+		this.deepThinkContent.value = "";
+	}
+
 	clear() {
 		this.messages.value = [];
 		this.sessionId.value = null;
