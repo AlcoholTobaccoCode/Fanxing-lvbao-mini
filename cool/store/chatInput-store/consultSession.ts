@@ -408,59 +408,82 @@ export class ConsultSessionStore {
 	// 获取法规/案例详情
 	private async fetchReferencesDetail(aiMsg: ConsultMessage) {
 		try {
-			const refs = aiMsg.references;
-			if (!refs) return;
+			if (!aiMsg.references) return;
 
+			// 找到消息在数组中的索引
+			const msgIndex = this.messages.value.findIndex((m) => m === aiMsg);
+			if (msgIndex === -1) return;
+
+			const updateMessage = (updater: (refs: ConsultMessageReferences) => void) => {
+				const msg = this.messages.value[msgIndex];
+				if (msg.references) {
+					updater(msg.references);
+					this.messages.value = [...this.messages.value];
+				}
+			};
+
+			const refs = aiMsg.references;
 			const promises: Promise<void>[] = [];
 
 			// 获取法规详情
 			if (refs.lawList && refs.lawList.length > 0) {
-				refs.loadingLaw = true;
+				updateMessage((r) => (r.loadingLaw = true));
+
 				const lawDetailList = refs.lawList
-					.filter((item) => item.lawId && item.lawItemId)
+					.filter((item) => item.lawId)
 					.map((item) => ({
 						lawId: item.lawId!,
-						lawItemId: item.lawItemId!
+						lawItemId: item.lawItemId || ""
 					}));
 
 				if (lawDetailList.length > 0) {
 					promises.push(
 						GetLawCardDetail(lawDetailList)
-							.then((res) => {
-								refs.lawDetails = res.data || [];
+							.then((res: any) => {
+								const lawData = res?.data ?? res ?? [];
+								updateMessage((r) => {
+									r.lawDetails = Array.isArray(lawData) ? lawData : [];
+									r.loadingLaw = false;
+								});
 							})
 							.catch((err) => {
 								console.error("[ConsultSession] 获取法规详情失败", err);
-								refs.lawDetails = [];
-							})
-							.finally(() => {
-								refs.loadingLaw = false;
+								updateMessage((r) => {
+									r.lawDetails = [];
+									r.loadingLaw = false;
+								});
 							})
 					);
 				} else {
-					refs.loadingLaw = false;
+					updateMessage((r) => (r.loadingLaw = false));
 				}
 			}
 
 			// 获取案例详情
 			if (refs.caseList && refs.caseList.length > 0) {
-				refs.loadingCase = true;
+				updateMessage((r) => (r.loadingCase = true));
+
 				promises.push(
 					GetCaseCardDetail(refs.caseList)
-						.then((res) => {
-							refs.caseDetails = res.data || [];
+						.then((res: any) => {
+							// 兼容不同的返回格式
+							const caseData = res?.data ?? res ?? [];
+							updateMessage((r) => {
+								r.caseDetails = Array.isArray(caseData) ? caseData : [];
+								r.loadingCase = false;
+							});
 						})
 						.catch((err) => {
 							console.error("[ConsultSession] 获取案例详情失败", err);
-							refs.caseDetails = [];
-						})
-						.finally(() => {
-							refs.loadingCase = false;
+							updateMessage((r) => {
+								r.caseDetails = [];
+								r.loadingCase = false;
+							});
 						})
 				);
 			}
 
-			// 并行请求
+			// 等待所有请求完成
 			if (promises.length > 0) {
 				await Promise.all(promises);
 				await this.saveCurrentSessionSnapshot();

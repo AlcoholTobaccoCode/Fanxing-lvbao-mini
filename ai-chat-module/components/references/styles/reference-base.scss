@@ -1,0 +1,144 @@
+/**
+ * 引用组件公共样式
+ */
+
+// 卡片容器
+@mixin reference-card {
+	@apply mt-3 bg-white rounded-xl overflow-hidden;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	border: 1px solid #f3f4f6;
+}
+
+// 头部样式
+.ref-header {
+	@apply flex flex-row items-center justify-between px-4 py-3;
+}
+
+.ref-header-left {
+	@apply flex flex-row items-center;
+}
+
+.ref-icon-wrapper {
+	@apply mr-2;
+}
+
+.ref-title {
+	@apply text-base font-semibold;
+	color: #3b82f6;
+}
+
+.ref-header-right {
+	@apply flex items-center;
+}
+
+// 内容区域
+.ref-content {
+	@apply px-4 pb-4;
+}
+
+// 加载状态
+.ref-loading-wrapper {
+	@apply flex flex-row items-center py-4;
+}
+
+.ref-loading-spinner {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 2px solid #e5e7eb;
+	border-top-color: #3b82f6;
+	animation: ref-spin 1s linear infinite;
+}
+
+.ref-loading-text {
+	@apply text-sm ml-2;
+	color: #9ca3af;
+}
+
+// 列表项样式
+.ref-list {
+	@apply mt-2;
+}
+
+.ref-item {
+	@apply mb-3 last:mb-0;
+	border: 1px solid #f3f4f6;
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+.ref-item-header {
+	@apply flex flex-row items-center justify-between px-3 py-2;
+	background-color: #fafbfc;
+}
+
+.ref-item-header-left {
+	@apply flex flex-row items-center flex-1;
+	min-width: 0;
+}
+
+.ref-item-index {
+	@apply text-sm font-semibold mr-2;
+	color: #3b82f6;
+}
+
+.ref-item-title {
+	@apply text-sm font-medium flex-1;
+	color: #1f2937;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.ref-item-detail {
+	@apply px-3 pb-3;
+}
+
+// Tab 样式
+.ref-tabs {
+	@apply flex flex-row items-center mt-2 mb-3;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.ref-tab {
+	@apply mr-4 pb-2;
+	border-bottom: 2px solid transparent;
+
+	&.active {
+		border-bottom-color: #3b82f6;
+	}
+}
+
+.ref-tab-text {
+	@apply text-sm;
+	color: #6b7280;
+
+	&.active {
+		color: #3b82f6;
+		font-weight: 500;
+	}
+}
+
+.ref-tab-content {
+	@apply mt-2;
+}
+
+// 空状态
+.ref-empty-wrapper {
+	@apply py-4 flex items-center justify-center;
+}
+
+.ref-empty-text {
+	@apply text-sm;
+	color: #9ca3af;
+}
+
+// 加载动画
+@keyframes ref-spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}

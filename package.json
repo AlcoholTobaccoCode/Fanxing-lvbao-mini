@@ -7,7 +7,6 @@
 		"build-icon": "node ./.cool/scripts/icon.js"
 	},
 	"dependencies": {
-		"dayjs": "^1.11.19",
 		"easemob-circle": "^4.15.2",
 		"easemob-websdk": "^4.17.0",
 		"hammer-touchemulator": "^0.0.2",

@@ -8,7 +8,6 @@ import CaseReference from "./case-reference.uvue";
 import SearchReference from "./search-reference.uvue";
 import type { LawDetailResponse, CaseDetailResponse } from "@/api/references";
 
-// 与 ConsultMessageReferences 兼容的搜索项类型
 interface SearchListItem {
 	hostName?: string;
 	hostLogo?: string;
@@ -23,10 +22,8 @@ export interface ReferencesData {
 	searchList?: SearchListItem[];
 	lawList?: Array<{ lawId?: string; lawItemId?: string }>;
 	caseList?: string[];
-	// 详情数据（API 返回后填充）
 	lawDetails?: LawDetailResponse[];
 	caseDetails?: CaseDetailResponse[];
-	// 加载状态
 	loadingLaw?: boolean;
 	loadingCase?: boolean;
 }

@@ -1,0 +1,122 @@
+<!--
+@description: 可展开内容组件 - 支持滚动、渐变遮罩和粘底按钮
+-->
+<script lang="ts" setup>
+import { computed } from "vue";
+
+const props = withDefaults(
+	defineProps<{
+		content: string;
+		expanded: boolean;
+		/** 触发展开按钮的最小内容长度 */
+		minLength?: number;
+		/** 展开时的最大高度 */
+		maxHeight?: number;
+	}>(),
+	{
+		minLength: 200,
+		maxHeight: 300
+	}
+);
+
+const emit = defineEmits<{
+	(e: "toggle"): void;
+}>();
+
+// 是否显示展开按钮
+const showExpandBtn = computed(() => {
+	return props.content && props.content.length > props.minLength;
+});
+
+const handleToggle = () => {
+	emit("toggle");
+};
+</script>
+
+<template>
+	<view class="expandable-content">
+		<view class="content-scroll-wrapper" :class="{ expanded: expanded }">
+			<scroll-view
+				v-if="expanded"
+				scroll-y
+				class="content-scroll"
+				:style="{ maxHeight: maxHeight + 'px' }"
+			>
+				<text class="content-text expanded">
+					<slot>{{ content }}</slot>
+				</text>
+			</scroll-view>
+			<text v-else class="content-text">
+				<slot>{{ content }}</slot>
+			</text>
+			<!-- 展开时的渐变遮罩 -->
+			<view v-if="expanded" class="content-fade-mask"></view>
+		</view>
+		<view v-if="showExpandBtn" class="expand-btn-sticky" @click="handleToggle">
+			<text class="expand-btn-text">
+				{{ expanded ? "收起" : "展开全部" }}
+			</text>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.expandable-content {
+	width: 100%;
+}
+
+.content-scroll-wrapper {
+	position: relative;
+}
+
+.content-scroll-wrapper.expanded {
+	max-height: v-bind("maxHeight + 'px'");
+}
+
+.content-scroll {
+	max-height: v-bind("maxHeight + 'px'");
+}
+
+.content-text {
+	@apply text-sm leading-relaxed;
+	padding: 4px 10px 30px 4px;
+	color: #374151;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 6;
+	line-clamp: 6;
+	overflow: hidden;
+}
+
+.content-text.expanded {
+	-webkit-line-clamp: unset;
+	line-clamp: unset;
+	overflow: visible;
+	display: block;
+}
+
+.content-fade-mask {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	right: 0;
+	height: 40px;
+	background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 1));
+	pointer-events: none;
+}
+
+.expand-btn-sticky {
+	@apply mt-2 py-2 flex items-center justify-center;
+	border: 1px solid #e5e7eb;
+	border-radius: 20px;
+	background-color: #ffffff;
+	position: sticky;
+	bottom: 0;
+	z-index: 10;
+}
+
+.expand-btn-text {
+	@apply text-sm;
+	color: #3b82f6;
+}
+</style>
