@@ -1,12 +1,12 @@
-// 聊天模块枚举（先预留 7 个子模块位）
+// 聊天模块枚举
 export type ChatModuleKey =
 	| "consult" // 咨询
-	| "contract" // 合同审查
-	| "caseSearch" // 判例检索
-	| "docAnalysis" // 文书分析
-	| "module5"
-	| "module6"
-	| "module7";
+	| "law" // 法规查询
+	| "case" // 案例检索
+	| "complaint" // 起诉状
+	| "defense" // 答辩状
+	| "contractReview" // 合同审查
+	| "contractGen"; // 合同生成
 
 // 每个模块的基础配置
 export interface ChatModuleConfig {

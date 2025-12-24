@@ -20,3 +20,4 @@ export * from "./dict";
 export * from "./user";
 export * from "./im";
 export * from "./chatInput-store";
+export * from "./moduleSwitchStore";

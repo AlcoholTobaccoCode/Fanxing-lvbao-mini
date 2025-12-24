@@ -1,0 +1,167 @@
+<!--
+@description: 起诉状生成起始页
+-->
+<script lang="ts" setup>
+import { COMPLAINT_CATEGORIES, COMPLAINT_STEPS, COMPLAINT_TEMPLATES } from "../utils";
+
+const emit = defineEmits<{
+	(e: "preset-select", value: string): void;
+}>();
+
+const handleCategoryClick = (category: { label: string; icon: string; desc: string }) => {
+	emit("preset-select", `我需要生成一份${category.label}文书`);
+};
+
+const handleTemplateClick = (template: string) => {
+	emit("preset-select", `帮我生成${template}`);
+};
+</script>
+
+<template>
+	<view class="flex flex-col gap-4">
+		<!-- 标题区域 -->
+		<view class="mt-2">
+			<view class="flex flex-row items-center gap-2">
+				<view class="icon-wrapper bg-error-100">
+					<cl-icon name="file-text-line" size="24px" color="error" />
+				</view>
+				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
+					起诉状生成
+				</cl-text>
+			</view>
+			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+				智能生成规范法律文书，根据案情自动引用法条，让诉讼准备更高效。
+			</cl-text>
+		</view>
+
+		<!-- 生成步骤 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">生成流程</cl-text>
+			<view class="steps-container bg-error-50">
+				<view v-for="(step, i) in COMPLAINT_STEPS" :key="i" class="step-item">
+					<view class="step-num bg-error-500">{{ step.num }}</view>
+					<view class="step-content">
+						<text class="step-title text-surface-700">{{ step.title }}</text>
+						<text class="step-desc text-surface-400">{{ step.desc }}</text>
+					</view>
+					<view v-if="i < COMPLAINT_STEPS.length - 1" class="step-arrow">
+						<cl-icon name="arrow-right-s-line" size="16px" color="info" />
+					</view>
+				</view>
+			</view>
+		</view>
+
+		<!-- 案件类型 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">选择类型</cl-text>
+			<view class="category-list">
+				<view
+					v-for="(item, i) in COMPLAINT_CATEGORIES"
+					:key="i"
+					class="category-card bg-surface-50 border-surface-200"
+					hover-class="hover-darker"
+					@click="handleCategoryClick(item)"
+				>
+					<view class="category-icon-wrap bg-error-50">
+						<cl-icon :name="item.icon" size="24px" color="error" />
+					</view>
+					<view class="category-info">
+						<text class="category-title text-surface-700">{{ item.label }}</text>
+						<text class="category-desc text-surface-400">{{ item.desc }}</text>
+					</view>
+					<cl-icon name="arrow-right-s-line" size="18px" color="info" />
+				</view>
+			</view>
+		</view>
+
+		<!-- 快捷模板 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">常用模板</cl-text>
+			<view class="template-wrap">
+				<view
+					v-for="(item, i) in COMPLAINT_TEMPLATES"
+					:key="i"
+					class="template-tag bg-error-50 border-error-200"
+					hover-class="hover-darker"
+					@click="handleTemplateClick(item)"
+				>
+					<cl-icon name="file-copy-line" size="14px" color="error" />
+					<text class="template-text text-error-600">{{ item }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.icon-wrapper {
+	@apply w-10 h-10 rounded-xl flex items-center justify-center;
+}
+
+.steps-container {
+	@apply flex flex-row items-center justify-between p-3 rounded-xl;
+}
+
+.step-item {
+	@apply flex flex-row items-center;
+	flex: 1;
+}
+
+.step-num {
+	@apply w-6 h-6 rounded-full flex items-center justify-center text-xs text-white;
+}
+
+.step-content {
+	@apply flex flex-col ml-2;
+}
+
+.step-title {
+	@apply text-sm font-medium;
+}
+
+.step-desc {
+	@apply text-xs;
+}
+
+.step-arrow {
+	@apply mx-2;
+}
+
+.category-list {
+	@apply flex flex-col gap-3;
+}
+
+.category-card {
+	@apply flex flex-row items-center p-3 rounded-xl;
+	border-width: 1px;
+}
+
+.category-icon-wrap {
+	@apply w-10 h-10 rounded-lg flex items-center justify-center;
+}
+
+.category-info {
+	@apply flex-1 flex flex-col ml-3;
+}
+
+.category-title {
+	@apply text-sm font-medium;
+}
+
+.category-desc {
+	@apply text-xs;
+}
+
+.template-wrap {
+	@apply flex flex-wrap gap-2;
+}
+
+.template-tag {
+	@apply flex flex-row items-center gap-1 px-3 py-2 rounded-full;
+	border-width: 1px;
+}
+
+.template-text {
+	@apply text-sm;
+}
+</style>

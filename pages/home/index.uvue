@@ -1,17 +1,27 @@
 <script lang="ts" setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { router, useStore } from "@/cool";
 import { showLoginModal } from "@/cool/store/login-modal";
-import { chatFlowStore, chatInputStore } from "@/cool/store";
+import { chatFlowStore, chatInputStore, moduleSwitchStore } from "@/cool/store";
+import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
 
 import type { SendData, Tools } from "@/cool/types/chat-input";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue";
 import SimpleCard from "@/components/card/simple-card.uvue";
-import Consult from "@/ai-chat-module/consult/consult.uvue";
+import ModuleSwitch from "@/ai-chat-module/components/module-switch/index.uvue";
+
+// 各模块起始页组件
+import ConsultStarter from "@/ai-chat-module/consult/consult.uvue";
+import LawStarter from "@/ai-chat-module/law/law.uvue";
+import CaseStarter from "@/ai-chat-module/case/case.uvue";
+import ComplaintStarter from "@/ai-chat-module/complaint/complaint.uvue";
+import DefenseStarter from "@/ai-chat-module/defense/defense.uvue";
+import ContractReviewStarter from "@/ai-chat-module/contract-review/contract-review.uvue";
+import ContractGenStarter from "@/ai-chat-module/contract-gen/contract-gen.uvue";
 
 const log = new Logger("HomePage");
 const ui = useUi();
@@ -20,11 +30,24 @@ const { user } = useStore();
 // 对话输入内容
 const inputValue = ref("");
 
+// 当前模块
+const currentModule = computed(() => moduleSwitchStore.currentModule.value);
+
+// 当前模块配置
+const currentConfig = computed(() => moduleSwitchStore.currentConfig.value);
+
 onLoad(async () => {
-	// 测试 errorAi 功能
+	// 页面加载
 });
 
 //#region 交互区域
+
+// 模块切换处理
+const handleModuleChange = (moduleKey: ChatModuleKey) => {
+	log.info("切换模块 => ", moduleKey);
+	// 清空输入框
+	inputValue.value = "";
+};
 
 // 发送当前对话输入：发起咨询模块并跳转到咨询对话页
 const handleToolsChange = (val: Tools) => {
@@ -61,12 +84,13 @@ const handleSend = async (data: SendData) => {
 	}
 
 	if (!questionText) {
-		ui.showToast({ message: "请输入或说出你的咨询问题" });
+		ui.showToast({ message: "请输入或说出你的问题" });
 		return;
 	}
 
-	// 记录本次从首页发起的咨询会话（先固定模块 consult）
-	chatFlowStore.startModule("consult", {
+	// 使用当前选中的模块
+	const moduleKey = currentModule.value;
+	chatFlowStore.startModule(moduleKey, {
 		text: questionText,
 		voice: data.mode === "voice" ? data.voice : null,
 		tools: chatInputStore.tools.value,
@@ -81,7 +105,7 @@ const handleSend = async (data: SendData) => {
 	if (cfg?.detailRoute) {
 		router.to(cfg.detailRoute);
 	} else {
-		ui.showToast({ message: "暂未配置咨询详情页" });
+		ui.showToast({ message: "暂未配置详情页" });
 	}
 };
 
@@ -99,12 +123,10 @@ const handleOpenNewChat = () => {
 	});
 };
 
-//#region 通话
-
+//#region 测试入口
 const toTestPage = () => {
 	router.to("/test-pages/setting/index");
 };
-
 //#endregion
 </script>
 
@@ -113,8 +135,37 @@ const toTestPage = () => {
 		<template #content>
 			<view class="h-full flex flex-col">
 				<simple-card class="flex-1 !p-0 !rounded-none">
+					<module-switch @change="handleModuleChange"></module-switch>
 					<view class="flex-1 p-4 !px-8">
-						<Consult @preset-select="handlePresetSelect" />
+						<!-- 动态渲染各模块起始页 -->
+						<consult-starter
+							v-if="currentModule === 'consult'"
+							@preset-select="handlePresetSelect"
+						/>
+						<law-starter
+							v-else-if="currentModule === 'law'"
+							@preset-select="handlePresetSelect"
+						/>
+						<case-starter
+							v-else-if="currentModule === 'case'"
+							@preset-select="handlePresetSelect"
+						/>
+						<complaint-starter
+							v-else-if="currentModule === 'complaint'"
+							@preset-select="handlePresetSelect"
+						/>
+						<defense-starter
+							v-else-if="currentModule === 'defense'"
+							@preset-select="handlePresetSelect"
+						/>
+						<contract-review-starter
+							v-else-if="currentModule === 'contractReview'"
+							@preset-select="handlePresetSelect"
+						/>
+						<contract-gen-starter
+							v-else-if="currentModule === 'contractGen'"
+							@preset-select="handlePresetSelect"
+						/>
 					</view>
 					<view class="p-4">
 						<cl-button @click="toTestPage">前往测试页面</cl-button>
@@ -122,11 +173,12 @@ const toTestPage = () => {
 					<chat-input
 						v-model:model-value="inputValue"
 						v-model:input-mode="chatInputStore.inputMode.value"
-						use-module="consult"
+						:use-module="currentModule"
 						:tools="chatInputStore.tools.value"
-						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
-						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
-						:show-default-network="chatInputStore.showDefaultNetwork.value"
+						:show-default-deep-think="currentConfig?.enableDeepThink ?? false"
+						:show-default-knowledge="currentConfig?.enableKnowledge ?? false"
+						:show-default-network="currentConfig?.enableNetwork ?? false"
+						:placeholder="currentConfig?.placeholder"
 						@send="handleSend"
 						@tool-change="handleToolsChange"
 						@input-mode-change="handleInputModeChange"

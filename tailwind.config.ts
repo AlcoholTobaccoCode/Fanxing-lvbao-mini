@@ -458,15 +458,63 @@ function getSurface(name: surfaceColor): Record<string, string> {
 // 获取项目根目录
 const resolve = (dir: string) => join(__dirname, dir);
 
+/**
+ * 语义色调色板（warning/error/info）
+ * 用于状态反馈等场景
+ */
+const SEMANTIC_COLORS = {
+	warning: {
+		50: "#fffbeb",
+		100: "#fef3c7",
+		200: "#fde68a",
+		300: "#fcd34d",
+		400: "#fbbf24",
+		500: "#f59e0b",
+		600: "#d97706",
+		700: "#b45309",
+		800: "#92400e",
+		900: "#78350f",
+		950: "#451a03"
+	},
+	error: {
+		50: "#fef2f2",
+		100: "#fee2e2",
+		200: "#fecaca",
+		300: "#fca5a5",
+		400: "#f87171",
+		500: "#ef4444",
+		600: "#dc2626",
+		700: "#b91c1c",
+		800: "#991b1b",
+		900: "#7f1d1d",
+		950: "#450a0a"
+	},
+	info: {
+		50: "#eff6ff",
+		100: "#dbeafe",
+		200: "#bfdbfe",
+		300: "#93c5fd",
+		400: "#60a5fa",
+		500: "#3b82f6",
+		600: "#2563eb",
+		700: "#1d4ed8",
+		800: "#1e40af",
+		900: "#1e3a8a",
+		950: "#172554"
+	}
+};
+
 export default {
 	content: [resolve("./**/*.{uvue,vue}"), "!**/node_modules/**", "!**/dist/**"],
 	darkMode: "class",
 	theme: {
 		extend: {
 			colors: {
-				...getPrimary("teal"),
-				// ...getPrimary("fanxingzhihui"),
-				...getSurface("zinc")
+				// ...getPrimary("teal"),
+				...getPrimary("blue"),
+				...getSurface("neutral"),
+				// 语义色
+				...SEMANTIC_COLORS
 			},
 			fontSize: {
 				md: ["1rem", "1.5rem"]

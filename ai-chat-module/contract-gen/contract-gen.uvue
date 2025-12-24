@@ -1,0 +1,215 @@
+<!--
+@description: 合同生成起始页
+-->
+<script lang="ts" setup>
+import { ref } from "vue";
+import { CONTRACT_GEN_CATEGORIES, CONTRACT_GEN_HOT_TEMPLATES } from "../utils";
+
+const emit = defineEmits<{
+	(e: "preset-select", value: string): void;
+}>();
+
+const selectedCategory = ref<number | null>(null);
+
+const handleCategoryClick = (index: number) => {
+	selectedCategory.value = selectedCategory.value === index ? null : index;
+};
+
+const handleTemplateClick = (template: string) => {
+	emit("preset-select", `帮我生成一份${template}`);
+};
+</script>
+
+<template>
+	<view class="flex flex-col gap-4">
+		<!-- 标题区域 -->
+		<view class="mt-2">
+			<view class="flex flex-row items-center gap-2">
+				<view class="icon-wrapper bg-surface-200">
+					<cl-icon name="file-add-line" size="24px" color="info" />
+				</view>
+				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
+					合同生成
+				</cl-text>
+				<view class="coming-soon-badge bg-surface-200">
+					<text class="badge-text text-surface-500">即将上线</text>
+				</view>
+			</view>
+			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+				描述你的需求，AI 智能生成规范合同，可自定义条款，一键导出 Word。
+			</cl-text>
+		</view>
+
+		<!-- 合同类型网格 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">合同类型</cl-text>
+			<view class="category-grid">
+				<view
+					v-for="(item, i) in CONTRACT_GEN_CATEGORIES"
+					:key="i"
+					class="category-card disabled"
+					:class="{
+						'bg-primary-50 border-primary-200': selectedCategory === i,
+						'bg-surface-50': selectedCategory !== i
+					}"
+					hover-class="hover-darker"
+					@click="handleCategoryClick(i)"
+				>
+					<cl-icon :name="item.icon" size="24px" color="info" />
+					<text class="category-label text-surface-700">{{ item.label }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 展开的模板列表 -->
+		<view v-if="selectedCategory !== null" class="template-expand bg-surface-50">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-2' }">
+				{{ CONTRACT_GEN_CATEGORIES[selectedCategory].label }}模板
+			</cl-text>
+			<view class="template-list">
+				<view
+					v-for="(tpl, i) in CONTRACT_GEN_CATEGORIES[selectedCategory].templates"
+					:key="i"
+					class="template-item bg-white disabled"
+					hover-class="hover-darker"
+					@click="handleTemplateClick(tpl)"
+				>
+					<cl-icon name="file-text-line" size="16px" color="info" />
+					<text class="template-name text-surface-700">{{ tpl }}</text>
+					<cl-icon name="arrow-right-s-line" size="16px" color="info" />
+				</view>
+			</view>
+		</view>
+
+		<!-- 热门模板 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">热门模板</cl-text>
+			<view class="hot-template-wrap">
+				<view
+					v-for="(item, i) in CONTRACT_GEN_HOT_TEMPLATES"
+					:key="i"
+					class="hot-template-card bg-surface-50 disabled"
+					hover-class="hover-darker"
+					@click="handleTemplateClick(item)"
+				>
+					<view class="hot-rank bg-surface-300 text-surface-600">{{ i + 1 }}</view>
+					<text class="hot-name text-surface-700">{{ item }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 自定义入口 -->
+		<view class="custom-entry bg-surface-50 border-surface-300 disabled">
+			<view class="custom-icon bg-surface-200">
+				<cl-icon name="magic-line" size="20px" color="info" />
+			</view>
+			<view class="custom-info">
+				<text class="custom-title text-surface-700">自定义合同</text>
+				<text class="custom-desc text-surface-400">描述需求，AI 智能生成（暂未开放）</text>
+			</view>
+			<cl-icon name="arrow-right-s-line" size="20px" color="info" />
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.icon-wrapper {
+	@apply w-10 h-10 rounded-xl flex items-center justify-center;
+}
+
+.coming-soon-badge {
+	@apply px-2 py-0.5 rounded-full;
+}
+
+.badge-text {
+	@apply text-xs;
+}
+
+.category-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
+
+.category-card {
+	@apply flex flex-col items-center justify-center py-4 rounded-xl;
+	border-width: 1px;
+	border-color: transparent;
+}
+
+.category-card.disabled {
+	opacity: 0.6;
+}
+
+.category-label {
+	@apply text-sm mt-2;
+}
+
+.template-expand {
+	@apply p-3 rounded-xl;
+}
+
+.template-list {
+	@apply flex flex-col gap-2;
+}
+
+.template-item {
+	@apply flex flex-row items-center gap-2 p-2 rounded-lg;
+}
+
+.template-item.disabled {
+	opacity: 0.6;
+}
+
+.template-name {
+	@apply flex-1 text-sm;
+}
+
+.hot-template-wrap {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 10px;
+}
+
+.hot-template-card {
+	@apply flex flex-row items-center gap-2 p-3 rounded-xl;
+}
+
+.hot-template-card.disabled {
+	opacity: 0.6;
+}
+
+.hot-rank {
+	@apply w-5 h-5 rounded-full flex items-center justify-center text-xs;
+}
+
+.hot-name {
+	@apply text-sm;
+}
+
+.custom-entry {
+	@apply flex flex-row items-center p-4 rounded-xl mt-4;
+	border-width: 1px;
+	border-style: dashed;
+}
+
+.custom-entry.disabled {
+	opacity: 0.6;
+}
+
+.custom-icon {
+	@apply w-10 h-10 rounded-full flex items-center justify-center;
+}
+
+.custom-info {
+	@apply flex-1 flex flex-col ml-3;
+}
+
+.custom-title {
+	@apply text-sm font-medium;
+}
+
+.custom-desc {
+	@apply text-xs;
+}
+</style>

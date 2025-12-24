@@ -41,25 +41,6 @@ export const createModelSessionId = (module: string): string => {
 	return `${moduleStr}${generateRandomString(8)}`;
 };
 
-// 咨询模块默认问题
-export const LEGAL_QUICK_QUESTIONS: string[] = [
-	"如何确定劳动合同的生效时间？",
-	"法院的判决和裁定如何执行？",
-	"劳动合同不公平，怎么解决？",
-	"如何确定借款合同的利率与利息合法性？",
-	"劳动仲裁的程序怎么走？",
-	"借条怎么打，才具有法律效应？",
-	"离婚时的财产如何分割？",
-	"如何确定未成年子女的抚养权归属？",
-	"外包工人受伤时，如何保证赔偿？",
-	"离婚协议未履行，如何处理？",
-	"交通事故发生后如何收集证据？",
-	"婚姻中一方有过错，如何追究法律责任？",
-	"夫妻间财务问题如何解决？",
-	"无证驾驶事故责任如何分担？",
-	"交通事故中的赔偿问题，如何解决？"
-];
-
 // TODO
 export const MSG_RECEIVE_BG =
 	"https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/msg-receive.wav";

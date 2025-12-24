@@ -28,7 +28,7 @@
 					class="cl-tabs__item"
 					v-for="(item, index) in list"
 					:key="index"
-					:class="[pt.item?.className]"
+					:class="[pt.item?.className, { 'is-disabled': item.disabled }]"
 					:style="{
 						padding: `0 ${parseRpx(gutter)}`
 					}"
@@ -415,6 +415,11 @@ onMounted(() => {
 
 	&__item {
 		@apply flex flex-row items-center justify-center h-full relative z-10;
+
+		&.is-disabled {
+			opacity: 0.4;
+			cursor: not-allowed;
+		}
 	}
 
 	&__line {

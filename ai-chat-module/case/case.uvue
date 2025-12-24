@@ -1,0 +1,154 @@
+<!--
+@description: 案例检索起始页
+-->
+<script lang="ts" setup>
+import { ref } from "vue";
+import { CASE_TYPES, CASE_COURT_LEVELS, CASE_HOT_ITEMS } from "../utils";
+
+const emit = defineEmits<{
+	(e: "preset-select", value: string): void;
+}>();
+
+const selectedCourtLevel = ref("");
+
+const handleCaseTypeClick = (type: string) => {
+	emit("preset-select", `检索${type}相关案例`);
+};
+
+const handleCourtLevelSelect = (level: { label: string; value: string }) => {
+	selectedCourtLevel.value = level.value;
+};
+
+const handleHotCaseClick = (caseName: string) => {
+	emit("preset-select", caseName);
+};
+</script>
+
+<template>
+	<view class="flex flex-col gap-4">
+		<!-- 标题区域 -->
+		<view class="mt-2">
+			<view class="flex flex-row items-center gap-2">
+				<view class="icon-wrapper bg-warning-100">
+					<cl-icon name="fxzh-falvfagui1" size="24px" color="warning" />
+				</view>
+				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
+					案例检索
+				</cl-text>
+			</view>
+			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+				海量真实判例智能检索，快速找到相似案例，了解法院裁判观点与判决趋势。
+			</cl-text>
+		</view>
+
+		<!-- 案由选择 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">热门案由</cl-text>
+			<view class="case-type-wrap">
+				<view
+					v-for="(item, i) in CASE_TYPES"
+					:key="i"
+					class="case-type-tag bg-warning-50 border-warning-200"
+					hover-class="hover-darker"
+					@click="handleCaseTypeClick(item)"
+				>
+					<text class="tag-text text-warning-600">{{ item }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 法院级别筛选 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">法院级别</cl-text>
+			<view class="court-level-wrap">
+				<view
+					v-for="(item, i) in CASE_COURT_LEVELS"
+					:key="i"
+					class="court-level-item"
+					:class="{
+						'bg-primary-50 border-primary-500': selectedCourtLevel === item.value,
+						'bg-surface-100': selectedCourtLevel !== item.value
+					}"
+					hover-class="hover-darker"
+					@click="handleCourtLevelSelect(item)"
+				>
+					<text
+						class="court-text"
+						:class="{
+							'text-primary-600': selectedCourtLevel === item.value,
+							'text-surface-500': selectedCourtLevel !== item.value
+						}"
+					>
+						{{ item.label }}
+					</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 热门案例 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">经典案例</cl-text>
+			<view class="flex flex-col gap-2">
+				<view
+					v-for="(item, i) in CASE_HOT_ITEMS"
+					:key="i"
+					class="hot-case-card bg-surface-50"
+					hover-class="hover-darker"
+					@click="handleHotCaseClick(item)"
+				>
+					<view class="case-index bg-warning-500">{{ i + 1 }}</view>
+					<text class="case-title text-surface-700">{{ item }}</text>
+					<cl-icon name="arrow-right-s-line" size="16px" color="info" />
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.icon-wrapper {
+	@apply w-10 h-10 rounded-xl flex items-center justify-center;
+}
+
+.case-type-wrap {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.case-type-tag {
+	@apply px-4 py-2 rounded-full;
+	border-width: 1px;
+}
+
+.tag-text {
+	@apply text-sm;
+}
+
+.court-level-wrap {
+	display: flex;
+	gap: 10px;
+}
+
+.court-level-item {
+	@apply flex-1 py-2 rounded-lg text-center;
+	border-width: 1px;
+	border-color: transparent;
+}
+
+.court-text {
+	@apply text-sm;
+}
+
+.hot-case-card {
+	@apply flex flex-row items-center gap-3 p-3 rounded-lg;
+}
+
+.case-index {
+	@apply w-6 h-6 rounded-full flex items-center justify-center text-xs text-white;
+}
+
+.case-title {
+	@apply flex-1 text-sm;
+}
+</style>

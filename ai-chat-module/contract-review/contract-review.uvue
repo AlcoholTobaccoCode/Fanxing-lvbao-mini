@@ -1,0 +1,155 @@
+<!--
+@description: 合同审查起始页
+-->
+<script lang="ts" setup>
+import { CONTRACT_REVIEW_TYPES, CONTRACT_REVIEW_POINTS } from "../utils";
+
+const emit = defineEmits<{
+	(e: "preset-select", value: string): void;
+}>();
+
+const handleContractTypeClick = (type: string) => {
+	emit("preset-select", `请帮我审查一份${type}`);
+};
+</script>
+
+<template>
+	<view class="flex flex-col gap-4">
+		<!-- 标题区域 -->
+		<view class="mt-2">
+			<view class="flex flex-row items-center gap-2">
+				<view class="icon-wrapper bg-surface-200">
+					<cl-icon name="file-search-line" size="24px" color="info" />
+				</view>
+				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
+					合同审查
+				</cl-text>
+				<view class="coming-soon-badge bg-surface-200">
+					<text class="badge-text text-surface-500">即将上线</text>
+				</view>
+			</view>
+			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+				智能审查合同条款，识别风险点，提供专业修改建议，让签约更安心。
+			</cl-text>
+		</view>
+
+		<!-- 上传区域（占位） -->
+		<view class="upload-area bg-surface-50 border-surface-300">
+			<view class="upload-icon-wrap">
+				<cl-icon name="upload-cloud-line" size="40px" color="info" />
+			</view>
+			<text class="upload-title text-surface-700">上传合同文件</text>
+			<text class="upload-desc text-surface-400">支持 Word、PDF、图片格式</text>
+			<view class="upload-btn bg-surface-200">
+				<text class="btn-text text-surface-500">选择文件（暂未开放）</text>
+			</view>
+		</view>
+
+		<!-- 审查要点 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">审查内容</cl-text>
+			<view class="review-grid">
+				<view
+					v-for="(item, i) in CONTRACT_REVIEW_POINTS"
+					:key="i"
+					class="review-item bg-surface-50"
+				>
+					<cl-icon :name="item.icon" size="20px" color="info" />
+					<text class="review-title text-surface-700">{{ item.title }}</text>
+					<text class="review-desc text-surface-400">{{ item.desc }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 合同类型 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">支持合同类型</cl-text>
+			<view class="contract-type-wrap">
+				<view
+					v-for="(item, i) in CONTRACT_REVIEW_TYPES"
+					:key="i"
+					class="contract-tag bg-surface-100 disabled"
+					hover-class="hover-darker"
+					@click="handleContractTypeClick(item)"
+				>
+					<text class="tag-text text-surface-500">{{ item }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.icon-wrapper {
+	@apply w-10 h-10 rounded-xl flex items-center justify-center;
+}
+
+.coming-soon-badge {
+	@apply px-2 py-0.5 rounded-full;
+}
+
+.badge-text {
+	@apply text-xs;
+}
+
+.upload-area {
+	@apply flex flex-col items-center justify-center p-6 rounded-xl mt-4;
+	border-width: 2px;
+	border-style: dashed;
+}
+
+.upload-icon-wrap {
+	@apply mb-3;
+}
+
+.upload-title {
+	@apply text-base font-medium;
+}
+
+.upload-desc {
+	@apply text-sm mt-1;
+}
+
+.upload-btn {
+	@apply mt-4 px-6 py-2 rounded-full;
+	opacity: 0.6;
+}
+
+.btn-text {
+	@apply text-sm;
+}
+
+.review-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 10px;
+}
+
+.review-item {
+	@apply flex flex-col items-center p-3 rounded-xl text-center;
+}
+
+.review-title {
+	@apply text-sm font-medium mt-2;
+}
+
+.review-desc {
+	@apply text-xs mt-1;
+}
+
+.contract-type-wrap {
+	@apply flex flex-wrap gap-2;
+}
+
+.contract-tag {
+	@apply px-3 py-1.5 rounded-full;
+}
+
+.contract-tag.disabled {
+	opacity: 0.6;
+}
+
+.tag-text {
+	@apply text-sm;
+}
+</style>

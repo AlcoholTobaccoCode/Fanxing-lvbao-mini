@@ -10,11 +10,25 @@
 				"navigationStyle": "custom",
 				"usingComponents": {
 					"chat-input": "/ai-chat-module/components/chat-input/ai-chat/index",
-					"consult": "/ai-chat-module/consult/consult"
+					"module-switch": "/ai-chat-module/components/module-switch/index",
+					"consult-starter": "/ai-chat-module/consult/consult",
+					"law-starter": "/ai-chat-module/law/law",
+					"case-starter": "/ai-chat-module/case/case",
+					"complaint-starter": "/ai-chat-module/complaint/complaint",
+					"defense-starter": "/ai-chat-module/defense/defense",
+					"contract-review-starter": "/ai-chat-module/contract-review/contract-review",
+					"contract-gen-starter": "/ai-chat-module/contract-gen/contract-gen"
 				},
 				"componentPlaceholder": {
 					"chat-input": "view",
-					"consult": "view"
+					"module-switch": "view",
+					"consult-starter": "view",
+					"law-starter": "view",
+					"case-starter": "view",
+					"complaint-starter": "view",
+					"defense-starter": "view",
+					"contract-review-starter": "view",
+					"contract-gen-starter": "view"
 				}
 			}
 		}

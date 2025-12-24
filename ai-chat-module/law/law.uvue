@@ -1,0 +1,100 @@
+<!--
+@description: 法规查询起始页
+-->
+<script lang="ts" setup>
+import { LAW_CATEGORIES, LAW_HOT_ITEMS } from "../utils";
+
+const emit = defineEmits<{
+	(e: "preset-select", value: string): void;
+}>();
+
+const handleCategoryClick = (category: { label: string; icon: string }) => {
+	emit("preset-select", `查询${category.label}相关法规`);
+};
+
+const handleHotLawClick = (law: string) => {
+	emit("preset-select", law);
+};
+</script>
+
+<template>
+	<view class="flex flex-col gap-4">
+		<!-- 标题区域 -->
+		<view class="mt-2">
+			<view class="flex flex-row items-center gap-2">
+				<view class="icon-wrapper bg-primary-100">
+					<cl-icon name="fxzh-falvfagui" size="24px" color="primary" />
+				</view>
+				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
+					法规查询
+				</cl-text>
+			</view>
+			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+				精准检索全量法律法规，快速定位条款内容，了解法规沿革与适用范围。
+			</cl-text>
+		</view>
+
+		<!-- 法规分类 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">法规分类</cl-text>
+			<view class="category-grid">
+				<view
+					v-for="(item, i) in LAW_CATEGORIES"
+					:key="i"
+					class="category-item bg-primary-50"
+					hover-class="hover-darker"
+					@click="handleCategoryClick(item)"
+				>
+					<cl-icon :name="item.icon" size="20px" color="primary" />
+					<text class="category-label text-surface-700">{{ item.label }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 热门法规 -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">热门法规</cl-text>
+			<view class="flex flex-col gap-2">
+				<view
+					v-for="(item, i) in LAW_HOT_ITEMS"
+					:key="i"
+					class="hot-item bg-warning-50"
+					hover-class="hover-darker"
+					@click="handleHotLawClick(item)"
+				>
+					<cl-icon name="fire-line" size="16px" color="warning" />
+					<text class="hot-text text-surface-700">{{ item }}</text>
+				</view>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.icon-wrapper {
+	@apply w-10 h-10 rounded-xl flex items-center justify-center;
+}
+
+.category-grid {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12px;
+}
+
+.category-item {
+	@apply flex flex-col items-center justify-center py-3 rounded-xl;
+	min-height: 70px;
+}
+
+.category-label {
+	@apply text-sm mt-1;
+}
+
+.hot-item {
+	@apply flex flex-row items-center gap-2 p-3 rounded-lg;
+}
+
+.hot-text {
+	@apply text-sm flex-1;
+}
+</style>

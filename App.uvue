@@ -80,6 +80,21 @@ page {
 	background-color: rgba(0, 0, 0, 0.8) !important;
 }
 
+/* 通用 Hover/Press 效果 */
+.hover-darker {
+	opacity: 0.7 !important;
+	transition: opacity ease-in-out 0.3s;
+}
+.hover-darker-sm {
+	opacity: 0.85 !important;
+	transition: opacity ease-in-out 0.3s;
+}
+.hover-darker-lg {
+	opacity: 0.6 !important;
+	transition: opacity ease-in-out 0.3s;
+}
+
+/* 旧版 hover class (兼容) */
 .block-hover-class {
 	transition: all ease-in-out 0.2s;
 	background-color: #e6e6e6 !important;
