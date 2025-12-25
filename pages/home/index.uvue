@@ -4,8 +4,9 @@ import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { router, useStore } from "@/cool";
 import { showLoginModal } from "@/cool/store/login-modal";
-import { chatFlowStore, chatInputStore, moduleSwitchStore } from "@/cool/store";
+import { chatFlowStore, chatInputStore, moduleSwitchStore, lawSessionStore } from "@/cool/store";
 import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
+import type { LawModelType } from "@/cool/store/chatInput-store/lawSession";
 
 import type { SendData, Tools } from "@/cool/types/chat-input";
 
@@ -23,12 +24,18 @@ import DefenseStarter from "@/ai-chat-module/defense/defense.uvue";
 import ContractReviewStarter from "@/ai-chat-module/contract-review/contract-review.uvue";
 import ContractGenStarter from "@/ai-chat-module/contract-gen/contract-gen.uvue";
 
+// 法规模块模型选择器
+import ModelSelector from "@/ai-chat-module/components/model-selector.uvue";
+
 const log = new Logger("HomePage");
 const ui = useUi();
 const { user } = useStore();
 
 // 对话输入内容
 const inputValue = ref("");
+
+// 法规模块模型选择（仅 law 模块使用）
+const lawModelType = ref<LawModelType>("fabao");
 
 // 当前模块
 const currentModule = computed(() => moduleSwitchStore.currentModule.value);
@@ -94,7 +101,9 @@ const handleSend = async (data: SendData) => {
 		text: questionText,
 		voice: data.mode === "voice" ? data.voice : null,
 		tools: chatInputStore.tools.value,
-		inputMode: chatInputStore.inputMode.value
+		inputMode: chatInputStore.inputMode.value,
+		// 法规模块传递模型类型
+		modelType: moduleKey === "law" ? lawModelType.value : undefined
 	});
 
 	// 清空首页输入框
@@ -178,11 +187,20 @@ const toTestPage = () => {
 						:show-default-deep-think="currentConfig?.enableDeepThink ?? false"
 						:show-default-knowledge="currentConfig?.enableKnowledge ?? false"
 						:show-default-network="currentConfig?.enableNetwork ?? false"
+						:show-intent-chips="currentModule !== 'law'"
 						:placeholder="currentConfig?.placeholder"
 						@send="handleSend"
 						@tool-change="handleToolsChange"
 						@input-mode-change="handleInputModeChange"
-					/>
+					>
+						<!-- 法规模块：模型选择器 -->
+						<template v-if="currentModule === 'law'" #tools-prepend>
+							<model-selector
+								v-model="lawModelType"
+								:locked="false"
+							/>
+						</template>
+					</chat-input>
 				</simple-card>
 			</view>
 		</template>

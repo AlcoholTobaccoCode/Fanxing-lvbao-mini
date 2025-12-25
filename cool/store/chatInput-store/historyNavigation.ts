@@ -6,6 +6,8 @@ import { useStore } from "@/cool";
 import { LoadMessages } from "@/api/history-chat";
 import { chatFlowStore } from "./flow";
 import { consultSessionStore, type ConsultMessage } from "./consultSession";
+import { lawSessionStore, type LawMessage } from "./lawSession";
+import { caseSessionStore, type CaseMessage } from "./caseSession";
 import { CHAT_MODULE_CONFIGS } from "./moduleConfigs";
 import type { ChatModuleKey } from "./types";
 import type {
@@ -70,7 +72,11 @@ export async function navigateToHistorySession(item: HistorySessionItem): Promis
 				await restoreConsultSession(item.session_id, sessionData);
 				break;
 			case "law":
+				await restoreLawSession(item.session_id, sessionData);
+				break;
 			case "case":
+				await restoreCaseSession(item.session_id, sessionData);
+				break;
 			case "complaint":
 			case "defense":
 			case "contractReview":
@@ -133,6 +139,60 @@ async function restoreConsultSession(sessionId: string, sessionData: any): Promi
 
 	// 恢复 consultSessionStore
 	consultSessionStore.restoreFromHistory(sessionId, consultMessages);
+}
+
+/**
+ * 恢复法规查询会话
+ */
+async function restoreLawSession(sessionId: string, sessionData: any): Promise<void> {
+	const messages = sessionData?.messages ?? [];
+
+	const lawMessages: LawMessage[] = messages.map((msg: any) => ({
+		role: msg.sender === "user" ? "user" : "system",
+		content: msg.content || "",
+		fromVoice: false,
+		voiceUrl: undefined,
+		voiceLength: undefined,
+		references: msg.references || {
+			searchList: [],
+			lawList: []
+		}
+	}));
+
+	chatFlowStore.startModule("law", {
+		text: "",
+		tools: [],
+		inputMode: "text"
+	});
+
+	lawSessionStore.restoreFromHistory(sessionId, lawMessages);
+}
+
+/**
+ * 恢复案例检索会话
+ */
+async function restoreCaseSession(sessionId: string, sessionData: any): Promise<void> {
+	const messages = sessionData?.messages ?? [];
+
+	const caseMessages: CaseMessage[] = messages.map((msg: any) => ({
+		role: msg.sender === "user" ? "user" : "system",
+		content: msg.content || "",
+		fromVoice: false,
+		voiceUrl: undefined,
+		voiceLength: undefined,
+		references: msg.references || {
+			searchList: [],
+			caseList: []
+		}
+	}));
+
+	chatFlowStore.startModule("case", {
+		text: "",
+		tools: [],
+		inputMode: "text"
+	});
+
+	caseSessionStore.restoreFromHistory(sessionId, caseMessages);
 }
 
 /**

@@ -1,0 +1,163 @@
+<!--
+@description: 律之星法规检索结果列表组件
+-->
+<script lang="ts" setup>
+import { ref } from "vue";
+import type { LzxLawResultItem } from "@/api/retrieve";
+import LzxLawCard from "./index.uvue";
+
+const props = defineProps<{
+	items: LzxLawResultItem[];
+	loading?: boolean;
+}>();
+
+const emit = defineEmits<{
+	(e: "view-detail", item: LzxLawResultItem): void;
+}>();
+
+// 列表展开/收起状态
+const isExpanded = ref(true);
+
+const toggleExpand = () => {
+	isExpanded.value = !isExpanded.value;
+};
+
+const handleViewDetail = (item: LzxLawResultItem) => {
+	emit("view-detail", item);
+};
+</script>
+
+<template>
+	<view class="lzx-list">
+		<!-- 标题栏 -->
+		<view class="list-header" @click="toggleExpand">
+			<view class="header-left">
+				<view class="header-icon">
+					<cl-icon name="fxzh-falvfagui" size="18px" color="#3b82f6" />
+				</view>
+				<text class="header-title">检索结果</text>
+				<view class="header-count">
+					<text class="count-text">{{ items.length }} 条</text>
+				</view>
+			</view>
+			<view class="header-right">
+				<cl-icon
+					:name="isExpanded ? 'arrow-down-s-line' : 'arrow-right-s-line'"
+					size="20px"
+					color="#9ca3af"
+				/>
+			</view>
+		</view>
+
+		<!-- 内容区域 -->
+		<view v-if="isExpanded" class="list-content">
+			<!-- 加载状态 -->
+			<view v-if="loading" class="loading-wrapper">
+				<view class="loading-spinner"></view>
+				<text class="loading-text">正在检索法规...</text>
+			</view>
+
+			<!-- 结果列表 -->
+			<template v-else-if="items && items.length">
+				<lzx-law-card
+					v-for="(item, index) in items"
+					:key="item.lawId || index"
+					:item="item"
+					:index="index"
+					@view-detail="handleViewDetail"
+				/>
+			</template>
+
+			<!-- 空状态 -->
+			<view v-else class="empty-wrapper">
+				<cl-icon name="search-line" size="40px" color="#d1d5db" />
+				<text class="empty-text">未找到相关法规</text>
+				<text class="empty-hint">请尝试调整检索关键词</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.lzx-list {
+	@apply mt-3;
+}
+
+.list-header {
+	@apply flex flex-row items-center justify-between px-4 py-3 rounded-xl;
+	background-color: #fafbfc;
+	border: 1px solid #f3f4f6;
+}
+
+.header-left {
+	@apply flex flex-row items-center;
+}
+
+.header-icon {
+	@apply mr-2;
+}
+
+.header-title {
+	@apply text-base font-semibold;
+	color: #3b82f6;
+}
+
+.header-count {
+	@apply ml-2 px-2 py-0.5 rounded-full;
+	background-color: #eff6ff;
+}
+
+.count-text {
+	@apply text-xs font-medium;
+	color: #3b82f6;
+}
+
+.header-right {
+	@apply flex items-center;
+}
+
+.list-content {
+	@apply mt-3;
+}
+
+.loading-wrapper {
+	@apply flex flex-row items-center justify-center py-8;
+}
+
+.loading-spinner {
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 2px solid #e5e7eb;
+	border-top-color: #3b82f6;
+	animation: spin 1s linear infinite;
+}
+
+.loading-text {
+	@apply text-sm ml-3;
+	color: #9ca3af;
+}
+
+.empty-wrapper {
+	@apply flex flex-col items-center justify-center py-12;
+}
+
+.empty-text {
+	@apply text-base mt-3;
+	color: #6b7280;
+}
+
+.empty-hint {
+	@apply text-sm mt-1;
+	color: #9ca3af;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+</style>

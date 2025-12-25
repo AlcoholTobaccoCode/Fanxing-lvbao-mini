@@ -48,6 +48,11 @@ const props = defineProps({
 	showDefaultNetwork: {
 		type: Boolean,
 		default: () => true
+	},
+	// 是否显示默认意图标签（tools chips）
+	showIntentChips: {
+		type: Boolean,
+		default: () => true
 	}
 });
 
@@ -288,28 +293,37 @@ watch(
 
 <template>
 	<simple-card class="chat-input-wrapper" :class="{ 'is-dark': isDark }">
-		<!-- 顶部意图标签 -->
-		<view class="chat-intent-row">
-			<scroll-view scroll-x class="w-full" show-scrollbar="false">
-				<view class="chat-intent-row__inner">
-					<view
-						v-for="(item, idx) in tools"
-						:key="item.text + '-' + idx"
-						class="chat-intent-chip"
-						:class="{ 'chat-intent-chip--active': item.enable }"
-						@tap.stop="handleToolTap(item)"
-					>
-						<cl-icon
-							:name="item.icon"
-							color="currentColor"
-							:pt="{ className: 'mr-1' }"
-						></cl-icon>
-						<cl-text size="13px" class="chat-intent-chip__text">{{
-							item.text
-						}}</cl-text>
+		<!-- 顶部工具区域 -->
+		<view class="chat-tools-area">
+			<!-- 前置插槽：模型选择等自定义工具 -->
+			<slot name="tools-prepend"></slot>
+
+			<!-- 默认意图标签 -->
+			<view v-if="showIntentChips && tools.length > 0" class="chat-intent-row">
+				<scroll-view scroll-x class="w-full" show-scrollbar="false">
+					<view class="chat-intent-row__inner">
+						<view
+							v-for="(item, idx) in tools"
+							:key="item.text + '-' + idx"
+							class="chat-intent-chip"
+							:class="{ 'chat-intent-chip--active': item.enable }"
+							@tap.stop="handleToolTap(item)"
+						>
+							<cl-icon
+								:name="item.icon"
+								color="currentColor"
+								:pt="{ className: 'mr-1' }"
+							></cl-icon>
+							<cl-text size="13px" class="chat-intent-chip__text">{{
+								item.text
+							}}</cl-text>
+						</view>
 					</view>
-				</view>
-			</scroll-view>
+				</scroll-view>
+			</view>
+
+			<!-- 后置插槽 -->
+			<slot name="tools-append"></slot>
 		</view>
 
 		<!-- 主输入区域 -->
@@ -445,8 +459,12 @@ watch(
 	border-width: 0;
 }
 
+.chat-tools-area {
+	@apply flex flex-col gap-2 mb-2;
+}
+
 .chat-intent-row {
-	@apply mb-2;
+	// 移除 mb-2，由父级 chat-tools-area 控制间距
 }
 
 .chat-intent-row__inner {

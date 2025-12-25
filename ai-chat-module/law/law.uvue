@@ -22,8 +22,8 @@ const handleHotLawClick = (law: string) => {
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="flex flex-row items-center gap-2">
-				<view class="icon-wrapper bg-primary-100">
-					<cl-icon name="fxzh-falvfagui" size="24px" color="primary" />
+				<view class="icon-wrapper">
+					<cl-icon name="fxzh-falvfagui" size="24px" color="info" />
 				</view>
 				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
 					法规查询

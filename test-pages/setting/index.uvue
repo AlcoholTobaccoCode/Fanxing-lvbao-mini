@@ -897,7 +897,9 @@ const toTestPage = () => {
 												</view>
 												<view
 													class="order-row"
-													v-if="order.status === 'PREPAY'"
+													v-if="
+														['PREPAY', 'CREATED'].includes(order.status)
+													"
 												>
 													<cl-button
 														type="warn"
