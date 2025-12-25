@@ -9,54 +9,28 @@ import {
 	UpdateSessionTitle
 } from "@/api/history-chat";
 
-// 业务类型 & 标签元信息（参考 Web 端 History）
+// 业务类型 & 标签元信息
 export type HistoryBizType =
-	| "consult"
-	| "retrieve"
-	| "document"
-	| "contract_generate"
-	| "contract_review";
+	| "consult" // 法律咨询
+	| "retrieve" // 案例检索（旧版统一检索 + 案例）
+	| "document" // 法规查询（旧版文档）
+	| "complaint" // 起诉状
+	| "defense" // 答辩状
+	| "contract_generate" // 合同生成
+	| "contract_review"; // 合同审查
 
 export interface HistoryBizMeta {
 	bizType: HistoryBizType;
 	tagLabel: string;
-	tagType: "blue" | "green" | "geekblue" | "orange" | "cyan";
+	tagType: "blue" | "green" | "geekblue" | "orange" | "cyan" | "red" | "purple";
 }
 
-// 为小程序端实现与 Web 端一致的业务类型推断
-export const getBizMetaBySessionId = (sessionId: string): HistoryBizMeta => {
-	if (sessionId.startsWith("contract_review_session")) {
-		return {
-			bizType: "contract_review",
-			tagLabel: "审查",
-			tagType: "geekblue"
-		};
-	}
-
-	if (sessionId.startsWith("ai_retrieve_")) {
-		return {
-			bizType: "retrieve",
-			tagLabel: "检索",
-			tagType: "orange"
-		};
-	}
-
-	if (sessionId.startsWith("ai_doc_")) {
-		return {
-			bizType: "document",
-			tagLabel: "文书",
-			tagType: "cyan"
-		};
-	}
-
-	if (sessionId.startsWith("ai_contract_")) {
-		return {
-			bizType: "contract_generate",
-			tagLabel: "生成",
-			tagType: "blue"
-		};
-	}
-
+/**
+ * 根据 sessionId 前缀推断业务类型
+ * 只识别新版前缀，旧版数据返回 null 会被过滤
+ */
+export const getBizMetaBySessionId = (sessionId: string): HistoryBizMeta | null => {
+	// 法律咨询
 	if (sessionId.startsWith("ai_consult_")) {
 		return {
 			bizType: "consult",
@@ -65,11 +39,62 @@ export const getBizMetaBySessionId = (sessionId: string): HistoryBizMeta => {
 		};
 	}
 
-	return {
-		bizType: "consult",
-		tagLabel: "咨询",
-		tagType: "green"
-	};
+	// 法规查询
+	if (sessionId.startsWith("ai_retrieve_law_")) {
+		return {
+			bizType: "document",
+			tagLabel: "法规",
+			tagType: "cyan"
+		};
+	}
+
+	// 案例检索
+	if (sessionId.startsWith("ai_retrieve_case_")) {
+		return {
+			bizType: "retrieve",
+			tagLabel: "案例",
+			tagType: "orange"
+		};
+	}
+
+	// 起诉状
+	if (sessionId.startsWith("ai_complaint_")) {
+		return {
+			bizType: "complaint",
+			tagLabel: "起诉状",
+			tagType: "red"
+		};
+	}
+
+	// 答辩状
+	if (sessionId.startsWith("ai_defense_")) {
+		return {
+			bizType: "defense",
+			tagLabel: "答辩状",
+			tagType: "purple"
+		};
+	}
+
+	// 合同审查
+	if (sessionId.startsWith("ai_contract_review_")) {
+		return {
+			bizType: "contract_review",
+			tagLabel: "合同审查",
+			tagType: "geekblue"
+		};
+	}
+
+	// 合同生成
+	if (sessionId.startsWith("ai_contract_generate_")) {
+		return {
+			bizType: "contract_generate",
+			tagLabel: "合同生成",
+			tagType: "blue"
+		};
+	}
+
+	// 未识别的前缀返回 null（会被过滤）
+	return null;
 };
 
 export interface HistorySessionItem extends UserSessionItem, HistoryBizMeta {}
@@ -160,16 +185,19 @@ export function useHistorySessions() {
 			})) as GetUserSessionsData | any;
 			const data =
 				(res as GetUserSessionsData)?.sessions ?? (res as any)?.data?.sessions ?? [];
-			const sessions = (data as UserSessionItem[]).filter(
-				(s) => !s.session_id.startsWith("lawyer-session_")
-			);
-			aiSessions.value = sessions.map((s) => {
+
+			// 过滤并转换会话数据
+			// 1. 过滤掉律师对话
+			// 2. 过滤掉无法识别的旧版数据（getBizMetaBySessionId 返回 null）
+			const validSessions: HistorySessionItem[] = [];
+			for (const s of data as UserSessionItem[]) {
+				if (s.session_id.startsWith("lawyer-session_")) continue;
 				const meta = getBizMetaBySessionId(s.session_id);
-				return {
-					...s,
-					...meta
-				};
-			});
+				if (!meta) continue; // 过滤旧版数据
+				validSessions.push({ ...s, ...meta });
+			}
+
+			aiSessions.value = validSessions;
 		} catch (err) {
 			console.error("[history] 获取会话列表失败", err);
 			ui.showToast({ message: "获取历史记录失败，请稍后重试" });

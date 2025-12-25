@@ -1,44 +1,35 @@
 import { generateUUID, generateRandomString } from "./util";
+import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
 
-export const MODULE_SESSION_NAME = {
-	// 咨询
-	consult: "ai_consult_",
-	// 检索
-	retrieve: "ai_retrieve_",
-	// 法条检索
-	retrieveLaw: "ai_retrieve_law_",
-	// 案例检索
-	retrieveCase: "ai_retrieve_case_",
-	// TODO
-	// 文书
-	doc: "ai_doc_",
-	// 起诉状
-	lawsuit: "ai_indictment_",
-	// 答辩状
-	defense: "ai_defense_",
-	// TODO
-	// 合同
-	contract: "ai_contract_",
-	// 合同审查
-	contractReview: "ai_contract_review_",
-	// 合同生成
-	contractGenerate: "ai_contract_generate_",
-	// 律师对话
-	lawyerChat: ""
+/**
+ * 模块 Session ID 前缀映射
+ */
+export const MODULE_SESSION_NAME: Record<ChatModuleKey, string> = {
+	consult: "ai_consult_", // 法律咨询
+	law: "ai_retrieve_law_", // 法规查询
+	case: "ai_retrieve_case_", // 案例检索
+	complaint: "ai_complaint_", // 起诉状生成
+	defense: "ai_defense_", // 答辩状生成
+	contractReview: "ai_contract_review_", // 合同审查
+	contractGen: "ai_contract_generate_" // 合同生成
 };
 
-export const createModelSessionId = (module: string): string => {
+/**
+ * 创建模块会话 ID
+ * @param module 模块 Key（ChatModuleKey）
+ */
+export const createModelSessionId = (module: ChatModuleKey): string => {
 	if (!module) {
 		throw new Error("需要指定模块");
 	}
 
-	const moduleStr = MODULE_SESSION_NAME[module] || null;
-	if (!moduleStr) {
+	const prefix = MODULE_SESSION_NAME[module];
+	if (!prefix) {
 		console.warn(`未找到该模块预设 「${module}」,随机生成`);
 		return generateUUID();
 	}
 
-	return `${moduleStr}${generateRandomString(8)}`;
+	return `${prefix}${generateRandomString(8)}`;
 };
 
 // TODO

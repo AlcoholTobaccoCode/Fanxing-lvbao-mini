@@ -15,13 +15,16 @@ import type {
 
 /**
  * 业务类型到模块 Key 的映射
+ * HistoryBizType → ChatModuleKey
  */
 const BIZ_TYPE_TO_MODULE: Record<HistoryBizType, ChatModuleKey | null> = {
-	consult: "consult",
-	retrieve: "caseSearch",
-	document: "docAnalysis",
-	contract_generate: "contract",
-	contract_review: "contract"
+	consult: "consult", // 法律咨询
+	retrieve: "case", // 案例检索
+	document: "law", // 法规查询
+	complaint: "complaint", // 起诉状
+	defense: "defense", // 答辩状
+	contract_generate: "contractGen", // 合同生成
+	contract_review: "contractReview" // 合同审查
 };
 
 /**
@@ -66,9 +69,12 @@ export async function navigateToHistorySession(item: HistorySessionItem): Promis
 			case "consult":
 				await restoreConsultSession(item.session_id, sessionData);
 				break;
-			case "contract":
-			case "caseSearch":
-			case "docAnalysis":
+			case "law":
+			case "case":
+			case "complaint":
+			case "defense":
+			case "contractReview":
+			case "contractGen":
 			default:
 				uni.hideLoading();
 				uni.showToast({ title: "该功能即将上线", icon: "none" });

@@ -45,7 +45,7 @@ const handleHotLawClick = (law: string) => {
 					hover-class="hover-darker"
 					@click="handleCategoryClick(item)"
 				>
-					<cl-icon :name="item.icon" size="20px" color="primary" />
+					<cl-icon :name="item.icon" size="20px" color="info" />
 					<text class="category-label text-surface-700">{{ item.label }}</text>
 				</view>
 			</view>

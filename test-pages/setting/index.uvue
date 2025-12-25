@@ -532,6 +532,7 @@ const toTestPage = () => {
 
 .section-header {
 	display: flex;
+	flex-direction: row;
 	justify-content: space-between;
 	align-items: center;
 	padding: 28rpx 24rpx;
@@ -540,6 +541,7 @@ const toTestPage = () => {
 
 .section-title {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: 16rpx;
 }
@@ -562,6 +564,7 @@ const toTestPage = () => {
 
 .step-header {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: 12rpx;
 	margin-bottom: 16rpx;
@@ -576,6 +579,7 @@ const toTestPage = () => {
 	font-size: 24rpx;
 	font-weight: bold;
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	justify-content: center;
 }
@@ -599,6 +603,7 @@ const toTestPage = () => {
 
 .action-row {
 	display: flex;
+	flex-direction: row;
 	gap: 16rpx;
 }
 
@@ -634,6 +639,7 @@ const toTestPage = () => {
 // 分隔线
 .divider {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	gap: 20rpx;
 	margin: 24rpx 0;
@@ -654,6 +660,7 @@ const toTestPage = () => {
 
 .param-item {
 	display: flex;
+	flex-direction: row;
 	align-items: center;
 	background: white;
 	border: 2rpx solid #e8e8e8;
@@ -701,6 +708,7 @@ const toTestPage = () => {
 .log-section {
 	.log-header {
 		display: flex;
+		flex-direction: row;
 		justify-content: space-between;
 		align-items: center;
 		padding: 28rpx 24rpx;
