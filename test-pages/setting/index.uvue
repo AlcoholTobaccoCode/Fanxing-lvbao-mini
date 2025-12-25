@@ -2,9 +2,7 @@
 import { ref, reactive } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
-import { parseClass } from "@/cool";
-
-import AppPage from "@/components/common/layout/app-page.uvue";
+import { parseClass, router } from "@/cool";
 import {
 	PermissionScope,
 	requestPermission,
@@ -12,7 +10,18 @@ import {
 	checkMultiplePermissions,
 	requestMultiplePermissions
 } from "@/utils/permission";
-import { router } from "@/cool";
+
+import {
+	WxLogin,
+	CreateJsApiOrder,
+	GetOrderStatus,
+	CloseOrder,
+	GetOrderList,
+	RegeneratePayment,
+	type OrderInfo
+} from "@/api/payment/wx";
+
+import AppPage from "@/components/common/layout/app-page.uvue";
 
 const log = new Logger("TestPage-Setting");
 const ui = useUi();
@@ -20,10 +29,11 @@ const ui = useUi();
 // ==================== 折叠面板状态 ====================
 const collapseState = reactive({
 	wxPay: false,
+	wxRealPay: false,
 	permission: false
 });
 
-// ==================== 微信支付测试 ====================
+//#region 微信支付测试
 const wxLoginCode = ref("");
 const wxLoginLoading = ref(false);
 
@@ -93,14 +103,13 @@ const parseJsonParams = () => {
 	}
 };
 
-// 发起支付请求
+// 发起支付请求（手动填写参数测试）
 const requestPayment = () => {
 	if (!payParams.timeStamp || !payParams.nonceStr || !payParams.package || !payParams.paySign) {
 		ui.showToast({ message: "请填写完整支付参数" });
 		return;
 	}
 
-	// 先提取参数值，避免 reactive 对象传递问题
 	const orderInfo = {
 		timeStamp: String(payParams.timeStamp),
 		nonceStr: String(payParams.nonceStr),
@@ -115,7 +124,6 @@ const requestPayment = () => {
 	//@ts-ignore
 	uni.requestPayment({
 		provider: "wxpay",
-		// orderInfo: orderInfo,
 		...orderInfo,
 		success: (res) => {
 			addLog(`✅ 支付成功: ${JSON.stringify(res)}`);
@@ -133,8 +141,237 @@ const requestPayment = () => {
 		}
 	});
 };
+//#endregion
 
-// ==================== 日志系统 ====================
+//#region 真实支付测试
+const realPayState = reactive({
+	openid: "",
+	sessionKey: "",
+	outTradeNo: "",
+	loading: false,
+	step: 1 // 1: 创建订单, 2: 发起支付
+});
+
+// 套餐选项
+const packageOptions = [{ id: 1, name: "测试商品", price: "0.01" }];
+const selectedPackageId = ref(1);
+
+// 静默获取 openid（返回 Promise）
+const ensureOpenId = (): Promise<string> => {
+	return new Promise((resolve, reject) => {
+		// 已有 openid 直接返回
+		if (realPayState.openid) {
+			resolve(realPayState.openid);
+			return;
+		}
+
+		uni.login({
+			provider: "weixin",
+			success: async (loginRes) => {
+				const code = loginRes.code ?? "";
+				try {
+					const res = await WxLogin({ code });
+					realPayState.openid = res.openid;
+					realPayState.sessionKey = res.session_key;
+					resolve(res.openid);
+				} catch (err: any) {
+					addLog(`❌ 获取 openid 失败: ${err?.message || JSON.stringify(err)}`);
+					reject(err);
+				}
+			},
+			fail: (err) => {
+				addLog(`❌ 获取 code 失败: ${JSON.stringify(err)}`);
+				reject(err);
+			}
+		});
+	});
+};
+
+// 创建订单（内部静默获取 openid）
+const createRealOrder = async () => {
+	realPayState.loading = true;
+	addLog("📝 创建订单中...");
+
+	try {
+		// 静默获取 openid
+		const openid = await ensureOpenId();
+
+		const res = await CreateJsApiOrder({
+			openid,
+			package_id: selectedPackageId.value
+		});
+
+		realPayState.outTradeNo = res.order.outTradeNo;
+
+		// 保存支付参数
+		const rp = res.requestPayment || {};
+		payParams.timeStamp = rp.timeStamp;
+		payParams.nonceStr = rp.nonceStr;
+		payParams.package = rp.package;
+		payParams.signType = rp.signType;
+		payParams.paySign = rp.paySign;
+
+		realPayState.step = 2;
+		addLog(`✅ 订单创建成功: ${res.order.outTradeNo}`);
+		ui.showToast({ message: "订单创建成功" });
+	} catch (err: any) {
+		addLog(`❌ 创建订单失败: ${err?.message || JSON.stringify(err)}`);
+		ui.showToast({ message: "创建订单失败" });
+	} finally {
+		realPayState.loading = false;
+	}
+};
+
+// 发起支付
+const doRealPayment = () => {
+	if (!payParams.timeStamp || !payParams.package) {
+		ui.showToast({ message: "请先创建订单" });
+		return;
+	}
+
+	const orderInfo = {
+		timeStamp: String(payParams.timeStamp),
+		nonceStr: String(payParams.nonceStr),
+		package: String(payParams.package),
+		signType: String(payParams.signType),
+		paySign: String(payParams.paySign)
+	};
+
+	addLog("💰 发起微信支付...");
+
+	//@ts-ignore
+	uni.requestPayment({
+		provider: "wxpay",
+		...orderInfo,
+		success: async (res) => {
+			addLog(`✅ 支付成功: ${JSON.stringify(res)}`);
+			ui.showToast({ message: "支付成功" });
+			// 支付成功后查询订单状态确认
+			await checkOrderStatus();
+		},
+		fail: (res) => {
+			addLog(`❌ 支付失败/取消: ${JSON.stringify(res)}`);
+			ui.showToast({ message: `支付失败: ${res.errMsg || "用户取消"}` });
+		}
+	});
+};
+
+// 查询订单状态
+const checkOrderStatus = async () => {
+	if (!realPayState.outTradeNo) {
+		ui.showToast({ message: "没有可查询的订单" });
+		return;
+	}
+
+	addLog(`🔍 查询订单状态: ${realPayState.outTradeNo}`);
+
+	try {
+		const res = await GetOrderStatus(realPayState.outTradeNo);
+		addLog(`📋 订单状态: ${JSON.stringify(res)}`);
+		ui.showToast({ message: `订单状态: ${res.status}` });
+	} catch (err: any) {
+		addLog(`❌ 查询失败: ${err?.message || JSON.stringify(err)}`);
+	}
+};
+
+// 关闭订单
+const closeCurrentOrder = async (order) => {
+	addLog(`🔒 关闭订单: ${order.outTradeNo}`);
+
+	try {
+		await CloseOrder(order.outTradeNo);
+		addLog(`✅ 订单已关闭`);
+		ui.showToast({ message: "订单已关闭" });
+		// 重置状态
+		fetchOrderList();
+	} catch (err: any) {
+		addLog(`❌ 关闭失败: ${err?.message || JSON.stringify(err)}`);
+	}
+};
+
+// 重新支付（基于已有订单）
+const regenerateAndPay = async () => {
+	if (!realPayState.outTradeNo) {
+		ui.showToast({ message: "没有可重新支付的订单" });
+		return;
+	}
+
+	addLog(`🔄 重新生成支付参数: ${realPayState.outTradeNo}`);
+
+	try {
+		const res = await RegeneratePayment(realPayState.outTradeNo);
+
+		const requestPayment = {
+			...(res.requestPayment || {})
+		};
+
+		payParams.timeStamp = requestPayment.timeStamp;
+		payParams.nonceStr = requestPayment.nonceStr;
+		payParams.package = requestPayment.package;
+		payParams.signType = requestPayment.signType;
+		payParams.paySign = requestPayment.paySign;
+
+		addLog(`✅ 重新生成成功，开始支付...`);
+		doRealPayment();
+	} catch (err: any) {
+		addLog(`❌ 重新生成失败: ${err?.message || JSON.stringify(err)}`);
+	}
+};
+
+// 获取订单列表
+const orderList = ref<OrderInfo[]>([]);
+const orderListLoading = ref(false);
+const showOrderList = ref(false);
+
+const fetchOrderList = async () => {
+	addLog(`📋 获取订单列表...`);
+	orderListLoading.value = true;
+
+	try {
+		const res = await GetOrderList({ page: 1, pageSize: 10 });
+		orderList.value = res.orders;
+		showOrderList.value = true;
+		addLog(`✅ 获取成功，共 ${res.total} 条订单`);
+	} catch (err: any) {
+		addLog(`❌ 获取失败: ${err?.message || JSON.stringify(err)}`);
+	} finally {
+		orderListLoading.value = false;
+	}
+};
+
+// 格式化状态
+const formatStatus = (status: string): string => {
+	const map: Record<string, string> = {
+		PREPAY: "待支付",
+		SUCCESS: "已支付",
+		unpaid: "未支付",
+		CLOSED: "已关闭"
+	};
+	return map[status] || status;
+};
+
+// 格式化金额（分转元）
+const formatFee = (fee: number): string => {
+	return (fee / 100).toFixed(2);
+};
+
+// 格式化时间
+const formatTime = (time: string): string => {
+	return time?.replace("T", " ").slice(0, 16) || "";
+};
+
+// 重置真实支付状态
+const resetRealPayState = () => {
+	realPayState.openid = "";
+	realPayState.sessionKey = "";
+	realPayState.outTradeNo = "";
+	realPayState.step = 1;
+	addLog("🔄 已重置支付状态");
+};
+
+//#endregion
+
+//#region 日志系统
 const testLog = ref<string[]>([]);
 
 const addLog = (message: string) => {
@@ -148,8 +385,9 @@ const addLog = (message: string) => {
 const clearLog = () => {
 	testLog.value = [];
 };
+//#endregion
 
-// ==================== 权限测试 ====================
+//#region 权限测试
 const testCameraPermission = async () => {
 	addLog("开始申请相机权限...");
 	const result = await requestPermission({
@@ -226,6 +464,7 @@ const testCustomPermission = async () => {
 const toTestPage = () => {
 	router.to("/ai-chat-module/voice-call/index");
 };
+//#endregion
 </script>
 
 <template>
@@ -411,6 +650,269 @@ const toTestPage = () => {
 								</view>
 							</view>
 						</view>
+					</cl-collapse>
+				</view>
+
+				<!-- 真实支付 -->
+				<view class="section">
+					<view
+						class="section-header"
+						@tap="collapseState.wxRealPay = !collapseState.wxRealPay"
+					>
+						<view class="section-title">
+							<cl-icon
+								name="money-cny-circle-line"
+								:size="40"
+								color="primary"
+							></cl-icon>
+							<cl-text size="lg" bold>微信真实支付测试</cl-text>
+						</view>
+						<cl-icon
+							name="arrow-down-s-line"
+							:size="36"
+							:pt="{
+								className: parseClass([
+									'text-surface-400 duration-200',
+									{ '-rotate-180': collapseState.wxRealPay }
+								])
+							}"
+						></cl-icon>
+					</view>
+
+					<cl-collapse v-model="collapseState.wxRealPay">
+						<scroll-view scroll-y style="max-height: 500px">
+							<view class="collapse-content">
+								<!-- 进度指示器 -->
+								<view class="progress-steps">
+									<view
+										class="progress-step"
+										:class="{
+											active: realPayState.step >= 1,
+											done: realPayState.step > 1
+										}"
+									>
+										<view class="step-dot">1</view>
+										<cl-text size="xs">创建订单</cl-text>
+									</view>
+									<view
+										class="progress-line"
+										:class="{ active: realPayState.step >= 2 }"
+									></view>
+									<view
+										class="progress-step"
+										:class="{ active: realPayState.step >= 2 }"
+									>
+										<view class="step-dot">2</view>
+										<cl-text size="xs">发起支付</cl-text>
+									</view>
+								</view>
+
+								<!-- Step 1: 选择套餐 & 创建订单 -->
+								<view class="step-card">
+									<view class="step-header">
+										<view
+											class="step-badge"
+											:class="{ done: realPayState.step >= 2 }"
+											>1</view
+										>
+										<cl-text bold>选择套餐 & 创建订单</cl-text>
+									</view>
+									<view class="step-content">
+										<!-- 套餐选择 -->
+										<view class="package-list">
+											<view
+												v-for="pkg in packageOptions"
+												:key="pkg.id"
+												class="package-item"
+												:class="{ selected: selectedPackageId === pkg.id }"
+												@tap="selectedPackageId = pkg.id"
+											>
+												<view class="package-radio">
+													<view
+														v-if="selectedPackageId === pkg.id"
+														class="radio-inner"
+													></view>
+												</view>
+												<view class="package-info">
+													<cl-text size="sm" bold>{{ pkg.name }}</cl-text>
+													<cl-text size="lg" color="error" bold
+														>¥{{ pkg.price }}</cl-text
+													>
+												</view>
+											</view>
+										</view>
+
+										<!-- 当前订单号 -->
+										<view v-if="realPayState.outTradeNo" class="info-box">
+											<cl-text size="xs" color="info">订单号:</cl-text>
+											<cl-text size="xs">{{
+												realPayState.outTradeNo
+											}}</cl-text>
+										</view>
+
+										<cl-button
+											type="primary"
+											size="small"
+											:loading="realPayState.loading"
+											@tap="createRealOrder"
+										>
+											{{
+												realPayState.outTradeNo
+													? "重新创建订单"
+													: "创建订单"
+											}}
+										</cl-button>
+									</view>
+								</view>
+
+								<!-- Step 2: 发起支付 -->
+								<view
+									class="step-card"
+									:class="{ disabled: realPayState.step < 2 }"
+								>
+									<view class="step-header">
+										<view class="step-badge">2</view>
+										<cl-text bold>发起支付</cl-text>
+									</view>
+									<view class="step-content">
+										<view class="action-row">
+											<cl-button
+												type="primary"
+												:disabled="realPayState.step < 2"
+												:pt="{ className: 'flex-1' }"
+												@tap="doRealPayment"
+											>
+												立即支付
+											</cl-button>
+										</view>
+									</view>
+								</view>
+
+								<!-- 辅助操作 -->
+								<view class="step-card aux-card">
+									<view class="step-header">
+										<cl-icon
+											name="tools-line"
+											:size="32"
+											color="info"
+										></cl-icon>
+										<cl-text bold>辅助操作</cl-text>
+									</view>
+									<view class="step-content">
+										<view class="button-grid-3">
+											<cl-button
+												type="info"
+												size="small"
+												@tap="checkOrderStatus"
+											>
+												查询订单
+											</cl-button>
+											<cl-button
+												type="success"
+												size="small"
+												@tap="regenerateAndPay"
+											>
+												重新支付
+											</cl-button>
+											<cl-button
+												type="info"
+												size="small"
+												@tap="fetchOrderList"
+											>
+												订单列表
+											</cl-button>
+											<cl-button size="small" @tap="resetRealPayState">
+												重置状态
+											</cl-button>
+										</view>
+									</view>
+								</view>
+
+								<!-- 订单列表 -->
+								<view v-if="showOrderList" class="step-card">
+									<view class="step-header">
+										<cl-icon
+											name="file-list-line"
+											:size="32"
+											color="primary"
+										></cl-icon>
+										<cl-text bold>订单列表</cl-text>
+										<cl-text size="xs" color="info"
+											>({{ orderList.length }}条)</cl-text
+										>
+										<view style="flex: 1"></view>
+										<cl-button
+											size="small"
+											type="info"
+											@tap="showOrderList = false"
+										>
+											收起
+										</cl-button>
+									</view>
+									<view class="step-content">
+										<view v-if="orderList.length === 0" class="empty-tip">
+											<cl-text color="info" size="sm">暂无订单</cl-text>
+										</view>
+										<view v-else class="order-list">
+											<view
+												v-for="order in orderList"
+												:key="order.outTradeNo"
+												class="order-item"
+											>
+												<view class="order-row">
+													<cl-text size="xs" color="info">订单号</cl-text>
+													<cl-text
+														size="xs"
+														:pt="{ className: 'break-all' }"
+													>
+														{{ order.outTradeNo }}
+													</cl-text>
+												</view>
+												<view class="order-row">
+													<cl-text size="xs" color="info">金额</cl-text>
+													<cl-text size="sm" color="error" bold>
+														¥{{ formatFee(order.totalFee) }}
+													</cl-text>
+												</view>
+												<view class="order-row">
+													<cl-text size="xs" color="info">状态</cl-text>
+													<cl-text
+														size="xs"
+														:color="
+															order.status === 'SUCCESS'
+																? 'success'
+																: order.status === 'CLOSED'
+																	? 'info'
+																	: 'warn'
+														"
+													>
+														{{ formatStatus(order.status) }}
+													</cl-text>
+												</view>
+												<view class="order-row">
+													<cl-text size="xs" color="info">时间</cl-text>
+													<cl-text size="xs">
+														{{ formatTime(order.createdAt) }}
+													</cl-text>
+												</view>
+												<view
+													class="order-row"
+													v-if="order.status === 'PREPAY'"
+												>
+													<cl-button
+														type="warn"
+														size="small"
+														@tap="closeCurrentOrder(order)"
+													>
+														关闭订单
+													</cl-button>
+												</view>
+											</view>
+										</view>
+									</view>
+								</view>
+							</view>
+						</scroll-view>
 					</cl-collapse>
 				</view>
 
@@ -687,6 +1189,176 @@ const toTestPage = () => {
 	grid-template-columns: repeat(2, 1fr);
 	gap: 16rpx;
 	margin-bottom: 20rpx;
+}
+
+.button-grid-3 {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12rpx;
+}
+
+// 进度指示器
+.progress-steps {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	padding: 20rpx 0;
+	margin-bottom: 16rpx;
+}
+
+.progress-step {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8rpx;
+	opacity: 0.5;
+
+	&.active {
+		opacity: 1;
+	}
+
+	&.done .step-dot {
+		background: #10b981;
+	}
+}
+
+.step-dot {
+	width: 48rpx;
+	height: 48rpx;
+	border-radius: 50%;
+	background: #d1d5db;
+	color: white;
+	font-size: 24rpx;
+	font-weight: bold;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.progress-step.active .step-dot {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.progress-line {
+	width: 60rpx;
+	height: 4rpx;
+	background: #e5e7eb;
+	margin: 0 8rpx;
+	margin-bottom: 32rpx;
+
+	&.active {
+		background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+	}
+}
+
+// 步骤卡片禁用状态
+.step-card.disabled {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
+.step-badge.done {
+	background: #10b981 !important;
+}
+
+// 信息展示框
+.info-box {
+	background: #f0f9ff;
+	border: 2rpx solid #bae6fd;
+	border-radius: 12rpx;
+	padding: 16rpx;
+	margin-bottom: 16rpx;
+	display: flex;
+	flex-direction: column;
+	gap: 8rpx;
+}
+
+// 套餐选择
+.package-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+	margin-bottom: 16rpx;
+}
+
+.package-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 16rpx;
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	padding: 16rpx 20rpx;
+	transition: all 0.2s;
+
+	&.selected {
+		border-color: #667eea;
+		background: #f5f3ff;
+	}
+}
+
+.package-radio {
+	width: 36rpx;
+	height: 36rpx;
+	border-radius: 50%;
+	border: 4rpx solid #d1d5db;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	.package-item.selected & {
+		border-color: #667eea;
+	}
+}
+
+.radio-inner {
+	width: 18rpx;
+	height: 18rpx;
+	border-radius: 50%;
+	background: #667eea;
+}
+
+.package-info {
+	flex: 1;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+}
+
+// 辅助卡片
+.aux-card {
+	background: #fafafa;
+	border: 2rpx dashed #e5e7eb;
+}
+
+// 订单列表
+.order-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16rpx;
+}
+
+.order-item {
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	padding: 16rpx;
+}
+
+.order-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6rpx 0;
+}
+
+.empty-tip {
+	padding: 40rpx;
+	text-align: center;
 }
 
 // 提示框

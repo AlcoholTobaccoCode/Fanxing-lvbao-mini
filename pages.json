@@ -123,6 +123,20 @@
 					}
 				},
 				{
+					"path": "law/index",
+					"style": {
+						"navigationBarTitleText": "法规查询",
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "case/index",
+					"style": {
+						"navigationBarTitleText": "案例检索",
+						"navigationStyle": "custom"
+					}
+				},
+				{
 					"path": "voice-call/index",
 					"style": {
 						"navigationBarTitleText": "实时通话",
