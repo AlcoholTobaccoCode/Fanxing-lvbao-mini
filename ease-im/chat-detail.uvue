@@ -316,6 +316,9 @@ const handleToggleAudio = (m: any) => {
 // 进入页面时，从路由参数中读取会话信息并自动加载历史记录
 const handlePageLoad = async (options) => {
 	const conversationId = (options?.conversationId || "").toString();
+
+	console.info("conversationId ===> ", conversationId);
+
 	if (conversationId) {
 		targetId.value = conversationId;
 		if (conversationId) {
@@ -415,7 +418,9 @@ const handleJumpToLatest = () => {
 							</view>
 							<view
 								class="w-full flex"
-								:class="[m.from === targetId ? 'justify-start' : 'justify-end']"
+								:class="[
+									m.from === targetId ? 'justify-start' : 'justify-end items-end'
+								]"
 							>
 								<view
 									class="px-3 py-2 rounded-lg text-sm w-fit"

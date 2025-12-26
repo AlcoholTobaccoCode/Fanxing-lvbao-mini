@@ -6,7 +6,7 @@ import { useStore } from "@/cool";
 import { LoadMessages } from "@/api/history-chat";
 import { chatFlowStore } from "./flow";
 import { consultSessionStore, type ConsultMessage } from "./consultSession";
-import { lawSessionStore, type LawMessage } from "./lawSession";
+import { lawSessionStore, type LawMessage, type LawModelType } from "./lawSession";
 import { caseSessionStore, type CaseMessage } from "./caseSession";
 import { CHAT_MODULE_CONFIGS } from "./moduleConfigs";
 import type { ChatModuleKey } from "./types";
@@ -146,6 +146,7 @@ async function restoreConsultSession(sessionId: string, sessionData: any): Promi
  */
 async function restoreLawSession(sessionId: string, sessionData: any): Promise<void> {
 	const messages = sessionData?.messages ?? [];
+	const modelType = sessionData?.modelType; // 读取保存的模型类型
 
 	const lawMessages: LawMessage[] = messages.map((msg: any) => ({
 		role: msg.sender === "user" ? "user" : "system",
@@ -155,17 +156,20 @@ async function restoreLawSession(sessionId: string, sessionData: any): Promise<v
 		voiceLength: undefined,
 		references: msg.references || {
 			searchList: [],
-			lawList: []
+			lawList: [],
+			lzxResults: msg.references?.lzxResults || [] // 恢复律之星结果
 		}
 	}));
 
 	chatFlowStore.startModule("law", {
 		text: "",
 		tools: [],
-		inputMode: "text"
+		inputMode: "text",
+		modelType // 传递模型类型
 	});
 
-	lawSessionStore.restoreFromHistory(sessionId, lawMessages);
+	// 传递 modelType 给 restoreFromHistory
+	lawSessionStore.restoreFromHistory(sessionId, lawMessages, modelType);
 }
 
 /**

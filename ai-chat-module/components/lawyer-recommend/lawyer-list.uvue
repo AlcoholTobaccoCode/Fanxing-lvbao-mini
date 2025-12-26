@@ -4,7 +4,8 @@
 <script lang="ts" setup>
 import type { RecommendLawyerItem } from "@/api/consult";
 import LawyerCard from "./lawyer-card.uvue";
-import { computed } from "vue";
+import LawyerDetailPopup from "./lawyer-detail-popup.uvue";
+import { computed, ref } from "vue";
 
 const props = defineProps<{
 	lawyers: RecommendLawyerItem[];
@@ -15,14 +16,26 @@ const props = defineProps<{
 const emit = defineEmits<{
 	(e: "lawyer-click", lawyer: RecommendLawyerItem): void;
 	(e: "more-click"): void;
+	(e: "consult", lawyer: RecommendLawyerItem): void;
 }>();
 
+// 控制律师详情弹窗
+const showDetailPopup = ref(false);
+const selectedLawyer = ref<RecommendLawyerItem | null>(null);
+
 const handleLawyerClick = (lawyer: RecommendLawyerItem) => {
+	// TODO - 调用接口获取
+	selectedLawyer.value = lawyer;
+	showDetailPopup.value = true;
 	emit("lawyer-click", lawyer);
 };
 
 const handleMoreClick = () => {
 	emit("more-click");
+};
+
+const handleConsult = (lawyer: RecommendLawyerItem) => {
+	emit("consult", lawyer);
 };
 
 // 最多显示 5 个律师
@@ -68,6 +81,13 @@ const hasMore = computed(() => {
 				<cl-text color="info" class="text-md">暂无合适律师</cl-text>
 			</view>
 		</template>
+
+		<!-- 律师详情弹窗 -->
+		<lawyer-detail-popup
+			v-model="showDetailPopup"
+			:lawyer="selectedLawyer"
+			@consult="handleConsult"
+		/>
 	</view>
 </template>
 
@@ -131,11 +151,11 @@ const hasMore = computed(() => {
 
 .lawyer-scroll {
 	@apply inline-flex px-3 flex-row whitespace-nowrap box-border;
-	height: 86px;
+	height: 100px;
 }
 
 .lawyer-item {
-	@apply h-fit inline-block flex-shrink-0 mr-3;
+	@apply inline-block flex-shrink-0 mr-3 h-fit;
 }
 
 .lawyer-item:last-child {

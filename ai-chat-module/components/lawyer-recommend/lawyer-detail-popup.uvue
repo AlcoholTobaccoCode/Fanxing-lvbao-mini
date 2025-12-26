@@ -1,0 +1,399 @@
+<!--
+@description: 律师详情弹窗组件
+-->
+<script lang="ts" setup>
+import type { RecommendLawyerItem } from "@/api/consult";
+import { computed, ref, watch } from "vue";
+import { router } from "@/cool";
+
+const props = defineProps<{
+	modelValue: boolean;
+	lawyer: RecommendLawyerItem | null;
+}>();
+
+const emit = defineEmits<{
+	(e: "update:modelValue", value: boolean): void;
+	(e: "consult", lawyer: RecommendLawyerItem): void;
+}>();
+
+const isVisible = ref(props.modelValue);
+
+watch(
+	() => props.modelValue,
+	(val) => {
+		isVisible.value = val;
+	}
+);
+
+watch(isVisible, (val) => {
+	emit("update:modelValue", val);
+});
+
+// 获取头像显示文字（姓名第一个字 + "律"）
+const avatarText = computed(() => {
+	const name = props.lawyer?.name || "";
+	return name.slice(0, 1) + "律" || "律师";
+});
+
+// 生成头像背景色（基于名字生成固定颜色）
+const avatarBgColor = computed(() => {
+	const colors = [
+		"#3b82f6", // blue
+		"#8b5cf6", // violet
+		"#ec4899", // pink
+		"#f59e0b", // amber
+		"#10b981", // emerald
+		"#06b6d4", // cyan
+		"#6366f1" // indigo
+	];
+	const name = props.lawyer?.name || "";
+	let hash = 0;
+	for (let i = 0; i < name.length; i++) {
+		hash = name.charCodeAt(i) + ((hash << 5) - hash);
+	}
+	return colors[Math.abs(hash) % colors.length];
+});
+
+// 擅长领域拆分为数组
+const expertiseList = computed(() => {
+	const expertise = props.lawyer?.expertise || "";
+	if (!expertise) return [];
+	// 支持中文逗号、英文逗号、顿号分隔
+	return expertise.split(/[,，、]/).filter((item) => item.trim());
+});
+
+// 关闭弹窗
+const handleClose = () => {
+	isVisible.value = false;
+};
+
+// 点击咨询
+const handleConsult = () => {
+	if (!props.lawyer) return;
+	emit("consult", props.lawyer);
+	handleClose();
+
+	// 跳转到环信 IM 聊天页面
+	router.push({
+		path: "/ease-im/chat-detail",
+		query: {
+			conversationId: String(props.lawyer.user_id)
+		}
+	});
+};
+</script>
+
+<template>
+	<cl-popup
+		v-model="isVisible"
+		title=""
+		direction="bottom"
+		size="80vh"
+		:pt="{
+			className: '!rounded-t-3xl'
+		}"
+	>
+		<view class="lawyer-detail">
+			<!-- 滚动内容区域 -->
+			<scroll-view scroll-y class="lawyer-detail__scroll">
+				<!-- 头部信息 -->
+				<view class="header-section">
+					<!-- 头像 -->
+					<view class="avatar" :style="{ backgroundColor: avatarBgColor }">
+						<text class="avatar-text">{{ avatarText }}</text>
+					</view>
+
+					<!-- 姓名 -->
+					<text class="lawyer-name">{{ lawyer?.name || "-" }}</text>
+
+					<!-- 标签 -->
+					<view class="tags-row">
+						<!-- <view class="tag tag--online" v-if="lawyer?.online">
+							<text class="tag-text tag-text--online">在线</text>
+						</view> -->
+						<view class="tag tag--cert" v-if="lawyer?.license_no">
+							<text class="tag-text tag-text--cert">资质认证</text>
+						</view>
+					</view>
+
+					<!-- 从业经验 + 职级 -->
+					<view class="exp-row">
+						<text class="exp-text">{{ lawyer?.practice_years }}年从业经验</text>
+						<text class="exp-divider">|</text>
+						<text class="exp-text">{{ lawyer?.grade_name }}</text>
+					</view>
+
+					<!-- 律所名称 -->
+					<text class="firm-name">{{ lawyer?.law_firm_name }}</text>
+
+					<!-- 距离 -->
+					<view class="distance-row" v-if="lawyer?.addr">
+						<cl-icon name="map-pin-line" size="14px" color="#9ca3af" />
+						<text class="distance-text">{{ lawyer?.addr }}</text>
+					</view>
+				</view>
+
+				<!-- 数据统计 -->
+				<view class="stats-section">
+					<view class="stat-item">
+						<text class="stat-value">{{
+							lawyer?.rating?.toFixed?.(1) || lawyer?.rating || "-"
+						}}</text>
+						<text class="stat-label">综合评分</text>
+					</view>
+					<view class="stat-item">
+						<text class="stat-value">{{ lawyer?.case_count || 0 }}</text>
+						<text class="stat-label">成功案例</text>
+					</view>
+					<view class="stat-item">
+						<text class="stat-value">0</text>
+						<text class="stat-label">咨询客户</text>
+					</view>
+				</view>
+
+				<!-- 擅长领域 -->
+				<view class="section" v-if="expertiseList.length > 0">
+					<text class="section-title">擅长领域</text>
+					<view class="expertise-list">
+						<view
+							v-for="(item, index) in expertiseList"
+							:key="index"
+							class="expertise-tag"
+						>
+							<text class="expertise-tag-text">{{ item }}</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 个人简介 -->
+				<view class="section" v-if="lawyer?.intro">
+					<text class="section-title">个人简介</text>
+					<view class="intro-box">
+						<text class="intro-text">{{ lawyer?.intro }}</text>
+					</view>
+				</view>
+
+				<!-- 案例数量 -->
+				<view class="section">
+					<view class="section-header">
+						<text class="section-title">案例数量</text>
+						<!-- <text class="section-action">查看全部</text> -->
+					</view>
+					<view class="case-box">
+						<text class="case-text"
+							>该律师共处理{{ lawyer?.case_count || 0 }}个案例，胜诉率暂无数据</text
+						>
+					</view>
+				</view>
+
+				<!-- 底部占位，避免被按钮遮挡 -->
+				<view class="bottom-placeholder"></view>
+			</scroll-view>
+
+			<!-- 底部咨询按钮 -->
+			<view class="footer-section">
+				<cl-button
+					type="primary"
+					:pt="{
+						className: '!w-full !rounded-xl !h-[48px]'
+					}"
+					@tap="handleConsult"
+				>
+					咨询他
+				</cl-button>
+			</view>
+		</view>
+	</cl-popup>
+</template>
+
+<style lang="scss" scoped>
+.lawyer-detail {
+	@apply w-full h-full flex flex-col bg-white relative;
+}
+
+.close-btn {
+	@apply absolute top-4 right-4 z-10 p-1;
+}
+
+.lawyer-detail__scroll {
+	@apply flex-1 w-full pb-4;
+}
+
+// 头部信息
+.header-section {
+	@apply flex flex-col items-center pt-8 pb-4 px-4 gap-2;
+}
+
+.avatar {
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin-bottom: 12px;
+}
+
+.avatar-text {
+	color: #fff;
+	font-size: 28px;
+	font-weight: 600;
+}
+
+.lawyer-name {
+	font-size: 20px;
+	font-weight: 600;
+	color: #1f2937;
+	margin-bottom: 8px;
+}
+
+.tags-row {
+	@apply flex flex-row items-center gap-2 mb-2;
+}
+
+.tag {
+	@apply px-2 py-0.5 rounded;
+	border: 1px solid;
+}
+
+.tag--online {
+	border-color: #3b82f6;
+	background-color: #fff;
+}
+
+.tag--cert {
+	border-color: #3b82f6;
+	background-color: #fff;
+}
+
+.tag-text {
+	font-size: 12px;
+}
+
+.tag-text--online {
+	color: #3b82f6;
+}
+
+.tag-text--cert {
+	color: #3b82f6;
+}
+
+.exp-row {
+	@apply flex flex-row items-center gap-2 mb-1;
+}
+
+.exp-text {
+	font-size: 14px;
+	color: #6b7280;
+}
+
+.exp-divider {
+	font-size: 14px;
+	color: #d1d5db;
+}
+
+.firm-name {
+	font-size: 14px;
+	color: #1f2937;
+	margin-bottom: 4px;
+}
+
+.distance-row {
+	@apply flex flex-row items-center gap-1;
+}
+
+.distance-text {
+	font-size: 12px;
+	color: #9ca3af;
+}
+
+// 数据统计
+.stats-section {
+	@apply flex flex-row items-center justify-around mx-4 py-4 mb-4;
+	background-color: #f9fafb;
+	border-radius: 12px;
+}
+
+.stat-item {
+	@apply flex flex-col items-center;
+}
+
+.stat-value {
+	font-size: 24px;
+	font-weight: 700;
+	color: #1f2937;
+	margin-bottom: 4px;
+}
+
+.stat-label {
+	font-size: 12px;
+	color: #9ca3af;
+}
+
+// 通用 section
+.section {
+	@apply px-4 mb-4;
+}
+
+.section-header {
+	@apply flex flex-row items-center justify-between mb-2;
+}
+
+.section-title {
+	font-size: 16px;
+	font-weight: 600;
+	color: #1f2937;
+	margin-bottom: 8px;
+}
+
+.section-action {
+	font-size: 14px;
+	color: #3b82f6;
+}
+
+// 擅长领域
+.expertise-list {
+	@apply flex flex-row flex-wrap gap-2;
+}
+
+.expertise-tag {
+	@apply px-3 py-1.5 rounded-full;
+	border: 1px solid #e0f2fe;
+	background-color: #f0f9ff;
+}
+
+.expertise-tag-text {
+	font-size: 14px;
+	color: #3b82f6;
+}
+
+// 个人简介
+.intro-box {
+	@apply p-3 rounded-xl;
+	background-color: #f9fafb;
+}
+
+.intro-text {
+	font-size: 14px;
+	color: #4b5563;
+	line-height: 1.6;
+}
+
+// 案例数量
+.case-box {
+	@apply p-3 rounded-xl;
+	background-color: #f9fafb;
+}
+
+.case-text {
+	font-size: 14px;
+	color: #6b7280;
+}
+
+// 底部按钮
+.footer-section {
+	@apply px-4 py-4 bg-white;
+	box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+	padding-bottom: calc(8px + env(safe-area-inset-bottom));
+}
+</style>

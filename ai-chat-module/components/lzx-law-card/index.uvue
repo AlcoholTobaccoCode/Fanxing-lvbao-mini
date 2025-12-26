@@ -103,18 +103,22 @@ const toggleExpand = () => {
 				</text>
 			</view>
 
-			<!-- 发文字号 -->
-			<text v-if="item.filenum" class="meta-text">{{ item.filenum }}</text>
+			<!-- 发行日期 -->
+			<text v-if="item.implementYearMonthDate" class="meta-text">{{
+				formatDate(item.implementYearMonthDate)
+			}}</text>
+
+			<text v-if="item.lawName" class="meta-text meta-type">{{ item.lawName }}</text>
 
 			<!-- 法规类型 -->
-			<text v-if="item.xls" class="meta-text meta-type">{{ item.xls }}</text>
+			<!-- <text v-if="item.xls" class="meta-text meta-type">{{ item.xls }}</text> -->
 		</view>
 
 		<!-- 条款号 -->
-		<view v-if="item.rawnumber" class="article-number">
+		<!-- <view v-if="item.rawnumber" class="article-number">
 			<cl-icon name="bookmark-line" size="14px" color="#3b82f6" />
 			<text class="article-text">{{ item.rawnumber }}</text>
-		</view>
+		</view> -->
 
 		<!-- 内容区域 -->
 		<view class="card-content" @click="toggleExpand">
@@ -132,17 +136,18 @@ const toggleExpand = () => {
 		<!-- 底部信息 -->
 		<view class="card-footer">
 			<!-- 日期信息 -->
-			<view class="date-info">
-				<view class="date-row">
-					<text class="date-label">发布日期</text>
-					<text class="date-value">{{ formatDate(item.releaseYearMonthDate) }}</text>
-				</view>
-				<view class="date-row">
-					<text class="date-label">实施日期</text>
-					<text class="date-value">{{ formatDate(item.implementYearMonthDate) }}</text>
-				</view>
+			<view class="date-row">
+				<text class="date-label">发布日期</text>
+				<text class="date-value">{{ formatDate(item.releaseYearMonthDate) }}</text>
 			</view>
-
+			<view class="date-row">
+				<text class="date-label">实施日期</text>
+				<text class="date-value">{{ formatDate(item.implementYearMonthDate) }}</text>
+			</view>
+			<view class="date-row">
+				<text class="date-label">发文字号</text>
+				<text class="date-value">{{ item.filenum ?? "-" }}</text>
+			</view>
 			<!-- 相似度 -->
 			<view class="similarity-wrapper">
 				<view class="similarity-header">
@@ -209,7 +214,8 @@ const toggleExpand = () => {
 }
 
 .timeliness-tag {
-	@apply px-2 py-0.5 rounded;
+	@apply p-2 rounded;
+	line-height: 0;
 }
 
 .timeliness-text {
@@ -258,11 +264,7 @@ const toggleExpand = () => {
 }
 
 .card-footer {
-	@apply flex flex-row items-end justify-between px-4 pb-3;
-}
-
-.date-info {
-	@apply flex flex-col gap-1;
+	@apply flex flex-col gap-1 mx-4 mb-3 p-3;
 }
 
 .date-row {
@@ -280,8 +282,7 @@ const toggleExpand = () => {
 }
 
 .similarity-wrapper {
-	@apply flex flex-col items-end;
-	width: 100px;
+	@apply w-full flex flex-col items-end;
 }
 
 .similarity-header {

@@ -1,0 +1,107 @@
+<!--
+@description: AI 消息容器组件
+-->
+<script lang="ts" setup>
+import { computed } from "vue";
+import ZeroMarkdownView from "../zero-markdown-view/components/zero-markdown-view/zero-markdown-view.vue";
+
+interface Props {
+	content?: string;
+	// 深度思考相关
+	deepThink?: string;
+	deepThinkStartTime?: number;
+	deepThinkEndTime?: number;
+	deepThinkExpanded?: boolean;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+	deepThinkExpanded: true
+});
+
+const emit = defineEmits<{
+	(e: "toggle-deep-think"): void;
+}>();
+
+// 计算思考用时文案
+const deepThinkTimeText = computed(() => {
+	if (!props.deepThink) return "";
+
+	if (props.deepThinkEndTime && props.deepThinkStartTime) {
+		const seconds = Math.round((props.deepThinkEndTime - props.deepThinkStartTime) / 1000);
+		return `思考（用时 ${seconds} 秒）`;
+	}
+
+	return "思考中...";
+});
+
+const handleToggle = () => {
+	emit("toggle-deep-think");
+};
+</script>
+
+<template>
+	<view class="ai-message px-4 my-2">
+		<!-- 深度思考展示 -->
+		<view v-if="deepThink" class="deepthink-wrapper">
+			<view class="deepthink-header" @tap.stop="handleToggle">
+				<view class="deepthink-icon">
+					<cl-text>💭</cl-text>
+				</view>
+				<text class="deepthink-title">{{ deepThinkTimeText }}</text>
+				<text class="deepthink-toggle">
+					<cl-icon :name="`arrow-${deepThinkExpanded ? 'up-s-line' : 'down-s-line'}`" />
+				</text>
+			</view>
+			<view v-if="deepThinkExpanded" class="deepthink-body">
+				<text class="deepthink-text">{{ deepThink }}</text>
+			</view>
+		</view>
+
+		<!-- Markdown 内容 -->
+		<template v-if="content">
+			<zero-markdown-view :markdown="content" :aiMode="true" />
+		</template>
+
+		<!-- 额外内容插槽（引用、推荐等） -->
+		<slot></slot>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.ai-message {
+	@apply w-full box-border;
+}
+
+.deepthink-wrapper {
+	@apply mt-3 mb-1;
+}
+
+.deepthink-header {
+	@apply flex flex-row items-center mb-1;
+}
+
+.deepthink-icon {
+	border-radius: 999px;
+	margin-right: 6px;
+}
+
+.deepthink-title {
+	@apply text-sm mr-1;
+	color: #3b82f6;
+}
+
+.deepthink-toggle {
+	@apply text-sm;
+	color: #9ca3af;
+}
+
+.deepthink-body {
+	@apply mt-1 pl-3 border-l;
+	border-color: #e5e7eb;
+}
+
+.deepthink-text {
+	@apply text-sm leading-relaxed;
+	color: #6b7280;
+}
+</style>

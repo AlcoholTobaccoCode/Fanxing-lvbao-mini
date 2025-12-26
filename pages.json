@@ -169,7 +169,13 @@
 					"path": "chat-detail",
 					"style": {
 						"navigationBarTitleText": "环信 IM 对话页面",
-						"navigationStyle": "custom"
+						"navigationStyle": "custom",
+						"usingComponents": {
+							"chat-input": "/ai-chat-module/components/chat-input/user-chat/index"
+						},
+						"componentPlaceholder": {
+							"chat-input": "view"
+						}
 					}
 				}
 			]

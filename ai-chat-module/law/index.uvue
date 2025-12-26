@@ -1,32 +1,29 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
 import type { SendData, Tools } from "@/cool/types/chat-input";
 import { showLoginModal } from "@/cool/store/login-modal";
-import {
-	chatFlowStore,
-	lawSessionStore,
-	chatInputStore,
-	type LawModelType
-} from "@/cool/store";
+import { chatFlowStore, lawSessionStore, chatInputStore, type LawModelType } from "@/cool/store";
 import { CHAT_MODULE_CONFIGS } from "@/cool/store/chatInput-store/moduleConfigs";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue";
-import AudioBubble from "@/ai-chat-module/components/chat-input/audio-bubble.uvue";
-import ZeroMarkdownView from "../components/zero-markdown-view/components/zero-markdown-view/zero-markdown-view.vue";
+import ChatLayout from "../components/chat-layout/index.uvue";
+import ChatInput from "../components/chat-input/ai-chat/index.uvue";
+import UserMessage from "../components/chat-layout/user-message.uvue";
+import AiMessage from "../components/chat-layout/ai-message.uvue";
 import ReferencesPanel from "../components/references/index.uvue";
 import ModelSelector from "../components/model-selector.uvue";
 import LzxLawList from "../components/lzx-law-card/list.uvue";
-import type { LzxLawResultItem } from "@/api/retrieve";
 
 const log = new Logger("LawChatPage");
 const ui = useUi();
 const { user } = useStore();
 
 const inputValue = ref("");
+const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
+
 const sessionId = computed(() => lawSessionStore.sessionId.value || "");
 const messages = lawSessionStore.messages;
 const isGenerating = computed(() => lawSessionStore.loading.value);
@@ -38,52 +35,6 @@ const modelType = computed({
 	set: (val: LawModelType) => lawSessionStore.setModelType(val)
 });
 const modelLocked = computed(() => lawSessionStore.modelLocked.value);
-
-// 滚动控制
-const scrollIntoViewId = ref("chat-bottom-a");
-const autoScroll = ref(true);
-const lastScrollTop = ref(0);
-
-const scrollToBottom = () => {
-	if (!autoScroll.value) return;
-	nextTick(() => {
-		scrollIntoViewId.value =
-			scrollIntoViewId.value === "chat-bottom-a" ? "chat-bottom-b" : "chat-bottom-a";
-	});
-};
-
-const handleToolsChange = (val: Tools) => {
-	chatInputStore.tools.value = val;
-};
-
-const handleInputModeChange = (mode: string) => {
-	chatInputStore.inputMode.value = mode as any;
-};
-
-watch(
-	messages,
-	() => {
-		if (!autoScroll.value) return;
-		scrollToBottom();
-	},
-	{ deep: true }
-);
-
-const handleScroll = (e: any) => {
-	const top = e?.detail?.scrollTop ?? 0;
-	if (top < lastScrollTop.value) {
-		autoScroll.value = false;
-		scrollIntoViewId.value = "";
-	}
-	lastScrollTop.value = top;
-};
-
-const handleScrollToLower = () => {
-	if (isGenerating.value) {
-		autoScroll.value = true;
-		scrollToBottom();
-	}
-};
 
 // 是否从历史记录恢复
 const isFromHistory = ref(false);
@@ -97,6 +48,23 @@ const hasValidLaunch = computed(() => {
 	return !!launch && !!cfg && launch.moduleKey === "law";
 });
 
+// 工具变化处理
+const handleToolsChange = (val: Tools) => {
+	chatInputStore.tools.value = val;
+};
+
+const handleInputModeChange = (mode: string) => {
+	chatInputStore.inputMode.value = mode as any;
+};
+
+// 监听消息变化，自动滚动
+watch(
+	messages,
+	() => {
+		chatLayoutRef.value?.scrollToBottom();
+	},
+	{ deep: true }
+);
 
 onLoad((options) => {
 	const fromHistory = options?.fromHistory === "true";
@@ -114,7 +82,7 @@ onLoad((options) => {
 		});
 
 		setTimeout(() => {
-			scrollToBottom();
+			chatLayoutRef.value?.scrollToBottom();
 		}, 300);
 		return;
 	}
@@ -147,7 +115,7 @@ onLoad((options) => {
 	}
 
 	setTimeout(() => {
-		scrollToBottom();
+		chatLayoutRef.value?.scrollToBottom();
 	}, 500);
 });
 
@@ -181,8 +149,7 @@ const handleSend = async (data: SendData) => {
 	}
 
 	try {
-		autoScroll.value = true;
-		scrollToBottom();
+		chatLayoutRef.value?.resetAutoScroll();
 		inputValue.value = "";
 
 		await lawSessionStore.sendTextQuestion(
@@ -207,220 +174,69 @@ const handleSend = async (data: SendData) => {
 		ui.showToast({ message: "查询失败，请稍后重试" });
 	}
 };
-
 </script>
 
 <template>
 	<app-page title="法规查询" back-top :use-history-layout="false" :chat-list-btn="false">
 		<template #content>
-			<view class="page-content">
-				<view
-					v-if="!hasValidLaunch"
-					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
-				>
-					暂未检测到会话启动参数，请从首页发起新的查询。
-				</view>
-				<view v-else class="scroll-container">
-					<scroll-view
-						scroll-y
-						class="ai-repeat-list__scroll"
-						:scroll-into-view="scrollIntoViewId"
-						:scroll-with-animation="true"
-						@scroll="handleScroll"
-						@scrolltolower="handleScrollToLower"
-					>
-						<!-- 消息列表 -->
-						<view
-							v-for="(item, index) in messages"
-							:key="index"
-							class="flex px-4 my-2"
-							:class="item.role === 'user' ? 'flex-row justify-end' : 'justify-start'"
-						>
-							<template v-if="item.role === 'user'">
-								<template v-if="item.fromVoice">
-									<view
-										class="chat-user-main !w-fit px-3 py-2 rounded-xl rounded-tr-none flex flex-col gap-1"
-									>
-										<audio-bubble
-											mode="send"
-											:length="item.voiceLength"
-											:url="item.voiceUrl || ''"
-										/>
-									</view>
-									<view class="voice-text">
-										{{ item.content }}
-									</view>
-								</template>
-								<view
-									v-else
-									class="chat-user-main !w-fit p-2 pl-3 rounded-xl rounded-tr-none text-lg"
-								>
-									<cl-text
-										:pt="{
-											className: 'text-white'
-										}"
-									>
-										{{ item.content }}
-									</cl-text>
-								</view>
-							</template>
-
-							<template v-else>
-								<view class="ai-message-wrapper">
-									<template v-if="item.content">
-										<zero-markdown-view
-											:markdown="item.content"
-											:aiMode="true"
-										></zero-markdown-view>
-									</template>
-
-									<!-- 律之星结果：卡片列表展示 -->
-									<lzx-law-list
-										v-if="item.references?.lzxResults?.length"
-										:items="item.references.lzxResults"
-									/>
-
-									<!-- 法宝/其他引用展示 -->
-									<references-panel
-										v-else-if="item.references"
-										:references="item.references"
-									/>
-								</view>
-							</template>
-						</view>
-
-						<view v-if="isGenerating && streamStatus" class="ai-status-wrapper">
-							<view class="ai-status-row">
-								<view class="ai-status-spinner"></view>
-								<text class="ai-status-text">{{ streamStatus }}</text>
-							</view>
-							<view class="ai-status-dots">
-								<view class="ai-status-dot ai-status-dot--1"></view>
-								<view class="ai-status-dot ai-status-dot--2"></view>
-								<view class="ai-status-dot ai-status-dot--3"></view>
-							</view>
-						</view>
-
-						<view id="chat-bottom-a"></view>
-						<view id="chat-bottom-b"></view>
-					</scroll-view>
-				</view>
-
-				<chat-input
-					v-model:model-value="inputValue"
-					v-model:input-mode="chatInputStore.inputMode.value"
-					:tools="chatInputStore.tools.value"
-					:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
-					:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
-					:show-default-network="chatInputStore.showDefaultNetwork.value"
-					:show-intent-chips="false"
-					@send="handleSend"
-					@tool-change="handleToolsChange"
-					@input-mode-change="handleInputModeChange"
-				>
-					<!-- 模型信息（锁定状态） -->
-					<template #tools-prepend>
-						<model-selector
-							v-model="modelType"
-							:locked="modelLocked"
+			<chat-layout
+				ref="chatLayoutRef"
+				:loading="isGenerating"
+				:status-text="streamStatus || ''"
+				:show-empty="!hasValidLaunch"
+				empty-text="暂未检测到会话启动参数，请从首页发起新的查询。"
+			>
+				<template #messages>
+					<template v-for="(item, index) in messages" :key="index">
+						<!-- 用户消息 -->
+						<user-message
+							v-if="item.role === 'user'"
+							:content="item.content"
+							:from-voice="item.fromVoice"
+							:voice-url="item.voiceUrl"
+							:voice-length="item.voiceLength"
 						/>
+
+						<!-- AI 消息 -->
+						<ai-message
+							v-else
+							:content="item.content"
+						>
+							<!-- 律之星结果：卡片列表展示 -->
+							<lzx-law-list
+								v-if="item.references?.lzxResults?.length"
+								:items="item.references.lzxResults"
+							/>
+
+							<!-- 法宝/其他引用展示 -->
+							<references-panel
+								v-else-if="item.references"
+								:references="item.references"
+							/>
+						</ai-message>
 					</template>
-				</chat-input>
-			</view>
+				</template>
+
+				<template #input>
+					<chat-input
+						v-model:model-value="inputValue"
+						v-model:input-mode="chatInputStore.inputMode.value"
+						:tools="chatInputStore.tools.value"
+						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
+						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
+						:show-default-network="chatInputStore.showDefaultNetwork.value"
+						:show-intent-chips="false"
+						@send="handleSend"
+						@tool-change="handleToolsChange"
+						@input-mode-change="handleInputModeChange"
+					>
+						<!-- 模型信息（锁定状态） -->
+						<template #tools-prepend>
+							<model-selector v-model="modelType" :locked="modelLocked" />
+						</template>
+					</chat-input>
+				</template>
+			</chat-layout>
 		</template>
 	</app-page>
 </template>
-
-<style lang="scss" scoped>
-.page-content {
-	@apply w-full h-full flex flex-col overflow-hidden;
-	background-color: #fafafa;
-}
-
-.scroll-container {
-	@apply flex-1 px-2 pt-2 pb-4;
-	overflow: hidden;
-}
-
-.ai-repeat-list__scroll {
-	height: 100%;
-}
-
-.chat-user-main {
-	background-color: #06b6d4; // cyan-500
-}
-
-.voice-text {
-	@apply text-md pl-4 py-2 bg-white rounded-md mt-2;
-}
-
-.ai-message-wrapper {
-	@apply w-full;
-}
-
-
-// 状态显示
-.ai-status-wrapper {
-	@apply px-4 py-3;
-}
-
-.ai-status-row {
-	@apply flex flex-row items-center mb-1;
-}
-
-.ai-status-spinner {
-	width: 14px;
-	height: 14px;
-	border-radius: 999px;
-	border-width: 2px;
-	border-style: solid;
-	border-color: #e5e7eb;
-	border-top-color: #06b6d4;
-	animation: ai-status-spin 1s linear infinite;
-}
-
-.ai-status-text {
-	@apply text-md text-gray-500 ml-2;
-}
-
-.ai-status-dots {
-	@apply flex flex-row items-center mt-1;
-}
-
-.ai-status-dot {
-	width: 6px;
-	height: 6px;
-	border-radius: 999px;
-	background-color: #06b6d4;
-	margin-right: 4px;
-	animation: ai-status-blink 1.4s infinite both;
-}
-
-.ai-status-dot--2 {
-	animation-delay: 0.2s;
-}
-
-.ai-status-dot--3 {
-	animation-delay: 0.4s;
-}
-
-@keyframes ai-status-spin {
-	0% {
-		transform: rotate(0deg);
-	}
-	100% {
-		transform: rotate(360deg);
-	}
-}
-
-@keyframes ai-status-blink {
-	0%,
-	80%,
-	100% {
-		opacity: 0.2;
-	}
-	40% {
-		opacity: 1;
-	}
-}
-</style>

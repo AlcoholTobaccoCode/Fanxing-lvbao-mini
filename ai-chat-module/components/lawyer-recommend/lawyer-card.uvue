@@ -50,7 +50,7 @@ const handleClick = () => {
 			<view class="avatar" :style="{ backgroundColor: avatarBgColor }">
 				<text class="avatar-text">{{ avatarText }}</text>
 			</view>
-			<view v-if="lawyer.online" class="online-badge"></view>
+			<!-- <view v-if="lawyer.online" class="online-badge"></view> -->
 		</view>
 
 		<!-- 信息区域 -->
@@ -85,7 +85,6 @@ const handleClick = () => {
 
 			<!-- 擅长领域 -->
 			<view class="expertise-row">
-				<view class="online-dot" v-if="lawyer.online"></view>
 				<cl-icon name="briefcase-line" size="12px" color="#6b7280" />
 				<text class="expertise-text">{{ lawyer.expertise }}</text>
 			</view>
@@ -161,7 +160,7 @@ const handleClick = () => {
 }
 
 .stat-item {
-	@apply flex flex-row items-baseline;
+	@apply flex flex-col items-center;
 }
 
 .stat-value {

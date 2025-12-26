@@ -1,0 +1,68 @@
+<!--
+@description: 用户消息气泡组件
+-->
+<script lang="ts" setup>
+import AudioBubble from "../chat-input/audio-bubble.uvue";
+
+interface Props {
+	content: string;
+	fromVoice?: boolean;
+	voiceUrl?: string;
+	voiceLength?: number;
+}
+
+defineProps<Props>();
+</script>
+
+<template>
+	<view
+		class="user-message"
+		:class="{ 'user-message--voice': fromVoice }"
+	>
+		<!-- 语音消息 -->
+		<template v-if="fromVoice">
+			<view class="user-bubble">
+				<audio-bubble
+					mode="send"
+					:length="voiceLength"
+					:url="voiceUrl || ''"
+				/>
+			</view>
+			<view class="voice-text">
+				{{ content }}
+			</view>
+		</template>
+
+		<!-- 文本消息 -->
+		<view v-else class="user-bubble user-bubble--text">
+			<cl-text :pt="{ className: 'text-white' }">
+				{{ content }}
+			</cl-text>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.user-message {
+	@apply flex flex-row justify-end px-4 my-2;
+}
+
+.user-message--voice {
+	@apply flex-col items-end;
+}
+
+.user-bubble {
+	@apply px-3 py-2 rounded-xl rounded-tr-none;
+	background-color: #22c57d;
+	max-width: 80%;
+}
+
+.user-bubble--text {
+	@apply p-2 pl-3 text-lg;
+}
+
+.voice-text {
+	@apply text-sm pl-4 py-2 bg-white rounded-md mt-2;
+	color: #374151;
+}
+</style>

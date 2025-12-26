@@ -1,19 +1,19 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
 import type { SendData, Tools } from "@/cool/types/chat-input";
 import type { RecommendLawyerItem } from "@/api/consult";
-import { createConsultTtsController } from "@/utils/aliyun/tts-stream";
 import { showLoginModal } from "@/cool/store/login-modal";
 import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store";
 import { CHAT_MODULE_CONFIGS } from "@/cool/store/chatInput-store/moduleConfigs";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue";
-import AudioBubble from "@/ai-chat-module/components/chat-input/audio-bubble.uvue";
-import ZeroMarkdownView from "../components/zero-markdown-view/components/zero-markdown-view/zero-markdown-view.vue";
+import ChatLayout from "../components/chat-layout/index.uvue";
+import ChatInput from "../components/chat-input/ai-chat/index.uvue";
+import UserMessage from "../components/chat-layout/user-message.uvue";
+import AiMessage from "../components/chat-layout/ai-message.uvue";
 import LawyerList from "../components/lawyer-recommend/lawyer-list.uvue";
 import ReferencesPanel from "../components/references/index.uvue";
 
@@ -21,29 +21,19 @@ const log = new Logger("ConsultChatPage");
 const ui = useUi();
 const { user } = useStore();
 
-// 对话输入内容
 const inputValue = ref("");
+const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
 
-// 获取当前 sessionId
 const sessionId = computed(() => consultSessionStore.sessionId.value || "");
-
-// 消息列表
 const messages = consultSessionStore.messages;
-// 是否正在生成 AI 回复
 const isGenerating = computed(() => consultSessionStore.loading.value);
-// 推荐律师加载中
 const isRecommendLoading = computed(() => consultSessionStore.recommendLoading.value);
-
-// 当前流式阶段状态文案（例如：正在思考中 / 正在为您检索相关司法判例...）
 const streamStatus = computed(() => consultSessionStore.streamStatus.value);
 
-// 深度思考展开状态：按消息索引记录“收起”的条目（默认全部展开）
+// 深度思考展开状态
 const collapsedDeepThinkIndexes = ref<number[]>([]);
 
-//#region 深度思考
-// 指定 ai 回复的深度思考是否展开
 const isDeepThinkExpanded = (idx: number) => {
-	// 不在收起列表中即视为展开
 	return !collapsedDeepThinkIndexes.value.includes(idx);
 };
 
@@ -51,111 +41,17 @@ const toggleDeepThink = (idx: number) => {
 	const arr = collapsedDeepThinkIndexes.value.slice();
 	const i = arr.indexOf(idx);
 	if (i >= 0) {
-		// 已收起 -> 从列表移除，恢复展开
 		arr.splice(i, 1);
 	} else {
-		// 当前展开 -> 加入收起列表
 		arr.push(idx);
 	}
 	collapsedDeepThinkIndexes.value = arr;
 };
 
-// 计算思考用时
-const getDeepThinkTimeText = (msg: any) => {
-	if (!msg.deepThink) return "";
-
-	// 如果有结束时间，显示用时
-	if (msg.deepThinkEndTime && msg.deepThinkStartTime) {
-		const seconds = Math.round((msg.deepThinkEndTime - msg.deepThinkStartTime) / 1000);
-		return `思考（用时 ${seconds} 秒）`;
-	}
-
-	// 否则显示思考中
-	return "思考中...";
-};
-//#endregion
-
-//#region 聊天列表自动滚动控制
-const scrollIntoViewId = ref("chat-bottom-a");
-const autoScroll = ref(true);
-const lastScrollTop = ref(0);
-
-const scrollToBottom = () => {
-	if (!autoScroll.value) return;
-	nextTick(() => {
-		// 在两个锚点之间切换，确保 scroll-into-view 每次都变化，强制触发滚动
-		scrollIntoViewId.value =
-			scrollIntoViewId.value === "chat-bottom-a" ? "chat-bottom-b" : "chat-bottom-a";
-	});
-};
-
-// 顶部工具变化 & 输入模式变化：同步到全局 chatInputStore，保证首页与详情页一致
-const handleToolsChange = (val: Tools) => {
-	chatInputStore.tools.value = val;
-};
-
-const handleInputModeChange = (mode: string) => {
-	chatInputStore.inputMode.value = mode as any;
-};
-
-// 监听消息变化：默认保持跟随到底部，除非用户手动上滑
-watch(
-	messages,
-	() => {
-		if (!autoScroll.value) return;
-		scrollToBottom();
-	},
-	{ deep: true }
-);
-
-// 用户滚动聊天列表：一旦有向上滚动，就关闭自动滚动并取消锚点
-const handleScroll = (e: any) => {
-	const top = e?.detail?.scrollTop ?? 0;
-	log.debug("用户滑动 top ===> ", top);
-	if (top < lastScrollTop.value) {
-		autoScroll.value = false;
-		// 清空 scroll-into-view，避免继续被强制拉到底部
-		scrollIntoViewId.value = "";
-	}
-	lastScrollTop.value = top;
-};
-
-// 用户滚动到底部
-const handleScrollToLower = () => {
-	// 只有在 AI 仍在生成时，重新开启自动滚动
-	if (isGenerating.value) {
-		autoScroll.value = true;
-		scrollToBottom();
-	}
-};
-
-//#endregion
-
-//#region 推荐律师相关
-
-// 点击律师卡片 - 跳转到律师详情页
-const handleLawyerClick = (lawyer: RecommendLawyerItem) => {
-	log.debug("点击律师卡片", lawyer);
-	uni.navigateTo({
-		url: `/pages/lawyer/detail?id=${lawyer.user_id}`
-	});
-};
-
-// 点击更多 - 跳转到更多律师列表页
-const handleMoreLawyers = () => {
-	log.debug("点击更多律师");
-	uni.navigateTo({
-		url: `/ai-chat-module/consult/lawyer-list?sessionId=${sessionId.value}`
-	});
-};
-
-//#endregion
-
 // 是否从历史记录恢复
 const isFromHistory = ref(false);
 
 const hasValidLaunch = computed(() => {
-	// 从历史记录恢复时，只要有 sessionId 就认为有效
 	if (isFromHistory.value) {
 		return !!consultSessionStore.sessionId.value;
 	}
@@ -164,13 +60,42 @@ const hasValidLaunch = computed(() => {
 	return !!launch && !!cfg && launch.moduleKey === "consult";
 });
 
+// 工具变化处理
+const handleToolsChange = (val: Tools) => {
+	chatInputStore.tools.value = val;
+};
+
+const handleInputModeChange = (mode: string) => {
+	chatInputStore.inputMode.value = mode as any;
+};
+
+// 推荐律师相关
+const handleLawyerClick = (lawyer: RecommendLawyerItem) => {
+	// TODO - 调用接口获取
+	log.debug("点击律师卡片", lawyer);
+};
+
+const handleMoreLawyers = () => {
+	log.debug("点击更多律师");
+	uni.navigateTo({
+		url: `/ai-chat-module/consult/lawyer-list?sessionId=${sessionId.value}`
+	});
+};
+
+// 监听消息变化，自动滚动
+watch(
+	messages,
+	() => {
+		chatLayoutRef.value?.scrollToBottom();
+	},
+	{ deep: true }
+);
+
 onLoad((options) => {
 	const fromHistory = options?.fromHistory === "true";
 	isFromHistory.value = fromHistory;
 
-	// 从历史记录恢复的情况
 	if (fromHistory) {
-		// 设置输入组件配置
 		const cfg = CHAT_MODULE_CONFIGS["consult"];
 		chatInputStore.setConfig({
 			tools: [],
@@ -182,13 +107,11 @@ onLoad((options) => {
 		});
 
 		setTimeout(() => {
-			log.debug("[consult/chat] messages 数量 =>", consultSessionStore.messages.value.length);
-			scrollToBottom();
+			chatLayoutRef.value?.scrollToBottom();
 		}, 300);
 		return;
 	}
 
-	// 正常启动流程
 	const launch = chatFlowStore.launchPayload.value;
 	const cfg = chatFlowStore.currentConfig.value;
 
@@ -199,10 +122,8 @@ onLoad((options) => {
 		return;
 	}
 
-	// 初始化本次咨询会话
 	consultSessionStore.initFromLaunch(launch);
 
-	// 按模块配置同步输入组件配置
 	chatInputStore.setConfig({
 		tools: launch.tools,
 		inputMode: launch.inputMode,
@@ -212,7 +133,6 @@ onLoad((options) => {
 		showDefaultNetwork: cfg.enableNetwork
 	});
 
-	// 自动以首页首问发起一次流式咨询
 	if (launch.text) {
 		consultSessionStore.sendTextQuestion(launch.text, launch.tools, undefined, {
 			fromVoice: !!launch.voice,
@@ -222,7 +142,7 @@ onLoad((options) => {
 	}
 
 	setTimeout(() => {
-		scrollToBottom();
+		chatLayoutRef.value?.scrollToBottom();
 	}, 500);
 });
 
@@ -231,25 +151,18 @@ onUnload(() => {
 	chatFlowStore.clear();
 });
 
-// 详情页内发送咨询问题（集成 /law/consult 流式接口）
 const handleSend = async (data: SendData) => {
 	log.group("consult detail send");
 	log.debug("payload ==> ", data);
 	log.groupEnd();
 
-	// 检查登录状态
 	if (!user.token) {
-		// 显示登录弹窗，登录成功后重新发送
 		showLoginModal(() => {
-			// 登录成功后，重新调用 handleSend 发送消息
 			handleSend(data);
 		});
 		return;
 	}
 
-	// 统一抽取本次提问文本：
-	// - 文本模式：直接用 data.text
-	// - 语音模式：优先使用语音识别出的文字 data.voice.text，兜底 data.text
 	let questionText = "";
 	if (data.mode === "voice" && data.voice) {
 		questionText = (data.voice.text || data.text || "").trim();
@@ -263,36 +176,26 @@ const handleSend = async (data: SendData) => {
 	}
 
 	try {
-		// 发送新问题前，重置为自动跟随到底部
-		autoScroll.value = true;
-		scrollToBottom();
-		// TODO - 创建流式语音合成
-		// const ttsController = await createConsultTtsController();
-		try {
-			inputValue.value = "";
+		chatLayoutRef.value?.resetAutoScroll();
+		inputValue.value = "";
 
-			await consultSessionStore.sendTextQuestion(
-				questionText,
-				chatInputStore.tools.value,
-				{
-					onTextChunk: async (chunk: string) => {
-						console.debug("chunk ===> ", chunk);
-						// await ttsController.feedText(chunk);
-					}
-				},
-				{
-					fromVoice: data.mode === "voice",
-					voiceUrl: data.mode === "voice" ? data.voice?.onlineUrl : undefined,
-					voiceLength:
-						data.mode === "voice" && data.voice
-							? Math.ceil((data.voice.duration || 0) / 1000)
-							: undefined
+		await consultSessionStore.sendTextQuestion(
+			questionText,
+			chatInputStore.tools.value,
+			{
+				onTextChunk: async (chunk: string) => {
+					console.debug("chunk ===> ", chunk);
 				}
-			);
-			// await ttsController.finish();
-		} finally {
-			// ttsController.dispose();
-		}
+			},
+			{
+				fromVoice: data.mode === "voice",
+				voiceUrl: data.mode === "voice" ? data.voice?.onlineUrl : undefined,
+				voiceLength:
+					data.mode === "voice" && data.voice
+						? Math.ceil((data.voice.duration || 0) / 1000)
+						: undefined
+			}
+		);
 	} catch (err) {
 		console.error("consult send error", err);
 		ui.showToast({ message: "咨询失败，请稍后重试" });
@@ -303,283 +206,67 @@ const handleSend = async (data: SendData) => {
 <template>
 	<app-page title="法律咨询" back-top :use-history-layout="false" :chat-list-btn="false">
 		<template #content>
-			<view class="page-content">
-				<view
-					v-if="!hasValidLaunch"
-					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
-				>
-					暂未检测到会话启动参数，请从首页发起新的咨询。
-				</view>
-				<view v-else class="flex-1 px-2 pt-2 pb-4">
-					<scroll-view
-						scroll-y
-						class="ai-repeat-list__scroll"
-						:enable-flex="true"
-						:scroll-into-view="scrollIntoViewId"
-						:scroll-with-animation="true"
-						@scroll="handleScroll"
-						@scrolltolower="handleScrollToLower"
-					>
-						<view
-							v-for="(item, index) in messages"
-							:key="index"
-							class="flex px-4 my-2"
-							:class="item.role === 'user' ? 'flex-row justify-end' : 'justify-start'"
+			<chat-layout
+				ref="chatLayoutRef"
+				:loading="isGenerating"
+				:status-text="streamStatus || ''"
+				:show-empty="!hasValidLaunch"
+				empty-text="暂未检测到会话启动参数，请从首页发起新的咨询。"
+			>
+				<template #messages>
+					<template v-for="(item, index) in messages" :key="index">
+						<!-- 用户消息 -->
+						<user-message
+							v-if="item.role === 'user'"
+							:content="item.content"
+							:from-voice="item.fromVoice"
+							:voice-url="item.voiceUrl"
+							:voice-length="item.voiceLength"
+						/>
+
+						<!-- AI 消息 -->
+						<ai-message
+							v-else
+							:content="item.content"
+							:deep-think="item.deepThink"
+							:deep-think-start-time="item.deepThinkStartTime"
+							:deep-think-end-time="item.deepThinkEndTime"
+							:deep-think-expanded="isDeepThinkExpanded(index)"
+							@toggle-deep-think="toggleDeepThink(index)"
 						>
-							<template v-if="item.role === 'user'">
-								<template v-if="item.fromVoice">
-									<view
-										class="chat-user-main !w-fit px-3 py-2 rounded-xl rounded-tr-none flex flex-col gap-1"
-									>
-										<audio-bubble
-											mode="send"
-											:length="item.voiceLength"
-											:url="item.voiceUrl || ''"
-										/>
-									</view>
-									<view class="voice-text">
-										{{ item.content }}
-									</view>
-								</template>
-								<!-- 普通文本提问：保持原有样式 -->
-								<view
-									v-else
-									class="chat-user-main !w-fit p-2 pl-3 rounded-xl rounded-tr-none text-lg"
-								>
-									<cl-text
-										:pt="{
-											className: 'text-white'
-										}"
-									>
-										{{ item.content }}
-									</cl-text>
-								</view>
-							</template>
+							<!-- 推荐律师展示 -->
+							<lawyer-list
+								v-if="item.haveRecommendLawyer"
+								:lawyers="item.recommendedLawyers || []"
+								:session-id="sessionId"
+								:loading="isRecommendLoading && !item.recommendedLawyers?.length"
+								@lawyer-click="handleLawyerClick"
+								@more-click="handleMoreLawyers"
+							/>
 
-							<template v-else>
-								<!-- 思考过程：显示在每条 AI 回复的最上方（如果存在 deepThink） -->
-								<view v-if="item.deepThink" class="deepthink-wrapper">
-									<view
-										class="deepthink-header"
-										@tap.stop="toggleDeepThink(index)"
-									>
-										<view class="deepthink-icon">
-											<cl-text>💭</cl-text>
-										</view>
-										<text class="deepthink-title">
-											{{ getDeepThinkTimeText(item) }}
-										</text>
-										<text class="deepthink-toggle">
-											<cl-icon
-												:name="`arrow-${isDeepThinkExpanded(index) ? 'up-s-line' : 'down-s-line'}`"
-											></cl-icon>
-										</text>
-									</view>
-									<view v-if="isDeepThinkExpanded(index)" class="deepthink-body">
-										<text class="deepthink-text">{{ item.deepThink }}</text>
-									</view>
-								</view>
+							<!-- 参考引用展示 -->
+							<references-panel
+								v-if="item.references"
+								:references="item.references"
+							/>
+						</ai-message>
+					</template>
+				</template>
 
-								<template v-if="item.content">
-									<zero-markdown-view
-										:markdown="item.content"
-										:aiMode="true"
-									></zero-markdown-view>
-								</template>
-
-								<!-- 推荐律师展示 -->
-								<lawyer-list
-									v-if="item.haveRecommendLawyer"
-									:lawyers="item.recommendedLawyers || []"
-									:session-id="sessionId"
-									:loading="
-										isRecommendLoading && !item.recommendedLawyers?.length
-									"
-									@lawyer-click="handleLawyerClick"
-									@more-click="handleMoreLawyers"
-								></lawyer-list>
-
-								<!-- 参考引用展示（法规、案例、数据来源） -->
-								<references-panel
-									v-if="item.references"
-									:references="item.references"
-								/>
-							</template>
-						</view>
-						<!-- 当前轮 AI 回复阶段性状态展示 -->
-						<view v-if="isGenerating && streamStatus" class="ai-status-wrapper">
-							<view class="ai-status-row">
-								<view class="ai-status-spinner"></view>
-								<text class="ai-status-text">{{ streamStatus }}</text>
-							</view>
-							<view class="ai-status-dots">
-								<view class="ai-status-dot ai-status-dot--1"></view>
-								<view class="ai-status-dot ai-status-dot--2"></view>
-								<view class="ai-status-dot ai-status-dot--3"></view>
-							</view>
-						</view>
-						<!-- 底部锚点：用于 scroll-into-view 自动滚动到底部 -->
-						<view id="chat-bottom-a"></view>
-						<view id="chat-bottom-b"></view>
-					</scroll-view>
-				</view>
-
-				<chat-input
-					v-model:model-value="inputValue"
-					v-model:input-mode="chatInputStore.inputMode.value"
-					:tools="chatInputStore.tools.value"
-					:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
-					:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
-					:show-default-network="chatInputStore.showDefaultNetwork.value"
-					@send="handleSend"
-					@tool-change="handleToolsChange"
-					@input-mode-change="handleInputModeChange"
-				/>
-			</view>
+				<template #input>
+					<chat-input
+						v-model:model-value="inputValue"
+						v-model:input-mode="chatInputStore.inputMode.value"
+						:tools="chatInputStore.tools.value"
+						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
+						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
+						:show-default-network="chatInputStore.showDefaultNetwork.value"
+						@send="handleSend"
+						@tool-change="handleToolsChange"
+						@input-mode-change="handleInputModeChange"
+					/>
+				</template>
+			</chat-layout>
 		</template>
 	</app-page>
 </template>
-
-<style lang="scss" scoped>
-.page-content {
-	@apply w-full h-full flex flex-col overflow-hidden;
-	background-color: #fafafa;
-}
-
-.ai-repeat-list__scroll {
-	@apply w-full h-full flex-1 flex flex-col gap-3;
-}
-
-.chat-user-main {
-	background-color: #22c57d;
-}
-
-.voice-text {
-	@apply text-md pl-4 py-2 bg-white rounded-md mt-2;
-}
-
-.deepthink-wrapper {
-	@apply mt-3 mb-1;
-}
-
-.deepthink-header {
-	@apply flex flex-row items-center mb-1;
-}
-
-.deepthink-icon {
-	border-radius: 999px;
-	margin-right: 6px;
-}
-
-.deepthink-title {
-	@apply text-md text-blue-500 mr-1;
-}
-
-.deepthink-toggle {
-	@apply text-md text-gray-400;
-}
-
-.deepthink-body {
-	@apply mt-1 pl-3 border-l border-gray-200;
-}
-
-.deepthink-text {
-	@apply text-md text-gray-500 leading-relaxed;
-}
-
-.lawyer-rec-wrapper {
-	@apply mt-3 px-4 py-3 bg-white rounded-xl shadow-sm;
-}
-
-.lawyer-rec-header {
-	@apply text-md text-gray-500 mb-2;
-}
-
-.lawyer-rec-item {
-	@apply mb-2 last:mb-0;
-}
-
-.lawyer-rec-main {
-	@apply flex flex-row items-baseline gap-2;
-}
-
-.lawyer-rec-name {
-	@apply text-sm text-gray-900 font-medium;
-}
-
-.lawyer-rec-title {
-	@apply text-[11px] text-blue-500;
-}
-
-.lawyer-rec-firm {
-	@apply block text-md text-gray-500 mt-1;
-}
-
-.lawyer-rec-expert {
-	@apply block text-md text-gray-500 mt-0.5;
-}
-
-.ai-status-wrapper {
-	@apply px-4 py-3;
-}
-
-.ai-status-row {
-	@apply flex flex-row items-center mb-1;
-}
-
-.ai-status-spinner {
-	width: 14px;
-	height: 14px;
-	border-radius: 999px;
-	border-width: 2px;
-	border-style: solid;
-	border-color: #e5e7eb;
-	border-top-color: #3b82f6;
-	animation: ai-status-spin 1s linear infinite;
-}
-
-.ai-status-text {
-	@apply text-md text-gray-500 ml-2;
-}
-
-.ai-status-dots {
-	@apply flex flex-row items-center mt-1;
-}
-
-.ai-status-dot {
-	width: 6px;
-	height: 6px;
-	border-radius: 999px;
-	background-color: #3b82f6;
-	margin-right: 4px;
-	animation: ai-status-blink 1.4s infinite both;
-}
-
-.ai-status-dot--2 {
-	animation-delay: 0.2s;
-}
-
-.ai-status-dot--3 {
-	animation-delay: 0.4s;
-}
-
-@keyframes ai-status-spin {
-	0% {
-		transform: rotate(0deg);
-	}
-	100% {
-		transform: rotate(360deg);
-	}
-}
-
-@keyframes ai-status-blink {
-	0%,
-	80%,
-	100% {
-		opacity: 0.2;
-	}
-	40% {
-		opacity: 1;
-	}
-}
-</style>

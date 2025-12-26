@@ -1,0 +1,214 @@
+<!--
+@description: 统一的聊天页面布局组件
+@usage: 用于咨询、法规、案例等所有聊天详情页
+-->
+<script lang="ts" setup>
+import { ref, nextTick, watch, computed } from "vue";
+
+const props = defineProps<{
+	// 是否正在生成中
+	loading?: boolean;
+	// 状态文案
+	statusText?: string;
+	// 是否显示空状态
+	showEmpty?: boolean;
+	// 空状态文案
+	emptyText?: string;
+}>();
+
+// 滚动控制
+const scrollIntoViewId = ref("chat-bottom-a");
+const autoScroll = ref(true);
+const lastScrollTop = ref(0);
+
+// 滚动到底部
+const scrollToBottom = () => {
+	if (!autoScroll.value) return;
+	nextTick(() => {
+		scrollIntoViewId.value =
+			scrollIntoViewId.value === "chat-bottom-a" ? "chat-bottom-b" : "chat-bottom-a";
+	});
+};
+
+// 处理滚动事件
+const handleScroll = (e: any) => {
+	const top = e?.detail?.scrollTop ?? 0;
+	if (top < lastScrollTop.value) {
+		autoScroll.value = false;
+		scrollIntoViewId.value = "";
+	}
+	lastScrollTop.value = top;
+};
+
+// 滚动到底部时
+const handleScrollToLower = () => {
+	if (props.loading) {
+		autoScroll.value = true;
+		scrollToBottom();
+	}
+};
+
+// 重置自动滚动
+const resetAutoScroll = () => {
+	autoScroll.value = true;
+	scrollToBottom();
+};
+
+// 暴露方法给父组件
+defineExpose({
+	scrollToBottom,
+	resetAutoScroll
+});
+
+// 监听 loading 状态，自动滚动
+watch(
+	() => props.loading,
+	(val) => {
+		if (val) {
+			scrollToBottom();
+		}
+	}
+);
+</script>
+
+<template>
+	<view class="chat-layout">
+		<!-- 空状态 -->
+		<view v-if="showEmpty" class="chat-layout__empty">
+			<text class="empty-text">{{ emptyText || "暂无内容" }}</text>
+		</view>
+
+		<!-- 聊天区域 -->
+		<view v-else class="chat-layout__scroll-wrapper">
+			<scroll-view
+				scroll-y
+				class="chat-layout__scroll"
+				:enable-flex="true"
+				:scroll-into-view="scrollIntoViewId"
+				:scroll-with-animation="true"
+				@scroll="handleScroll"
+				@scrolltolower="handleScrollToLower"
+			>
+				<!-- 消息列表插槽 -->
+				<slot name="messages"></slot>
+
+				<!-- 加载状态 -->
+				<view v-if="loading && statusText" class="chat-layout__status">
+					<view class="status-row">
+						<view class="status-spinner"></view>
+						<text class="status-text">{{ statusText }}</text>
+					</view>
+					<view class="status-dots">
+						<view class="status-dot status-dot--1"></view>
+						<view class="status-dot status-dot--2"></view>
+						<view class="status-dot status-dot--3"></view>
+					</view>
+				</view>
+
+				<!-- 底部锚点 -->
+				<view id="chat-bottom-a" class="chat-anchor"></view>
+				<view id="chat-bottom-b" class="chat-anchor"></view>
+			</scroll-view>
+		</view>
+
+		<!-- 输入框插槽 -->
+		<slot name="input"></slot>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.chat-layout {
+	@apply w-full h-full flex flex-col;
+	background-color: #fafafa;
+	overflow: hidden;
+}
+
+.chat-layout__empty {
+	@apply flex-1 flex items-center justify-center px-4 py-6;
+}
+
+.empty-text {
+	@apply text-sm text-center;
+	color: #9ca3af;
+}
+
+.chat-layout__scroll-wrapper {
+	@apply flex-1 px-2 pt-2 pb-2;
+	min-height: 0; /* 关键：允许 flex 子项收缩 */
+	overflow: hidden;
+}
+
+.chat-layout__scroll {
+	@apply w-full h-full;
+}
+
+.chat-anchor {
+	height: 1px;
+}
+
+// 状态显示
+.chat-layout__status {
+	@apply px-4 py-3;
+}
+
+.status-row {
+	@apply flex flex-row items-center mb-1;
+}
+
+.status-spinner {
+	width: 14px;
+	height: 14px;
+	border-radius: 999px;
+	border-width: 2px;
+	border-style: solid;
+	border-color: #e5e7eb;
+	border-top-color: #3b82f6;
+	animation: status-spin 1s linear infinite;
+}
+
+.status-text {
+	@apply text-sm ml-2;
+	color: #6b7280;
+}
+
+.status-dots {
+	@apply flex flex-row items-center mt-1;
+}
+
+.status-dot {
+	width: 6px;
+	height: 6px;
+	border-radius: 999px;
+	background-color: #3b82f6;
+	margin-right: 4px;
+	animation: status-blink 1.4s infinite both;
+}
+
+.status-dot--2 {
+	animation-delay: 0.2s;
+}
+
+.status-dot--3 {
+	animation-delay: 0.4s;
+}
+
+@keyframes status-spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes status-blink {
+	0%,
+	80%,
+	100% {
+		opacity: 0.2;
+	}
+	40% {
+		opacity: 1;
+	}
+}
+</style>
