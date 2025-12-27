@@ -1,12 +1,38 @@
 import { ref } from "vue";
+import { config } from "@/config";
 import { useStore } from "@/cool";
 import { createModelSessionId } from "@/utils/assetsConfig";
 import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID } from "@/utils/util";
-import { QueryCase } from "@/api/retrieve";
+import {
+	QueryFaruiCase,
+	type FaruiCaseResultItem,
+	type FabaoLawMessage,
+	type FabaoSsePayload
+} from "@/api/retrieve";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
-import { GetCaseCardDetail, type CaseDetailResponse } from "@/api/references";
+
+/**
+ * 案例检索模型类型
+ * - farui: 法睿 (专业版) - 非流式，返回案例列表
+ * - fabao: 法宝 (通用版) - 流式 SSE，智能分析
+ */
+export type CaseModelType = "farui" | "fabao";
+
+/**
+ * 法宝案例引用项
+ */
+export interface FabaoCaseReferenceItem {
+	title: string;
+	content: string;
+	url: string;
+	doc_type?: string;
+	case_type?: string;
+	court_name?: string;
+	decision_date?: string;
+	cause_of_action?: string;
+}
 
 export interface CaseMessageReferences {
 	searchList?: Array<{
@@ -19,8 +45,10 @@ export interface CaseMessageReferences {
 		url?: string;
 	}>;
 	caseList?: string[];
-	caseDetails?: CaseDetailResponse[];
-	loadingCase?: boolean;
+	// 法睿返回的案例列表 (用于卡片渲染)
+	faruiResults?: FaruiCaseResultItem[];
+	// 法宝返回的案例列表 (直接展示)
+	fabaoCaseList?: FabaoCaseReferenceItem[];
 }
 
 export interface CaseMessage {
@@ -42,9 +70,33 @@ export class CaseSessionStore {
 	loading = ref(false);
 	streamStatus = ref<string | null>(null);
 
+	// 模型选择相关
+	modelType = ref<CaseModelType>("fabao"); // 默认通用版
+	modelLocked = ref(false); // 对话开始后锁定
+
+	// 法睿分页相关
+	faruiKeywords = ref<string[]>([]); // 关键词
+	faruiCurrentPage = ref(1); // 当前页
+	faruiTotalCount = ref(0); // 总数量
+	faruiPageSize = ref(10); // 每页数量
+	loadingMore = ref(false); // 加载更多状态
+	lastQuery = ref(""); // 上次查询内容
+
+	/**
+	 * 设置模型类型 (仅在未锁定时可用)
+	 */
+	setModelType(type: CaseModelType) {
+		if (!this.modelLocked.value) {
+			this.modelType.value = type;
+		}
+	}
+
 	initFromLaunch(launch: ChatLaunchPayload) {
 		this.messages.value = [];
 		this.sessionId.value = null;
+		this.modelLocked.value = false;
+		// 使用启动参数中的模型类型，默认通用版
+		this.modelType.value = (launch as any).modelType || "fabao";
 	}
 
 	private buildSessionForSave(sessionId: string, msgList?: CaseMessage[]) {
@@ -62,7 +114,7 @@ export class CaseSessionStore {
 		const mappedMessages = list.map((m) => ({
 			id: generateUUID(),
 			content: m.content,
-			sender: m.role === "user" ? "user" : "ai",
+			role: m.role,
 			timestamp: dateTimeStr,
 			isStreaming: false,
 			references: m.references
@@ -73,7 +125,8 @@ export class CaseSessionStore {
 			title,
 			messages: mappedMessages,
 			createdAt: now,
-			updatedAt: now
+			updatedAt: now,
+			modelType: this.modelType.value // 保存模型类型
 		} as Record<string, any>;
 	}
 
@@ -98,6 +151,9 @@ export class CaseSessionStore {
 		}
 	}
 
+	/**
+	 * 发送文本问题 - 根据模型类型分发
+	 */
 	async sendTextQuestion(
 		text: string,
 		_tools: Tools,
@@ -107,11 +163,15 @@ export class CaseSessionStore {
 		const content = text.trim();
 		if (!content || this.loading.value) return;
 
+		// 首轮发送时生成 sessionId 并锁定模型
 		if (!this.sessionId.value) {
 			this.sessionId.value = createModelSessionId("case");
 		}
 
-		this.streamStatus.value = "正在检索案例...";
+		// 锁定模型选择
+		if (!this.modelLocked.value) {
+			this.modelLocked.value = true;
+		}
 
 		// 添加用户消息
 		this.messages.value.push({
@@ -131,42 +191,15 @@ export class CaseSessionStore {
 		this.loading.value = true;
 
 		try {
-			// 调用案例检索 API
-			const res = await QueryCase({
-				content,
-				pageNumber: 1,
-				pageSize: 10
-			});
-
-			// 处理响应
-			const responseData = (res as any)?.data ?? res;
-
-			// 根据实际响应格式处理数据
-			if (responseData) {
-				// 如果返回的是文本内容
-				if (typeof responseData === "string") {
-					aiMsg.content = responseData;
-				} else if (responseData.content) {
-					aiMsg.content = responseData.content;
-				} else if (responseData.answer) {
-					aiMsg.content = responseData.answer;
-				} else if (Array.isArray(responseData)) {
-					// 如果返回的是案例列表，格式化显示
-					aiMsg.content = this.formatCaseResults(responseData);
-					aiMsg.references = {
-						caseList: responseData.map((item: any) => item.caseId || item.id || "")
-					};
-				} else {
-					// 尝试将对象转为可读内容
-					aiMsg.content = JSON.stringify(responseData, null, 2);
-				}
-
-				hooks?.onTextChunk?.(aiMsg.content);
+			// 根据模型类型分发
+			if (this.modelType.value === "farui") {
+				await this.sendFaruiQuery(content, aiMsg, hooks);
+			} else {
+				await this.sendFabaoQuery(aiMsg, hooks);
 			}
 
 			this.streamStatus.value = null;
 			await this.saveCurrentSessionSnapshot();
-			await this.fetchReferencesDetail(aiMsg);
 		} catch (err) {
 			console.error("[CaseSession] 检索失败", err);
 			aiMsg.content = "检索失败，请稍后重试";
@@ -176,101 +209,293 @@ export class CaseSessionStore {
 		}
 	}
 
-	private formatCaseResults(results: any[]): string {
-		if (!results.length) {
-			return "未找到相关案例，请尝试其他关键词。";
+	/**
+	 * 法睿查询 (非流式)
+	 */
+	private async sendFaruiQuery(text: string, aiMsg: CaseMessage, hooks?: CaseStreamHooks) {
+		this.streamStatus.value = "正在检索案例...";
+		this.lastQuery.value = text;
+
+		const res = await QueryFaruiCase({ content: text, pageNumber: 1, pageSize: 10 });
+		const responseData = (res as any)?.data ?? res;
+		const caseResult = responseData?.caseResult || [];
+
+		// 保存分页信息
+		this.faruiCurrentPage.value = responseData?.currentPage || 1;
+		this.faruiTotalCount.value = responseData?.totalCount || caseResult.length;
+		this.faruiPageSize.value = responseData?.pageSize || 10;
+
+		// 保存关键词
+		this.faruiKeywords.value = responseData?.queryKeywords || [];
+
+		if (caseResult.length > 0) {
+			aiMsg.content = `根据您的检索，找到以下相关案例：`;
+			aiMsg.references = {
+				faruiResults: caseResult,
+				caseList: caseResult.map(
+					(item: FaruiCaseResultItem) => item.caseDomain?.caseId || ""
+				)
+			};
+			hooks?.onTextChunk?.(aiMsg.content);
+		} else {
+			aiMsg.content = "未找到相关案例，请尝试其他关键词。";
+			hooks?.onTextChunk?.(aiMsg.content);
 		}
-
-		const lines = ["根据您的检索，找到以下相关案例：\n"];
-		results.forEach((item, index) => {
-			const caseNo = item.caseNo || item.case_no || "";
-			const caseName = item.caseName || item.title || item.name || `案例 ${index + 1}`;
-			const court = item.court || item.courtName || "";
-			const judgeDate = item.judgeDate || item.judge_date || "";
-
-			lines.push(`**${index + 1}. ${caseName}**`);
-			if (caseNo) lines.push(`案号：${caseNo}`);
-			if (court) lines.push(`法院：${court}`);
-			if (judgeDate) lines.push(`裁判日期：${judgeDate}`);
-			lines.push("");
-		});
-
-		return lines.join("\n");
 	}
 
-	private async fetchReferencesDetail(aiMsg: CaseMessage) {
+	/**
+	 * 加载更多法睿案例
+	 */
+	async loadMoreFaruiResults() {
+		if (this.loadingMore.value) return;
+		if (!this.lastQuery.value) return;
+
+		// 检查是否还有更多
+		const currentTotal = this.faruiCurrentPage.value * this.faruiPageSize.value;
+		if (currentTotal >= this.faruiTotalCount.value) return;
+
+		this.loadingMore.value = true;
+
 		try {
-			if (!aiMsg.references) return;
+			const nextPage = this.faruiCurrentPage.value + 1;
+			const res = await QueryFaruiCase({
+				content: this.lastQuery.value,
+				pageNumber: nextPage,
+				pageSize: this.faruiPageSize.value
+			});
+			const responseData = (res as any)?.data ?? res;
+			const newResults = responseData?.caseResult || [];
 
-			const msgIndex = this.messages.value.findIndex((m) => m === aiMsg);
-			if (msgIndex === -1) return;
+			if (newResults.length > 0) {
+				// 更新页码
+				this.faruiCurrentPage.value = nextPage;
 
-			const updateMessage = (updater: (refs: CaseMessageReferences) => void) => {
-				const msg = this.messages.value[msgIndex];
-				if (msg.references) {
-					updater(msg.references);
+				// 找到最后一条 AI 消息并追加结果
+				const lastAiMsg = [...this.messages.value]
+					.reverse()
+					.find((m) => m.role === "system");
+				if (lastAiMsg && lastAiMsg.references?.faruiResults) {
+					lastAiMsg.references.faruiResults = [
+						...lastAiMsg.references.faruiResults,
+						...newResults
+					];
+					// 追加 caseList
+					const newCaseIds = newResults.map(
+						(item: FaruiCaseResultItem) => item.caseDomain?.caseId || ""
+					);
+					lastAiMsg.references.caseList = [
+						...(lastAiMsg.references.caseList || []),
+						...newCaseIds
+					];
+					// 触发响应式更新
 					this.messages.value = [...this.messages.value];
+				}
+
+				await this.saveCurrentSessionSnapshot();
+			}
+		} catch (err) {
+			console.error("[CaseSession] 加载更多失败", err);
+		} finally {
+			this.loadingMore.value = false;
+		}
+	}
+
+	/**
+	 * 法宝查询 (SSE 流式)
+	 */
+	private async sendFabaoQuery(aiMsg: CaseMessage, hooks?: CaseStreamHooks) {
+		this.streamStatus.value = "正在分析问题...";
+
+		// 构建 messages 数组 (支持多轮对话上下文)
+		const apiMessages: FabaoLawMessage[] = this.messages.value
+			.filter((m) => m.content) // 过滤空消息
+			.map((m) => ({
+				role: m.role === "user" ? "user" : ("system" as const),
+				content: m.content
+			}));
+
+		const { user } = useStore();
+
+		await new Promise<void>((resolve, reject) => {
+			let buffer = "";
+
+			const processSseLine = (rawLine: string) => {
+				const line = rawLine.trim();
+				if (!line) return;
+
+				// 解析 "data: data: {...}" 格式
+				let jsonStr: string | null = null;
+
+				if (line.startsWith("data:")) {
+					let payload = line.slice(5).trim();
+					// 处理双重 data: 前缀
+					if (payload.startsWith("data:")) {
+						payload = payload.slice(5).trim();
+					}
+					if (!payload || payload === "[DONE]") return;
+					jsonStr = payload;
+				} else if (line.startsWith("{")) {
+					jsonStr = line;
+				} else {
+					return;
+				}
+
+				try {
+					const evt = JSON.parse(jsonStr) as FabaoSsePayload;
+
+					switch (evt.stage) {
+						case "info":
+							this.streamStatus.value = evt.message || "正在处理...";
+							break;
+
+						case "mcp_call":
+							this.streamStatus.value = `正在检索: ${evt.args?.text || "案例"}`;
+							break;
+
+						case "mcp_result":
+							// 保存法宝案例引用数据
+							if (evt.cases && Array.isArray(evt.cases)) {
+								if (!aiMsg.references) {
+									aiMsg.references = {};
+								}
+								aiMsg.references.fabaoCaseList = evt.cases.map((item) => ({
+									title: item.title,
+									content: item.content,
+									url: item.url,
+									doc_type: item.doc_type,
+									case_type: item.case_type,
+									court_name: item.court_name,
+									decision_date: item.decision_date,
+									cause_of_action: item.cause_of_action
+								}));
+							}
+							break;
+
+						case "qwen":
+							this.streamStatus.value = evt.message || "正在生成回答...";
+							break;
+
+						case "qwen_delta":
+							if (evt.delta) {
+								aiMsg.content += evt.delta;
+								hooks?.onTextChunk?.(evt.delta);
+							}
+							// 检查是否结束
+							if (evt.event === "end") {
+								this.streamStatus.value = null;
+							}
+							break;
+
+						case "final":
+							if (evt.content) {
+								aiMsg.content = evt.content;
+							}
+							this.streamStatus.value = null;
+							break;
+					}
+				} catch (err) {
+					console.error("[CaseSession] 解析法宝响应失败", err, jsonStr);
 				}
 			};
 
-			const refs = aiMsg.references;
-
-			if (refs.caseList && refs.caseList.length > 0) {
-				updateMessage((r) => (r.loadingCase = true));
-
-				const validCaseIds = refs.caseList.filter((id) => !!id);
-
-				if (validCaseIds.length > 0) {
-					try {
-						const res = await GetCaseCardDetail(validCaseIds);
-						const caseData = (res as any)?.data ?? res ?? [];
-						updateMessage((r) => {
-							r.caseDetails = Array.isArray(caseData) ? caseData : [];
-							r.loadingCase = false;
-						});
-					} catch (err) {
-						console.error("[CaseSession] 获取案例详情失败", err);
-						updateMessage((r) => {
-							r.caseDetails = [];
-							r.loadingCase = false;
-						});
+			const handleChunk = (data: ArrayBuffer) => {
+				try {
+					let chunkStr = "";
+					if (typeof TextDecoder !== "undefined") {
+						chunkStr = new TextDecoder("utf-8").decode(data);
+					} else {
+						const uint8 = new Uint8Array(data);
+						let str = "";
+						for (let i = 0; i < uint8.length; i++) {
+							str += String.fromCharCode(uint8[i]);
+						}
+						try {
+							chunkStr = decodeURIComponent(escape(str));
+						} catch {
+							chunkStr = str;
+						}
 					}
 
-					await this.saveCurrentSessionSnapshot();
-				} else {
-					updateMessage((r) => (r.loadingCase = false));
+					if (!chunkStr) return;
+
+					buffer += chunkStr;
+					const lines = buffer.split(/\r?\n/);
+					buffer = lines.pop() ?? "";
+
+					for (const raw of lines) {
+						processSseLine(raw);
+					}
+				} catch (err) {
+					console.error("[CaseSession] 处理流式数据失败", err);
 				}
+			};
+
+			const requestTask: any = uni.request({
+				url: config.baseUrl + "/law/queryCase1",
+				method: "POST",
+				data: { messages: apiMessages } as any,
+				header: {
+					"Content-Type": "application/json",
+					Authorization: user.token || ""
+				},
+				enableChunked: true,
+				responseType: "arraybuffer",
+				success: (res: any) => {
+					try {
+						if (res.data) {
+							handleChunk(res.data as ArrayBuffer);
+							// 处理剩余 buffer
+							if (buffer) {
+								const lastLines = buffer.split(/\r?\n/);
+								buffer = "";
+								for (const raw of lastLines) {
+									processSseLine(raw);
+								}
+							}
+						}
+						resolve();
+					} catch (err) {
+						reject(err);
+					}
+				},
+				fail: (err: any) => {
+					console.error("[CaseSession] 法宝请求失败:", err);
+					reject(err);
+				}
+			} as any);
+
+			if (requestTask && typeof requestTask.onChunkReceived === "function") {
+				requestTask.onChunkReceived((res: any) => {
+					handleChunk(res.data as ArrayBuffer);
+				});
 			}
-		} catch (err) {
-			console.error("[CaseSession] 获取引用详情失败", err);
-		}
+		});
 	}
 
-	restoreFromHistory(sessionId: string, messages: CaseMessage[]) {
+	/**
+	 * 从历史记录恢复会话
+	 */
+	restoreFromHistory(sessionId: string, messages: CaseMessage[], modelType?: CaseModelType) {
 		this.sessionId.value = sessionId;
 		this.messages.value = messages;
 		this.loading.value = false;
 		this.streamStatus.value = null;
-
-		this.loadMissingReferencesDetail();
-	}
-
-	private async loadMissingReferencesDetail() {
-		for (const msg of this.messages.value) {
-			if (msg.role !== "system" || !msg.references) continue;
-
-			const refs = msg.references;
-			const needLoadCase = refs.caseList?.length && !refs.caseDetails?.length;
-
-			if (needLoadCase) {
-				await this.fetchReferencesDetail(msg);
-			}
-		}
+		this.modelType.value = modelType || "fabao";
+		this.modelLocked.value = true; // 恢复时锁定模型
 	}
 
 	clear() {
 		this.messages.value = [];
 		this.sessionId.value = null;
+		this.modelLocked.value = false;
+		this.modelType.value = "fabao"; // 重置为默认
+		// 重置分页相关状态
+		this.faruiKeywords.value = [];
+		this.faruiCurrentPage.value = 1;
+		this.faruiTotalCount.value = 0;
+		this.faruiPageSize.value = 10;
+		this.loadingMore.value = false;
+		this.lastQuery.value = "";
 	}
 }
 

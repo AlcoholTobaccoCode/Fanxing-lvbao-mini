@@ -18,7 +18,7 @@
 					"defense-starter": "/ai-chat-module/defense/defense",
 					"contract-review-starter": "/ai-chat-module/contract-review/contract-review",
 					"contract-gen-starter": "/ai-chat-module/contract-gen/contract-gen",
-					"model-selector": "/ai-chat-module/components/model-selector"
+					"model-selector": "/ai-chat-module/components/model-selector/index"
 				},
 				"componentPlaceholder": {
 					"chat-input": "view",

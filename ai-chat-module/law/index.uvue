@@ -14,7 +14,7 @@ import ChatInput from "../components/chat-input/ai-chat/index.uvue";
 import UserMessage from "../components/chat-layout/user-message.uvue";
 import AiMessage from "../components/chat-layout/ai-message.uvue";
 import ReferencesPanel from "../components/references/index.uvue";
-import ModelSelector from "../components/model-selector.uvue";
+import ModelSelector from "../components/model-selector/index.uvue";
 import LzxLawList from "../components/lzx-law-card/list.uvue";
 
 const log = new Logger("LawChatPage");
@@ -198,10 +198,7 @@ const handleSend = async (data: SendData) => {
 						/>
 
 						<!-- AI 消息 -->
-						<ai-message
-							v-else
-							:content="item.content"
-						>
+						<ai-message v-else :content="item.content">
 							<!-- 律之星结果：卡片列表展示 -->
 							<lzx-law-list
 								v-if="item.references?.lzxResults?.length"

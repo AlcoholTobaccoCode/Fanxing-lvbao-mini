@@ -110,9 +110,9 @@ async function restoreConsultSession(sessionId: string, sessionData: any): Promi
 	// 解析消息列表
 	const messages = sessionData?.messages ?? [];
 
-	// 转换为 ConsultMessage 格式
+	// 转换为 ConsultMessage 格式 (兼容新旧数据：优先读 role，没有再读 sender)
 	const consultMessages: ConsultMessage[] = messages.map((msg: any) => ({
-		role: msg.sender === "user" ? "user" : "system",
+		role: msg.role ?? (msg.sender === "user" ? "user" : "system"),
 		content: msg.content || "",
 		fromVoice: false,
 		voiceUrl: undefined,
@@ -149,7 +149,7 @@ async function restoreLawSession(sessionId: string, sessionData: any): Promise<v
 	const modelType = sessionData?.modelType; // 读取保存的模型类型
 
 	const lawMessages: LawMessage[] = messages.map((msg: any) => ({
-		role: msg.sender === "user" ? "user" : "system",
+		role: msg.role ?? (msg.sender === "user" ? "user" : "system"),
 		content: msg.content || "",
 		fromVoice: false,
 		voiceUrl: undefined,
@@ -177,26 +177,30 @@ async function restoreLawSession(sessionId: string, sessionData: any): Promise<v
  */
 async function restoreCaseSession(sessionId: string, sessionData: any): Promise<void> {
 	const messages = sessionData?.messages ?? [];
+	const modelType = sessionData?.modelType; // 读取保存的模型类型
 
 	const caseMessages: CaseMessage[] = messages.map((msg: any) => ({
-		role: msg.sender === "user" ? "user" : "system",
+		role: msg.role ?? (msg.sender === "user" ? "user" : "system"),
 		content: msg.content || "",
 		fromVoice: false,
 		voiceUrl: undefined,
 		voiceLength: undefined,
 		references: msg.references || {
 			searchList: [],
-			caseList: []
+			caseList: [],
+			faruiResults: msg.references?.faruiResults || [] // 恢复法睿结果
 		}
 	}));
 
 	chatFlowStore.startModule("case", {
 		text: "",
 		tools: [],
-		inputMode: "text"
+		inputMode: "text",
+		modelType // 传递模型类型
 	});
 
-	caseSessionStore.restoreFromHistory(sessionId, caseMessages);
+	// 传递 modelType 给 restoreFromHistory
+	caseSessionStore.restoreFromHistory(sessionId, caseMessages, modelType);
 }
 
 /**

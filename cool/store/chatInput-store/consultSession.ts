@@ -107,7 +107,7 @@ export class ConsultSessionStore {
 			return {
 				id: generateUUID(),
 				content: m.content,
-				sender: m.role === "user" ? "user" : "ai",
+				role: m.role,
 				timestamp: dateTimeStr,
 				// 小程序端目前没有流式中断的概念，这里统一按已完成落库
 				isStreaming: false,

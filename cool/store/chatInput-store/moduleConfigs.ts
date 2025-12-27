@@ -30,7 +30,7 @@ export const CHAT_MODULE_CONFIGS: Record<ChatModuleKey, ChatModuleConfig> = {
 		enableVoice: true,
 		enableFileUpload: false,
 		enableDeepThink: false,
-		enableKnowledge: true,
+		enableKnowledge: false,
 		enableNetwork: false,
 		placeholder: "输入案由或关键词检索相似案例…"
 	},
@@ -40,8 +40,8 @@ export const CHAT_MODULE_CONFIGS: Record<ChatModuleKey, ChatModuleConfig> = {
 		detailRoute: "/ai-chat-module/complaint/index",
 		enableVoice: true,
 		enableFileUpload: false,
-		enableDeepThink: true,
-		enableKnowledge: true,
+		enableDeepThink: false,
+		enableKnowledge: false,
 		enableNetwork: false,
 		placeholder: "描述案件情况，帮你生成起诉状…"
 	},
@@ -51,8 +51,8 @@ export const CHAT_MODULE_CONFIGS: Record<ChatModuleKey, ChatModuleConfig> = {
 		detailRoute: "/ai-chat-module/defense/index",
 		enableVoice: true,
 		enableFileUpload: false,
-		enableDeepThink: true,
-		enableKnowledge: true,
+		enableDeepThink: false,
+		enableKnowledge: false,
 		enableNetwork: false,
 		placeholder: "描述被诉情况，帮你生成答辩状…"
 	},
@@ -61,9 +61,9 @@ export const CHAT_MODULE_CONFIGS: Record<ChatModuleKey, ChatModuleConfig> = {
 		title: "合同审查",
 		detailRoute: "/ai-chat-module/contract-review/index",
 		enableVoice: false,
-		enableFileUpload: true,
-		enableDeepThink: true,
-		enableKnowledge: true,
+		enableFileUpload: false,
+		enableDeepThink: false,
+		enableKnowledge: false,
 		enableNetwork: false,
 		placeholder: "上传或粘贴合同内容进行审查…"
 	},
@@ -73,8 +73,8 @@ export const CHAT_MODULE_CONFIGS: Record<ChatModuleKey, ChatModuleConfig> = {
 		detailRoute: "/ai-chat-module/contract-gen/index",
 		enableVoice: true,
 		enableFileUpload: false,
-		enableDeepThink: true,
-		enableKnowledge: true,
+		enableDeepThink: false,
+		enableKnowledge: false,
 		enableNetwork: false,
 		placeholder: "描述合同需求，帮你生成合同…"
 	}

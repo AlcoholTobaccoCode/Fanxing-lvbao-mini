@@ -3,6 +3,7 @@ import type { Tools } from "@/cool/types/chat-input";
 import type { ChatModuleKey, ChatModuleConfig } from "./types";
 import { CHAT_MODULE_CONFIGS } from "./moduleConfigs";
 import type { LawModelType } from "./lawSession";
+import type { CaseModelType } from "./caseSession";
 
 export interface ChatLaunchPayload {
 	moduleKey: ChatModuleKey;
@@ -11,8 +12,8 @@ export interface ChatLaunchPayload {
 	files?: any[];
 	tools: Tools;
 	inputMode: "text" | "voice";
-	/** 法规检索模型类型 (仅 law 模块使用) */
-	modelType?: LawModelType;
+	/** 模型类型 (法规/案例模块使用) */
+	modelType?: LawModelType | CaseModelType | undefined;
 }
 
 export class ChatFlowStore {

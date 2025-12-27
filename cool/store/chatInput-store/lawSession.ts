@@ -13,7 +13,7 @@ import {
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
 import { GetLawCardDetail, type LawDetailResponse } from "@/api/references";
-
+import type { CaseModelType } from "./caseSession";
 /**
  * 法规检索模型类型
  * - lzx: 律之星 (专业版) - 非流式，专业死板
@@ -73,7 +73,7 @@ export class LawSessionStore {
 	streamStatus = ref<string | null>(null);
 
 	// 模型选择相关
-	modelType = ref<LawModelType>("fabao"); // 默认通用版
+	modelType = ref<LawModelType | CaseModelType | undefined>("fabao"); // 默认通用版
 	modelLocked = ref(false); // 对话开始后锁定
 
 	/**
@@ -108,7 +108,7 @@ export class LawSessionStore {
 		const mappedMessages = list.map((m) => ({
 			id: generateUUID(),
 			content: m.content,
-			sender: m.role === "user" ? "user" : "ai",
+			role: m.role,
 			timestamp: dateTimeStr,
 			isStreaming: false,
 			references: m.references

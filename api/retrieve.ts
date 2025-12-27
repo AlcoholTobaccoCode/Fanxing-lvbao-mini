@@ -146,3 +146,97 @@ export interface FabaoSsePayload {
 	content?: string;
 	event?: string;
 }
+
+// ============ 法睿 (专业版) 案例检索 ============
+
+/**
+ * 法睿案例检索请求参数
+ */
+export interface FaruiCaseSearchRequest {
+	/** 检索内容 */
+	content: string;
+	/** 页码，默认 1 */
+	pageNumber?: number;
+	/** 每页数量，默认 10 */
+	pageSize?: number;
+}
+
+/**
+ * 审理法院信息
+ */
+export interface FaruiTrialCourt {
+	country?: string;
+	province?: string;
+	city?: string;
+	district?: string;
+	county?: string;
+	name?: string;
+	commonLevel?: string;
+	specialLevel?: string;
+}
+
+/**
+ * 法睿案例详情
+ */
+export interface FaruiCaseDomain {
+	caseId: string;
+	caseNo: string;
+	caseTitle: string;
+	caseSummary?: string;
+	caseType?: string;
+	caseCause?: string;
+	documentType?: string;
+	trialLevel?: string;
+	trialDate?: string;
+	trialCourt?: FaruiTrialCourt;
+	verdict?: string;
+	courtThink?: string;
+	courtFindOut?: string;
+	appliedLaws?: string;
+	sourceContent?: string;
+	openCaseCause?: string;
+	closeCaseCause?: string;
+	caseFeature?: string;
+	disputeFocus?: string;
+	keyfacts?: string;
+	litigants?: string;
+	dataFrom?: string;
+}
+
+/**
+ * 法睿案例检索结果项
+ */
+export interface FaruiCaseResultItem {
+	mode?: string;
+	similarity: string;
+	caseDomain: FaruiCaseDomain;
+}
+
+/**
+ * 法睿案例检索响应
+ */
+export interface FaruiCaseSearchResponse {
+	queryKeywords?: string[];
+	query?: string;
+	caseResult: FaruiCaseResultItem[];
+	caseLevel?: string;
+	pageSize: number;
+	currentPage: number;
+	totalCount: number;
+}
+
+/**
+ * 法睿案例检索
+ * POST /law/queryCase
+ */
+export const QueryFaruiCase = (data: FaruiCaseSearchRequest): Promise<ApiResponse<FaruiCaseSearchResponse>> => {
+	return request({
+		url: "/law/queryCase",
+		method: "POST",
+		data: {
+			content: data.content,
+			pageNumber: data.pageNumber || 1,
+			pageSize: data.pageSize || 10
+		}
+	}) as Promise<ApiResponse<FaruiCaseSearchResponse>>;
+};

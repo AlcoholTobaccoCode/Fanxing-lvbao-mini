@@ -1,101 +1,46 @@
 <script lang="ts" setup>
-import { computed, nextTick, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
 import type { SendData, Tools } from "@/cool/types/chat-input";
 import { showLoginModal } from "@/cool/store/login-modal";
-import { chatFlowStore, caseSessionStore, chatInputStore } from "@/cool/store";
+import { chatFlowStore, caseSessionStore, chatInputStore, type CaseModelType } from "@/cool/store";
 import { CHAT_MODULE_CONFIGS } from "@/cool/store/chatInput-store/moduleConfigs";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
-import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue";
-import AudioBubble from "@/ai-chat-module/components/chat-input/audio-bubble.uvue";
-import ZeroMarkdownView from "../components/zero-markdown-view/components/zero-markdown-view/zero-markdown-view.vue";
+import ChatLayout from "../components/chat-layout/index.uvue";
+import ChatInput from "../components/chat-input/ai-chat/index.uvue";
+import UserMessage from "../components/chat-layout/user-message.uvue";
+import AiMessage from "../components/chat-layout/ai-message.uvue";
 import ReferencesPanel from "../components/references/index.uvue";
+import ModelSelector from "../components/model-selector/index.uvue";
+import FaruiCaseList from "../components/farui-case-card/list.uvue";
 
 const log = new Logger("CaseChatPage");
 const ui = useUi();
 const { user } = useStore();
 
 const inputValue = ref("");
-const sessionId = computed(() => caseSessionStore.sessionId.value || "");
+const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
+
 const messages = caseSessionStore.messages;
 const isGenerating = computed(() => caseSessionStore.loading.value);
 const streamStatus = computed(() => caseSessionStore.streamStatus.value);
 
-// 深度思考展开状态
-const collapsedDeepThinkIndexes = ref<number[]>([]);
+// 法睿分页相关
+const faruiKeywords = computed(() => caseSessionStore.faruiKeywords.value);
+const faruiCurrentPage = computed(() => caseSessionStore.faruiCurrentPage.value);
+const faruiTotalCount = computed(() => caseSessionStore.faruiTotalCount.value);
+const faruiPageSize = computed(() => caseSessionStore.faruiPageSize.value);
+const loadingMore = computed(() => caseSessionStore.loadingMore.value);
 
-const isDeepThinkExpanded = (idx: number) => {
-	return !collapsedDeepThinkIndexes.value.includes(idx);
-};
-
-const toggleDeepThink = (idx: number) => {
-	const arr = collapsedDeepThinkIndexes.value.slice();
-	const i = arr.indexOf(idx);
-	if (i >= 0) {
-		arr.splice(i, 1);
-	} else {
-		arr.push(idx);
-	}
-	collapsedDeepThinkIndexes.value = arr;
-};
-
-const getDeepThinkTimeText = (msg: any) => {
-	if (!msg.deepThink) return "";
-	if (msg.deepThinkEndTime && msg.deepThinkStartTime) {
-		const seconds = Math.round((msg.deepThinkEndTime - msg.deepThinkStartTime) / 1000);
-		return `思考（用时 ${seconds} 秒）`;
-	}
-	return "思考中...";
-};
-
-// 滚动控制
-const scrollIntoViewId = ref("chat-bottom-a");
-const autoScroll = ref(true);
-const lastScrollTop = ref(0);
-
-const scrollToBottom = () => {
-	if (!autoScroll.value) return;
-	nextTick(() => {
-		scrollIntoViewId.value =
-			scrollIntoViewId.value === "chat-bottom-a" ? "chat-bottom-b" : "chat-bottom-a";
-	});
-};
-
-const handleToolsChange = (val: Tools) => {
-	chatInputStore.tools.value = val;
-};
-
-const handleInputModeChange = (mode: string) => {
-	chatInputStore.inputMode.value = mode as any;
-};
-
-watch(
-	messages,
-	() => {
-		if (!autoScroll.value) return;
-		scrollToBottom();
-	},
-	{ deep: true }
-);
-
-const handleScroll = (e: any) => {
-	const top = e?.detail?.scrollTop ?? 0;
-	if (top < lastScrollTop.value) {
-		autoScroll.value = false;
-		scrollIntoViewId.value = "";
-	}
-	lastScrollTop.value = top;
-};
-
-const handleScrollToLower = () => {
-	if (isGenerating.value) {
-		autoScroll.value = true;
-		scrollToBottom();
-	}
-};
+// 模型选择（聊天页锁定状态）
+const modelType = computed({
+	get: () => caseSessionStore.modelType.value,
+	set: (val: CaseModelType) => caseSessionStore.setModelType(val)
+});
+const modelLocked = computed(() => caseSessionStore.modelLocked.value);
 
 // 是否从历史记录恢复
 const isFromHistory = ref(false);
@@ -108,6 +53,29 @@ const hasValidLaunch = computed(() => {
 	const cfg = chatFlowStore.currentConfig.value;
 	return !!launch && !!cfg && launch.moduleKey === "case";
 });
+
+// 工具变化处理
+const handleToolsChange = (val: Tools) => {
+	chatInputStore.tools.value = val;
+};
+
+const handleInputModeChange = (mode: string) => {
+	chatInputStore.inputMode.value = mode as any;
+};
+
+// 加载更多法睿案例
+const handleLoadMore = () => {
+	caseSessionStore.loadMoreFaruiResults();
+};
+
+// 监听消息变化，自动滚动
+watch(
+	messages,
+	() => {
+		chatLayoutRef.value?.scrollToBottom();
+	},
+	{ deep: true }
+);
 
 onLoad((options) => {
 	const fromHistory = options?.fromHistory === "true";
@@ -125,7 +93,7 @@ onLoad((options) => {
 		});
 
 		setTimeout(() => {
-			scrollToBottom();
+			chatLayoutRef.value?.scrollToBottom();
 		}, 300);
 		return;
 	}
@@ -158,7 +126,7 @@ onLoad((options) => {
 	}
 
 	setTimeout(() => {
-		scrollToBottom();
+		chatLayoutRef.value?.scrollToBottom();
 	}, 500);
 });
 
@@ -192,8 +160,7 @@ const handleSend = async (data: SendData) => {
 	}
 
 	try {
-		autoScroll.value = true;
-		scrollToBottom();
+		chatLayoutRef.value?.resetAutoScroll();
 		inputValue.value = "";
 
 		await caseSessionStore.sendTextQuestion(
@@ -223,237 +190,71 @@ const handleSend = async (data: SendData) => {
 <template>
 	<app-page title="案例检索" back-top :use-history-layout="false" :chat-list-btn="false">
 		<template #content>
-			<view class="page-content">
-				<view
-					v-if="!hasValidLaunch"
-					class="flex-1 px-4 py-6 text-center text-gray-400 text-sm"
-				>
-					暂未检测到会话启动参数，请从首页发起新的检索。
-				</view>
-				<view v-else class="flex-1 px-2 pt-2 pb-4">
-					<scroll-view
-						scroll-y
-						class="ai-repeat-list__scroll"
-						:enable-flex="true"
-						:scroll-into-view="scrollIntoViewId"
-						:scroll-with-animation="true"
-						@scroll="handleScroll"
-						@scrolltolower="handleScrollToLower"
+			<chat-layout
+				ref="chatLayoutRef"
+				:loading="isGenerating"
+				:status-text="streamStatus || ''"
+				:show-empty="!hasValidLaunch"
+				empty-text="暂未检测到会话启动参数，请从首页发起新的检索。"
+			>
+				<template #messages>
+					<template v-for="(item, index) in messages" :key="index">
+						<!-- 用户消息 -->
+						<user-message
+							v-if="item.role === 'user'"
+							:content="item.content"
+							:from-voice="item.fromVoice"
+							:voice-url="item.voiceUrl"
+							:voice-length="item.voiceLength"
+						/>
+
+						<!-- AI 消息 -->
+						<ai-message v-else :content="item.content">
+							<!-- 法睿结果：卡片列表展示 -->
+							<farui-case-list
+								v-if="item.references?.faruiResults?.length"
+								:items="item.references.faruiResults"
+								:keywords="faruiKeywords"
+								:current-page="faruiCurrentPage"
+								:total-count="faruiTotalCount"
+								:page-size="faruiPageSize"
+								:loading-more="loadingMore"
+								@load-more="handleLoadMore"
+							/>
+
+							<!-- 法宝/其他引用展示 -->
+							<references-panel
+								v-else-if="item.references"
+								:references="item.references"
+							/>
+						</ai-message>
+					</template>
+				</template>
+
+				<template #input>
+					<chat-input
+						v-model:model-value="inputValue"
+						v-model:input-mode="chatInputStore.inputMode.value"
+						:tools="chatInputStore.tools.value"
+						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
+						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
+						:show-default-network="chatInputStore.showDefaultNetwork.value"
+						:show-intent-chips="false"
+						@send="handleSend"
+						@tool-change="handleToolsChange"
+						@input-mode-change="handleInputModeChange"
 					>
-						<view
-							v-for="(item, index) in messages"
-							:key="index"
-							class="flex px-4 my-2"
-							:class="item.role === 'user' ? 'flex-row justify-end' : 'justify-start'"
-						>
-							<template v-if="item.role === 'user'">
-								<template v-if="item.fromVoice">
-									<view
-										class="chat-user-main !w-fit px-3 py-2 rounded-xl rounded-tr-none flex flex-col gap-1"
-									>
-										<audio-bubble
-											mode="send"
-											:length="item.voiceLength"
-											:url="item.voiceUrl || ''"
-										/>
-									</view>
-									<view class="voice-text">
-										{{ item.content }}
-									</view>
-								</template>
-								<view
-									v-else
-									class="chat-user-main !w-fit p-2 pl-3 rounded-xl rounded-tr-none text-lg"
-								>
-									<cl-text
-										:pt="{
-											className: 'text-white'
-										}"
-									>
-										{{ item.content }}
-									</cl-text>
-								</view>
-							</template>
-
-							<template v-else>
-								<view v-if="item.deepThink" class="deepthink-wrapper">
-									<view
-										class="deepthink-header"
-										@tap.stop="toggleDeepThink(index)"
-									>
-										<view class="deepthink-icon">
-											<cl-text>💭</cl-text>
-										</view>
-										<text class="deepthink-title">
-											{{ getDeepThinkTimeText(item) }}
-										</text>
-										<text class="deepthink-toggle">
-											<cl-icon
-												:name="`arrow-${isDeepThinkExpanded(index) ? 'up-s-line' : 'down-s-line'}`"
-											></cl-icon>
-										</text>
-									</view>
-									<view v-if="isDeepThinkExpanded(index)" class="deepthink-body">
-										<text class="deepthink-text">{{ item.deepThink }}</text>
-									</view>
-								</view>
-
-								<template v-if="item.content">
-									<zero-markdown-view
-										:markdown="item.content"
-										:aiMode="true"
-									></zero-markdown-view>
-								</template>
-
-								<!-- 案例引用展示 -->
-								<references-panel
-									v-if="item.references"
-									:references="item.references"
-								/>
-							</template>
-						</view>
-
-						<view v-if="isGenerating && streamStatus" class="ai-status-wrapper">
-							<view class="ai-status-row">
-								<view class="ai-status-spinner"></view>
-								<text class="ai-status-text">{{ streamStatus }}</text>
-							</view>
-							<view class="ai-status-dots">
-								<view class="ai-status-dot ai-status-dot--1"></view>
-								<view class="ai-status-dot ai-status-dot--2"></view>
-								<view class="ai-status-dot ai-status-dot--3"></view>
-							</view>
-						</view>
-
-						<view id="chat-bottom-a"></view>
-						<view id="chat-bottom-b"></view>
-					</scroll-view>
-				</view>
-
-				<chat-input
-					v-model:model-value="inputValue"
-					v-model:input-mode="chatInputStore.inputMode.value"
-					:tools="chatInputStore.tools.value"
-					:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
-					:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
-					:show-default-network="chatInputStore.showDefaultNetwork.value"
-					@send="handleSend"
-					@tool-change="handleToolsChange"
-					@input-mode-change="handleInputModeChange"
-				/>
-			</view>
+						<!-- 模型信息（锁定状态） -->
+						<template #tools-prepend>
+							<model-selector
+								v-model="modelType"
+								:locked="modelLocked"
+								search-type="case"
+							/>
+						</template>
+					</chat-input>
+				</template>
+			</chat-layout>
 		</template>
 	</app-page>
 </template>
-
-<style lang="scss" scoped>
-.page-content {
-	@apply w-full h-full flex flex-col overflow-hidden;
-	background-color: #fafafa;
-}
-
-.ai-repeat-list__scroll {
-	@apply w-full h-full flex-1 flex flex-col gap-3;
-}
-
-.chat-user-main {
-	background-color: #f97316; // orange-500
-}
-
-.voice-text {
-	@apply text-md pl-4 py-2 bg-white rounded-md mt-2;
-}
-
-.deepthink-wrapper {
-	@apply mt-3 mb-1;
-}
-
-.deepthink-header {
-	@apply flex flex-row items-center mb-1;
-}
-
-.deepthink-icon {
-	border-radius: 999px;
-	margin-right: 6px;
-}
-
-.deepthink-title {
-	@apply text-md text-orange-500 mr-1;
-}
-
-.deepthink-toggle {
-	@apply text-md text-gray-400;
-}
-
-.deepthink-body {
-	@apply mt-1 pl-3 border-l border-gray-200;
-}
-
-.deepthink-text {
-	@apply text-md text-gray-500 leading-relaxed;
-}
-
-.ai-status-wrapper {
-	@apply px-4 py-3;
-}
-
-.ai-status-row {
-	@apply flex flex-row items-center mb-1;
-}
-
-.ai-status-spinner {
-	width: 14px;
-	height: 14px;
-	border-radius: 999px;
-	border-width: 2px;
-	border-style: solid;
-	border-color: #e5e7eb;
-	border-top-color: #f97316;
-	animation: ai-status-spin 1s linear infinite;
-}
-
-.ai-status-text {
-	@apply text-md text-gray-500 ml-2;
-}
-
-.ai-status-dots {
-	@apply flex flex-row items-center mt-1;
-}
-
-.ai-status-dot {
-	width: 6px;
-	height: 6px;
-	border-radius: 999px;
-	background-color: #f97316;
-	margin-right: 4px;
-	animation: ai-status-blink 1.4s infinite both;
-}
-
-.ai-status-dot--2 {
-	animation-delay: 0.2s;
-}
-
-.ai-status-dot--3 {
-	animation-delay: 0.4s;
-}
-
-@keyframes ai-status-spin {
-	0% {
-		transform: rotate(0deg);
-	}
-	100% {
-		transform: rotate(360deg);
-	}
-}
-
-@keyframes ai-status-blink {
-	0%,
-	80%,
-	100% {
-		opacity: 0.2;
-	}
-	40% {
-		opacity: 1;
-	}
-}
-</style>

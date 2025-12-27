@@ -1,39 +1,38 @@
 <script lang="ts" setup>
-import type { LawModelType } from "@/cool/store/chatInput-store/lawSession";
+import { computed } from "vue";
+import { type SearchType, getModelOptionsBySearchType } from "./hook";
 
 interface Props {
-	modelValue: LawModelType;
+	modelValue: string;
 	locked?: boolean;
+	/** 检索类型：law-法规 / case-案例 */
+	searchType?: SearchType;
 }
 
 const props = withDefaults(defineProps<Props>(), {
 	modelValue: "fabao",
-	locked: false
+	locked: false,
+	searchType: "law"
 });
 
 const emit = defineEmits<{
-	(e: "update:modelValue", value: LawModelType): void;
-	(e: "change", value: LawModelType): void;
+	(e: "update:modelValue", value: string): void;
+	(e: "change", value: string): void;
 }>();
 
-const selectModel = (type: LawModelType) => {
+// 根据检索类型获取模型选项
+const options = computed(() => getModelOptionsBySearchType(props.searchType));
+
+const selectModel = (key: string) => {
 	if (props.locked) return;
-	emit("update:modelValue", type);
-	emit("change", type);
+	emit("update:modelValue", key);
+	emit("change", key);
 };
 
-const modelLabels: Record<LawModelType, { icon: string; label: string; desc: string }> = {
-	fabao: {
-		icon: "🌐",
-		label: "通用版",
-		desc: "全域法律智能中枢"
-	},
-	lzx: {
-		icon: "🗼",
-		label: "专业版",
-		desc: "拥有过硬的专业法律知识"
-	}
-};
+// 当前选中的模型配置
+const currentOption = computed(() => {
+	return options.value.find((o) => o.key === props.modelValue) || options.value[0];
+});
 </script>
 
 <template>
@@ -41,37 +40,23 @@ const modelLabels: Record<LawModelType, { icon: string; label: string; desc: str
 		<!-- 未锁定：可选择 -->
 		<view v-if="!locked" class="model-options">
 			<view
+				v-for="item in options"
+				:key="item.key"
 				class="model-option"
-				:class="{ active: modelValue === 'fabao' }"
-				@tap="selectModel('fabao')"
+				:class="{ active: modelValue === item.key }"
+				@tap="selectModel(item.key)"
 			>
 				<view class="model-icon">
-					<cl-text>{{ modelLabels.fabao.icon }}</cl-text>
+					<cl-text>{{ item.icon }}</cl-text>
 				</view>
 				<view class="model-info">
 					<view class="model-label">
-						<text class="label-text">{{ modelLabels.fabao.label }}</text>
-						<view class="recommend-badge">
+						<text class="label-text">{{ item.label }}</text>
+						<view v-if="item.recommend" class="recommend-badge">
 							<text class="badge-text">推荐</text>
 						</view>
 					</view>
-					<text class="model-desc">{{ modelLabels.fabao.desc }}</text>
-				</view>
-			</view>
-
-			<view
-				class="model-option"
-				:class="{ active: modelValue === 'lzx' }"
-				@tap="selectModel('lzx')"
-			>
-				<view class="model-icon">
-					<cl-text>{{ modelLabels.lzx.icon }}</cl-text>
-				</view>
-				<view class="model-info">
-					<view class="model-label">
-						<text class="label-text">{{ modelLabels.lzx.label }}</text>
-					</view>
-					<text class="model-desc">{{ modelLabels.lzx.desc }}</text>
+					<text class="model-desc">{{ item.desc }}</text>
 				</view>
 			</view>
 		</view>
@@ -79,9 +64,9 @@ const modelLabels: Record<LawModelType, { icon: string; label: string; desc: str
 		<!-- 已锁定：只读展示 -->
 		<view v-else class="model-locked">
 			<view class="model-icon">
-				<cl-text>{{ modelLabels[modelValue].icon }}</cl-text>
+				<cl-text>{{ currentOption.icon }}</cl-text>
 			</view>
-			<text class="locked-text"> 当前模型：{{ modelLabels[modelValue].label }} </text>
+			<text class="locked-text">当前模型：{{ currentOption.label }}</text>
 		</view>
 	</view>
 </template>

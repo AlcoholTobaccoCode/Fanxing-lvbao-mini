@@ -4,9 +4,14 @@ import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { router, useStore } from "@/cool";
 import { showLoginModal } from "@/cool/store/login-modal";
-import { chatFlowStore, chatInputStore, moduleSwitchStore, lawSessionStore } from "@/cool/store";
+import {
+	chatFlowStore,
+	chatInputStore,
+	moduleSwitchStore
+} from "@/cool/store";
 import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
 import type { LawModelType } from "@/cool/store/chatInput-store/lawSession";
+import type { CaseModelType } from "@/cool/store/chatInput-store/caseSession";
 
 import type { SendData, Tools } from "@/cool/types/chat-input";
 
@@ -25,7 +30,7 @@ import ContractReviewStarter from "@/ai-chat-module/contract-review/contract-rev
 import ContractGenStarter from "@/ai-chat-module/contract-gen/contract-gen.uvue";
 
 // 法规模块模型选择器
-import ModelSelector from "@/ai-chat-module/components/model-selector.uvue";
+import ModelSelector from "@/ai-chat-module/components/model-selector/index.uvue";
 
 const log = new Logger("HomePage");
 const ui = useUi();
@@ -36,6 +41,9 @@ const inputValue = ref("");
 
 // 法规模块模型选择（仅 law 模块使用）
 const lawModelType = ref<LawModelType>("fabao");
+
+// 案例模块模型选择（仅 case 模块使用）
+const caseModelType = ref<CaseModelType>("fabao");
 
 // 当前模块
 const currentModule = computed(() => moduleSwitchStore.currentModule.value);
@@ -97,13 +105,21 @@ const handleSend = async (data: SendData) => {
 
 	// 使用当前选中的模块
 	const moduleKey = currentModule.value;
+
+	// 获取当前模块的模型类型
+	let modelType: LawModelType | CaseModelType | undefined;
+	if (moduleKey === "law") {
+		modelType = lawModelType.value;
+	} else if (moduleKey === "case") {
+		modelType = caseModelType.value;
+	}
+
 	chatFlowStore.startModule(moduleKey, {
 		text: questionText,
 		voice: data.mode === "voice" ? data.voice : null,
 		tools: chatInputStore.tools.value,
 		inputMode: chatInputStore.inputMode.value,
-		// 法规模块传递模型类型
-		modelType: moduleKey === "law" ? lawModelType.value : undefined
+		modelType
 	});
 
 	// 清空首页输入框
@@ -133,6 +149,7 @@ const handleOpenNewChat = () => {
 };
 
 //#region 测试入口
+const showTestPageBtn = ref(0);
 const toTestPage = () => {
 	router.to("/test-pages/setting/index");
 };
@@ -144,7 +161,9 @@ const toTestPage = () => {
 		<template #content>
 			<view class="h-full flex flex-col">
 				<simple-card class="flex-1 !p-0 !rounded-none">
-					<module-switch @change="handleModuleChange"></module-switch>
+					<view @click="showTestPageBtn++">
+						<module-switch @change="handleModuleChange"></module-switch>
+					</view>
 					<view class="flex-1 p-4 !px-8">
 						<!-- 动态渲染各模块起始页 -->
 						<consult-starter
@@ -176,7 +195,7 @@ const toTestPage = () => {
 							@preset-select="handlePresetSelect"
 						/>
 					</view>
-					<view class="p-4">
+					<view v-if="showTestPageBtn >= 10" class="p-4">
 						<cl-button @click="toTestPage">前往测试页面</cl-button>
 					</view>
 					<chat-input
@@ -198,6 +217,15 @@ const toTestPage = () => {
 							<model-selector
 								v-model="lawModelType"
 								:locked="false"
+								search-type="law"
+							/>
+						</template>
+						<!-- 案例模块：模型选择器 -->
+						<template v-else-if="currentModule === 'case'" #tools-prepend>
+							<model-selector
+								v-model="caseModelType"
+								:locked="false"
+								search-type="case"
 							/>
 						</template>
 					</chat-input>

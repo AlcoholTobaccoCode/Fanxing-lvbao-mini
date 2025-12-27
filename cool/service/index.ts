@@ -95,7 +95,6 @@ export function request(options: RequestOptions): Promise<any | null> {
 					...(header as UTSJSONObject)
 				},
 				timeout,
-
 				success(res) {
 					// 401 无权限 - 弹出登录弹窗
 					if (res.statusCode == 401) {
