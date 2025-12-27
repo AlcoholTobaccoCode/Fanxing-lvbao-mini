@@ -10,7 +10,9 @@ import {
 	caseSessionStore,
 	chatInputStore,
 	type CaseModelType,
-	type CaseMessageReferences
+	type CaseMessageReferences,
+	type CaseMessageReferencesObject,
+	type FabaoCaseStageItem
 } from "@/cool/store";
 import type { FaruiCaseResultItem } from "@/api/retrieve";
 import { CHAT_MODULE_CONFIGS } from "@/cool/store/chatInput-store/moduleConfigs";
@@ -20,9 +22,9 @@ import ChatLayout from "../components/chat-layout/index.uvue";
 import ChatInput from "../components/chat-input/ai-chat/index.uvue";
 import UserMessage from "../components/chat-layout/user-message.uvue";
 import AiMessage from "../components/chat-layout/ai-message.uvue";
-import ReferencesPanel from "../components/references/index.uvue";
 import ModelSelector from "../components/model-selector/index.uvue";
 import FaruiCaseList from "../components/farui-case-card/list.uvue";
+import FabaoStages from "../components/fabao-stages/index.uvue";
 
 const log = new Logger("CaseChatPage");
 const ui = useUi();
@@ -37,6 +39,27 @@ const getFaruiResults = (
 ): FaruiCaseResultItem[] | undefined => {
 	if (!refs) return undefined;
 	return Array.isArray(refs) ? refs : undefined;
+};
+
+/**
+ * 获取法宝引用对象
+ * 法宝模式下 references 是 CaseMessageReferencesObject 对象
+ */
+const getFabaoRefs = (
+	refs: CaseMessageReferences | undefined
+): CaseMessageReferencesObject | undefined => {
+	if (!refs) return undefined;
+	return Array.isArray(refs) ? undefined : refs;
+};
+
+/**
+ * 获取法宝阶段状态
+ */
+const getFabaoStages = (
+	refs: CaseMessageReferences | undefined
+): FabaoCaseStageItem[] | undefined => {
+	const fabaoRefs = getFabaoRefs(refs);
+	return fabaoRefs?.fabaoStages;
 };
 
 const inputValue = ref("");
@@ -228,6 +251,16 @@ const handleSend = async (data: SendData) => {
 
 						<!-- AI 消息 -->
 						<ai-message v-else :content="item.content">
+							<!-- 法宝阶段进度（放在内容上方） -->
+							<template #prepend>
+								<fabao-stages
+									v-if="getFabaoStages(item.references)?.length"
+									:stages="getFabaoStages(item.references)!"
+									:loading="isGenerating"
+									search-type="case"
+								/>
+							</template>
+
 							<!-- 法睿结果：卡片列表展示 -->
 							<farui-case-list
 								v-if="getFaruiResults(item.references)?.length"
@@ -238,12 +271,6 @@ const handleSend = async (data: SendData) => {
 								:page-size="faruiPageSize"
 								:loading-more="loadingMore"
 								@load-more="handleLoadMore"
-							/>
-
-							<!-- 法宝/其他引用展示 -->
-							<references-panel
-								v-else-if="item.references && !Array.isArray(item.references)"
-								:references="item.references"
 							/>
 						</ai-message>
 					</template>

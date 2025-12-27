@@ -1,0 +1,460 @@
+<!--
+@description: 法宝流式响应阶段进度展示组件（法规/案例通用）
+显示分步状态和详细信息：分析问题 → 检索 → 生成回答
+-->
+<script lang="ts" setup>
+import { computed } from "vue";
+import type { FabaoStageItem, FabaoStageType } from "@/cool/store/chatInput-store/lawSession";
+
+const props = defineProps<{
+	/** 阶段状态列表 */
+	stages: FabaoStageItem[];
+	/** 是否正在加载中 */
+	loading?: boolean;
+	/** 搜索类型：law 法规 / case 案例 */
+	searchType?: "law" | "case";
+}>();
+
+/** 搜索类型文案 */
+const searchTypeText = computed(() => {
+	return props.searchType === "case" ? "案例" : "法规";
+});
+
+/** 阶段配置：根据搜索类型动态生成 */
+const STAGE_CONFIG = computed(
+	() =>
+		({
+			info: {
+				label: "分析问题",
+				icon: "search-line",
+				activeLabel: "正在分析问题...",
+				desc: "正在就您的问题进行分析"
+			},
+			mcp_call: {
+				label: `检索${searchTypeText.value}`,
+				icon: "file-search-line",
+				activeLabel: "正在检索...",
+				desc: `调用${searchTypeText.value}检索服务`
+			},
+			mcp_result: {
+				label: "处理结果",
+				icon: "file-list-line",
+				activeLabel: "正在处理...",
+				desc: "检索服务返回结果"
+			},
+			qwen: {
+				label: "千问总结",
+				icon: "magic-line",
+				activeLabel: "千问总结中...",
+				desc: "大模型正在总结分析"
+			},
+			qwen_delta: {
+				label: "生成回答",
+				icon: "edit-line",
+				activeLabel: "正在生成回答...",
+				desc: "大模型回复中"
+			},
+			final: {
+				label: "完成",
+				icon: "check-double-line",
+				activeLabel: "已完成",
+				desc: "最终结果已生成"
+			}
+		}) as Record<
+			FabaoStageType,
+			{ label: string; icon: string; activeLabel: string; desc: string }
+		>
+);
+
+/** 需要展示的核心阶段（去掉处理结果步骤） */
+const DISPLAY_STAGES: FabaoStageType[] = ["info", "mcp_call", "qwen_delta"];
+
+/** 计算展示的阶段列表 */
+const displayStages = computed(() => {
+	return DISPLAY_STAGES.map((stageType) => {
+		const stageData = props.stages.find((s) => s.stage === stageType);
+		const config = STAGE_CONFIG.value[stageType];
+
+		// 处理状态继承
+		let status: "pending" | "active" | "completed" = "pending";
+		if (stageData) {
+			status = stageData.status;
+		} else if (stageType === "qwen_delta") {
+			// qwen_delta 继承 qwen 或 mcp_result 的状态
+			const qwenStage = props.stages.find((s) => s.stage === "qwen");
+			const mcpResultStage = props.stages.find((s) => s.stage === "mcp_result");
+			if (qwenStage?.status === "active") {
+				status = "pending";
+			} else if (qwenStage?.status === "completed") {
+				status = "active";
+			} else if (mcpResultStage?.status === "completed") {
+				status = "pending";
+			}
+		}
+
+		// mcp_call 完成时，如果 mcp_result 也完成了，视为 mcp_call 完成
+		if (stageType === "mcp_call" && !stageData) {
+			const mcpResultStage = props.stages.find((s) => s.stage === "mcp_result");
+			if (mcpResultStage?.status === "completed") {
+				status = "completed";
+			}
+		}
+
+		// 如果 final 完成了，所有阶段都算完成
+		const finalStage = props.stages.find((s) => s.stage === "final");
+		if (finalStage?.status === "completed") {
+			status = "completed";
+		}
+
+		return {
+			type: stageType,
+			label: config.label,
+			activeLabel: config.activeLabel,
+			icon: config.icon,
+			desc: config.desc,
+			status,
+			message: stageData?.message,
+			searchKeyword: stageData?.searchKeyword,
+			resultCount: stageData?.resultCount
+		};
+	});
+});
+
+/** 是否全部完成 */
+const isAllCompleted = computed(() => {
+	const finalStage = props.stages.find((s) => s.stage === "final");
+	return finalStage?.status === "completed";
+});
+
+/** 当前激活的阶段 */
+const activeStage = computed(() => {
+	return displayStages.value.find((s) => s.status === "active");
+});
+
+/** 已完成的阶段数量 */
+const completedCount = computed(() => {
+	return displayStages.value.filter((s) => s.status === "completed").length;
+});
+</script>
+
+<template>
+	<view class="fabao-stages" :class="{ completed: isAllCompleted }">
+		<!-- 当前状态标题 -->
+		<view class="stages-header">
+			<view class="header-left">
+				<template v-if="isAllCompleted">
+					<view class="status-icon completed">
+						<cl-icon name="check-line" size="16px" color="#ffffff" />
+					</view>
+					<text class="status-text completed">分析完成</text>
+				</template>
+				<template v-else-if="activeStage">
+					<view class="status-icon active">
+						<view class="loading-spinner-white"></view>
+					</view>
+					<text class="status-text active">{{ activeStage.activeLabel }}</text>
+				</template>
+			</view>
+			<view class="header-right">
+				<text class="progress-text">{{ completedCount }}/{{ displayStages.length }}</text>
+			</view>
+		</view>
+
+		<!-- 阶段进度条 -->
+		<view class="stages-progress">
+			<view
+				v-for="(stage, index) in displayStages"
+				:key="stage.type"
+				class="stage-item"
+				:class="{
+					active: stage.status === 'active',
+					completed: stage.status === 'completed',
+					pending: stage.status === 'pending'
+				}"
+			>
+				<!-- 圆点和连接线容器 -->
+				<view class="stage-indicator">
+					<view class="indicator-dot">
+						<template v-if="stage.status === 'completed'">
+							<cl-icon name="check-line" size="10px" color="#ffffff" />
+						</template>
+						<template v-else-if="stage.status === 'active'">
+							<view class="dot-pulse"></view>
+						</template>
+					</view>
+					<!-- 连接线（绝对定位） -->
+					<view
+						v-if="index < displayStages.length - 1"
+						class="connector-line"
+						:class="{ filled: stage.status === 'completed' }"
+					></view>
+				</view>
+
+				<!-- 阶段信息（居中对齐） -->
+				<view class="stage-info">
+					<text class="stage-label">{{ stage.label }}</text>
+					<text class="stage-desc">{{ stage.desc }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 当前阶段详细信息 -->
+		<view v-if="activeStage && !isAllCompleted" class="stage-detail">
+			<!-- 检索关键词 -->
+			<view
+				v-if="activeStage.type === 'mcp_call' && activeStage.searchKeyword"
+				class="detail-item"
+			>
+				<cl-icon name="search-line" size="14px" color="#6b7280" />
+				<text class="detail-label">检索关键词：</text>
+				<text class="detail-value keyword">{{ activeStage.searchKeyword }}</text>
+			</view>
+
+			<!-- 结果数量 -->
+			<view
+				v-else-if="activeStage.type === 'mcp_result' && activeStage.resultCount"
+				class="detail-item"
+			>
+				<cl-icon name="file-list-line" size="14px" color="#10b981" />
+				<text class="detail-value success"
+					>找到 {{ activeStage.resultCount }} 条相关{{ searchTypeText }}</text
+				>
+			</view>
+
+			<!-- 其他状态描述 -->
+			<view v-else class="detail-item">
+				<cl-icon name="information-line" size="14px" color="#6b7280" />
+				<text class="detail-text">{{ activeStage.message || activeStage.desc }}</text>
+			</view>
+		</view>
+
+		<!-- 完成状态摘要 -->
+		<view v-if="isAllCompleted" class="completion-summary">
+			<cl-icon name="checkbox-circle-line" size="14px" color="#10b981" />
+			<text class="summary-text">已完成{{ searchTypeText }}检索与智能分析</text>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.fabao-stages {
+	@apply mb-3 px-4 py-3 rounded-xl;
+	background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+	border: 1px solid #e2e8f0;
+
+	&.completed {
+		background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+		border-color: #bbf7d0;
+	}
+}
+
+.stages-header {
+	@apply flex flex-row items-center justify-between mb-3;
+}
+
+.header-left {
+	@apply flex flex-row items-center;
+}
+
+.status-icon {
+	@apply flex items-center justify-center mr-2;
+	width: 24px;
+	height: 24px;
+	border-radius: 12px;
+
+	&.active {
+		background-color: #3b82f6;
+	}
+
+	&.completed {
+		background-color: #10b981;
+	}
+}
+
+.loading-spinner-white {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-top-color: #ffffff;
+	animation: spin 1s linear infinite;
+}
+
+.status-text {
+	@apply text-sm font-medium;
+
+	&.active {
+		color: #3b82f6;
+	}
+
+	&.completed {
+		color: #10b981;
+	}
+}
+
+.header-right {
+	@apply flex items-center;
+}
+
+.progress-text {
+	@apply text-xs px-2 py-1 rounded-full;
+	background-color: #e2e8f0;
+	color: #64748b;
+}
+
+.stages-progress {
+	@apply flex flex-row;
+}
+
+.stage-item {
+	@apply flex-1 flex flex-col items-center overflow-visible;
+	position: relative;
+
+	&.completed {
+		.stage-label {
+			color: #10b981;
+		}
+		.indicator-dot {
+			background-color: #10b981;
+		}
+	}
+
+	&.active {
+		.stage-label {
+			color: #3b82f6;
+			font-weight: 500;
+		}
+		.indicator-dot {
+			background-color: #3b82f6;
+		}
+	}
+
+	&.pending {
+		.stage-label {
+			color: #94a3b8;
+		}
+		.indicator-dot {
+			background-color: #cbd5e1;
+		}
+	}
+}
+
+.stage-indicator {
+	@apply flex items-center justify-center mb-2 overflow-visible;
+	position: relative;
+	width: 100%;
+}
+
+.indicator-dot {
+	@apply flex items-center justify-center;
+	width: 20px;
+	height: 20px;
+	border-radius: 10px;
+	flex-shrink: 0;
+	z-index: 1;
+}
+
+.dot-pulse {
+	width: 8px;
+	height: 8px;
+	background-color: #ffffff;
+	border-radius: 4px;
+	animation: pulse 1.5s ease-in-out infinite;
+}
+
+.connector-line {
+	position: absolute;
+	height: 2px;
+	background-color: #cbd5e1;
+	top: 50%;
+	left: 50%;
+	width: 100%;
+	transform: translateY(-50%);
+
+	&.filled {
+		background-color: #10b981;
+	}
+}
+
+.stage-info {
+	@apply flex flex-col items-center justify-center;
+}
+
+.stage-label {
+	@apply text-xs text-center font-medium;
+}
+
+.stage-desc {
+	@apply text-xs text-center mt-0.5;
+	color: #94a3b8;
+	font-size: 10px;
+	line-height: 1.3;
+	max-width: 80px;
+}
+
+.stage-detail {
+	@apply mt-3 pt-3;
+	border-top: 1px dashed #e2e8f0;
+}
+
+.detail-item {
+	@apply flex flex-row items-center;
+}
+
+.detail-label {
+	@apply text-xs ml-1.5;
+	color: #64748b;
+}
+
+.detail-value {
+	@apply text-xs font-medium;
+	color: #334155;
+
+	&.keyword {
+		@apply px-2 py-0.5 rounded ml-1;
+		background-color: #dbeafe;
+		color: #1d4ed8;
+	}
+
+	&.success {
+		color: #10b981;
+		margin-left: 6px;
+	}
+}
+
+.detail-text {
+	@apply text-xs ml-1.5;
+	color: #64748b;
+}
+
+.completion-summary {
+	@apply flex flex-row items-center mt-2 pt-2;
+	border-top: 1px dashed #bbf7d0;
+}
+
+.summary-text {
+	@apply text-xs ml-1.5;
+	color: #10b981;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.5;
+		transform: scale(0.8);
+	}
+}
+</style>

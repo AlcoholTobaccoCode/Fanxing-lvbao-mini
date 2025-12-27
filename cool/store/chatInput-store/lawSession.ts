@@ -20,12 +20,19 @@ import type { Tools } from "@/cool/types/chat-input";
 export type LawModelType = "lzx" | "fabao";
 
 /**
- * 法宝引用项 (直接从 mcp_result 获取)
+ * 法宝流式响应阶段类型
  */
-export interface FabaoLawReferenceItem {
-	title: string;
-	article: string;
-	url: string;
+export type FabaoStageType = "info" | "mcp_call" | "mcp_result" | "qwen" | "qwen_delta" | "final";
+
+/**
+ * 法宝阶段状态
+ */
+export interface FabaoStageItem {
+	stage: FabaoStageType;
+	status: "pending" | "active" | "completed";
+	message?: string;
+	searchKeyword?: string; // mcp_call 时的搜索关键词
+	resultCount?: number; // mcp_result 时的结果数量
 }
 
 export interface LawMessageReferencesObject {
@@ -38,8 +45,8 @@ export interface LawMessageReferencesObject {
 		body?: string;
 		url?: string;
 	}>;
-	// 法宝返回的法规列表 (直接展示)
-	fabaoLawList?: FabaoLawReferenceItem[];
+	// 法宝流式阶段状态 (用于分步展示)
+	fabaoStages?: FabaoStageItem[];
 }
 
 /**
@@ -266,6 +273,46 @@ export class LawSessionStore {
 	private async sendFabaoQuery(aiMsg: LawMessage, hooks?: LawStreamHooks) {
 		this.streamStatus.value = "正在分析问题...";
 
+		// 初始化阶段状态
+		const refsObj: LawMessageReferencesObject = { fabaoStages: [] };
+		aiMsg.references = refsObj;
+
+		// 辅助函数：更新阶段状态（保留已有的 message 等字段）
+		const updateStage = (
+			stage: FabaoStageType,
+			status: "pending" | "active" | "completed",
+			extra?: Partial<FabaoStageItem>
+		) => {
+			const refs = aiMsg.references as LawMessageReferencesObject;
+			if (!refs.fabaoStages) refs.fabaoStages = [];
+
+			const existingIndex = refs.fabaoStages.findIndex((s) => s.stage === stage);
+			const existingStage = existingIndex >= 0 ? refs.fabaoStages[existingIndex] : null;
+
+			// 合并现有属性，保留 message、searchKeyword、resultCount
+			const stageItem: FabaoStageItem = {
+				stage,
+				status,
+				// 优先使用现有值，再被 extra 覆盖
+				...(existingStage?.message ? { message: existingStage.message } : {}),
+				...(existingStage?.searchKeyword
+					? { searchKeyword: existingStage.searchKeyword }
+					: {}),
+				...(existingStage?.resultCount !== undefined
+					? { resultCount: existingStage.resultCount }
+					: {}),
+				...extra
+			};
+
+			if (existingIndex >= 0) {
+				refs.fabaoStages[existingIndex] = stageItem;
+			} else {
+				refs.fabaoStages.push(stageItem);
+			}
+			// 触发响应式更新
+			this.messages.value = [...this.messages.value];
+		};
+
 		// 构建 messages 数组 (支持多轮对话上下文)
 		const apiMessages: FabaoLawMessage[] = this.messages.value
 			.filter((m) => m.content) // 过滤空消息
@@ -306,40 +353,56 @@ export class LawSessionStore {
 					switch (evt.stage) {
 						case "info":
 							this.streamStatus.value = evt.message || "正在处理...";
+							updateStage("info", "active", { message: evt.message });
 							break;
 
 						case "mcp_call":
 							this.streamStatus.value = `正在检索: ${evt.args?.text || "法规"}`;
+							// 完成 info 阶段
+							updateStage("info", "completed");
+							// 开始 mcp_call 阶段
+							updateStage("mcp_call", "active", {
+								message: `检索: ${evt.args?.text || "法规"}`,
+								searchKeyword: evt.args?.text
+							});
 							break;
 
 						case "mcp_result":
-							// 保存法宝引用数据 (直接使用，无需二次查询)
+							// 完成 mcp_call 阶段
+							updateStage("mcp_call", "completed");
 							if (evt.result && Array.isArray(evt.result)) {
-								const refsObj: LawMessageReferencesObject = !aiMsg.references
-									? {}
-									: Array.isArray(aiMsg.references)
-										? {}
-										: aiMsg.references;
-								refsObj.fabaoLawList = evt.result.map((item) => ({
-									title: item.title,
-									article: item.article,
-									url: item.url
-								}));
-								aiMsg.references = refsObj;
+								updateStage("mcp_result", "completed", {
+									message: `找到 ${evt.result.length} 条相关法规`,
+									resultCount: evt.result.length
+								});
+							} else {
+								updateStage("mcp_result", "completed", {
+									message: "检索完成"
+								});
 							}
 							break;
 
 						case "qwen":
 							this.streamStatus.value = evt.message || "正在生成回答...";
+							updateStage("qwen", "active", { message: evt.message });
 							break;
 
 						case "qwen_delta":
+							// 首次收到 delta 时，标记 qwen 完成，开始 qwen_delta
+							const refs = aiMsg.references as LawMessageReferencesObject;
+							const qwenStage = refs.fabaoStages?.find((s) => s.stage === "qwen");
+							if (qwenStage?.status === "active") {
+								updateStage("qwen", "completed");
+								updateStage("qwen_delta", "active", { message: "正在输出回答..." });
+							}
+
 							if (evt.delta) {
 								aiMsg.content += evt.delta;
 								hooks?.onTextChunk?.(evt.delta);
 							}
 							// 检查是否结束
 							if (evt.event === "end") {
+								updateStage("qwen_delta", "completed");
 								this.streamStatus.value = null;
 							}
 							break;
@@ -348,6 +411,7 @@ export class LawSessionStore {
 							if (evt.content) {
 								aiMsg.content = evt.content;
 							}
+							updateStage("final", "completed", { message: "最终结果已生成" });
 							this.streamStatus.value = null;
 							break;
 					}
@@ -430,7 +494,7 @@ export class LawSessionStore {
 		});
 	}
 
-/**
+	/**
 	 * 从历史记录恢复会话
 	 */
 	restoreFromHistory(sessionId: string, messages: LawMessage[], modelType?: LawModelType) {

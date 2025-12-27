@@ -21,17 +21,25 @@ import type { Tools } from "@/cool/types/chat-input";
 export type CaseModelType = "farui" | "fabao";
 
 /**
- * 法宝案例引用项
+ * 法宝流式响应阶段类型
  */
-export interface FabaoCaseReferenceItem {
-	title: string;
-	content: string;
-	url: string;
-	doc_type?: string;
-	case_type?: string;
-	court_name?: string;
-	decision_date?: string;
-	cause_of_action?: string;
+export type FabaoCaseStageType =
+	| "info"
+	| "mcp_call"
+	| "mcp_result"
+	| "qwen"
+	| "qwen_delta"
+	| "final";
+
+/**
+ * 法宝阶段状态
+ */
+export interface FabaoCaseStageItem {
+	stage: FabaoCaseStageType;
+	status: "pending" | "active" | "completed";
+	message?: string;
+	searchKeyword?: string; // mcp_call 时的搜索关键词
+	resultCount?: number; // mcp_result 时的结果数量
 }
 
 export interface CaseMessageReferencesObject {
@@ -44,8 +52,8 @@ export interface CaseMessageReferencesObject {
 		body?: string;
 		url?: string;
 	}>;
-	// 法宝返回的案例列表 (直接展示)
-	fabaoCaseList?: FabaoCaseReferenceItem[];
+	// 法宝流式阶段状态 (用于分步展示)
+	fabaoStages?: FabaoCaseStageItem[];
 }
 
 /**
@@ -295,6 +303,46 @@ export class CaseSessionStore {
 	private async sendFabaoQuery(aiMsg: CaseMessage, hooks?: CaseStreamHooks) {
 		this.streamStatus.value = "正在分析问题...";
 
+		// 初始化阶段状态
+		const refsObj: CaseMessageReferencesObject = { fabaoStages: [] };
+		aiMsg.references = refsObj;
+
+		// 辅助函数：更新阶段状态（保留已有的 message 等字段）
+		const updateStage = (
+			stage: FabaoCaseStageType,
+			status: "pending" | "active" | "completed",
+			extra?: Partial<FabaoCaseStageItem>
+		) => {
+			const refs = aiMsg.references as CaseMessageReferencesObject;
+			if (!refs.fabaoStages) refs.fabaoStages = [];
+
+			const existingIndex = refs.fabaoStages.findIndex((s) => s.stage === stage);
+			const existingStage = existingIndex >= 0 ? refs.fabaoStages[existingIndex] : null;
+
+			// 合并现有属性，保留 message、searchKeyword、resultCount
+			const stageItem: FabaoCaseStageItem = {
+				stage,
+				status,
+				// 优先使用现有值，再被 extra 覆盖
+				...(existingStage?.message ? { message: existingStage.message } : {}),
+				...(existingStage?.searchKeyword
+					? { searchKeyword: existingStage.searchKeyword }
+					: {}),
+				...(existingStage?.resultCount !== undefined
+					? { resultCount: existingStage.resultCount }
+					: {}),
+				...extra
+			};
+
+			if (existingIndex >= 0) {
+				refs.fabaoStages[existingIndex] = stageItem;
+			} else {
+				refs.fabaoStages.push(stageItem);
+			}
+			// 触发响应式更新
+			this.messages.value = [...this.messages.value];
+		};
+
 		// 构建 messages 数组 (支持多轮对话上下文)
 		const apiMessages: FabaoLawMessage[] = this.messages.value
 			.filter((m) => m.content) // 过滤空消息
@@ -335,53 +383,66 @@ export class CaseSessionStore {
 					switch (evt.stage) {
 						case "info":
 							this.streamStatus.value = evt.message || "正在处理...";
+							updateStage("info", "active", { message: evt.message });
 							break;
 
 						case "mcp_call":
 							this.streamStatus.value = `正在检索: ${evt.args?.text || "案例"}`;
+							// 完成 info 阶段
+							updateStage("info", "completed");
+							// 开始 mcp_call 阶段
+							updateStage("mcp_call", "active", {
+								message: `检索: ${evt.args?.text || "案例"}`,
+								searchKeyword: evt.args?.text
+							});
 							break;
 
 						case "mcp_result":
-							// 保存法宝案例引用数据
+							// 完成 mcp_call 阶段
+							updateStage("mcp_call", "completed");
 							if (evt.cases && Array.isArray(evt.cases)) {
-								const refsObj: CaseMessageReferencesObject = !aiMsg.references
-									? {}
-									: Array.isArray(aiMsg.references)
-										? {}
-										: aiMsg.references;
-								refsObj.fabaoCaseList = evt.cases.map((item) => ({
-									title: item.title,
-									content: item.content,
-									url: item.url,
-									doc_type: item.doc_type,
-									case_type: item.case_type,
-									court_name: item.court_name,
-									decision_date: item.decision_date,
-									cause_of_action: item.cause_of_action
-								}));
-								aiMsg.references = refsObj;
+								updateStage("mcp_result", "completed", {
+									message: `找到 ${evt.cases.length} 条相关案例`,
+									resultCount: evt.cases.length
+								});
+							} else {
+								updateStage("mcp_result", "completed", {
+									message: "检索完成"
+								});
 							}
 							break;
 
 						case "qwen":
 							this.streamStatus.value = evt.message || "正在生成回答...";
+							updateStage("qwen", "active", { message: evt.message });
 							break;
 
-						case "qwen_delta":
+						case "qwen_delta": {
+							// 首次收到 delta 时，标记 qwen 完成，开始 qwen_delta
+							const refs = aiMsg.references as CaseMessageReferencesObject;
+							const qwenStage = refs.fabaoStages?.find((s) => s.stage === "qwen");
+							if (qwenStage?.status === "active") {
+								updateStage("qwen", "completed");
+								updateStage("qwen_delta", "active", { message: "正在输出回答..." });
+							}
+
 							if (evt.delta) {
 								aiMsg.content += evt.delta;
 								hooks?.onTextChunk?.(evt.delta);
 							}
 							// 检查是否结束
 							if (evt.event === "end") {
+								updateStage("qwen_delta", "completed");
 								this.streamStatus.value = null;
 							}
 							break;
+						}
 
 						case "final":
 							if (evt.content) {
 								aiMsg.content = evt.content;
 							}
+							updateStage("final", "completed", { message: "最终结果已生成" });
 							this.streamStatus.value = null;
 							break;
 					}
