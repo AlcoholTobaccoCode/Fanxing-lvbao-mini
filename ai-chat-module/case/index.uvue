@@ -5,7 +5,14 @@ import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
 import type { SendData, Tools } from "@/cool/types/chat-input";
 import { showLoginModal } from "@/cool/store/login-modal";
-import { chatFlowStore, caseSessionStore, chatInputStore, type CaseModelType } from "@/cool/store";
+import {
+	chatFlowStore,
+	caseSessionStore,
+	chatInputStore,
+	type CaseModelType,
+	type CaseMessageReferences
+} from "@/cool/store";
+import type { FaruiCaseResultItem } from "@/api/retrieve";
 import { CHAT_MODULE_CONFIGS } from "@/cool/store/chatInput-store/moduleConfigs";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
@@ -20,6 +27,17 @@ import FaruiCaseList from "../components/farui-case-card/list.uvue";
 const log = new Logger("CaseChatPage");
 const ui = useUi();
 const { user } = useStore();
+
+/**
+ * 获取法睿结果
+ * 法睿模式下 references 直接是 FaruiCaseResultItem[]
+ */
+const getFaruiResults = (
+	refs: CaseMessageReferences | undefined
+): FaruiCaseResultItem[] | undefined => {
+	if (!refs) return undefined;
+	return Array.isArray(refs) ? refs : undefined;
+};
 
 const inputValue = ref("");
 const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
@@ -212,8 +230,8 @@ const handleSend = async (data: SendData) => {
 						<ai-message v-else :content="item.content">
 							<!-- 法睿结果：卡片列表展示 -->
 							<farui-case-list
-								v-if="item.references?.faruiResults?.length"
-								:items="item.references.faruiResults"
+								v-if="getFaruiResults(item.references)?.length"
+								:items="getFaruiResults(item.references)!"
 								:keywords="faruiKeywords"
 								:current-page="faruiCurrentPage"
 								:total-count="faruiTotalCount"
@@ -224,7 +242,7 @@ const handleSend = async (data: SendData) => {
 
 							<!-- 法宝/其他引用展示 -->
 							<references-panel
-								v-else-if="item.references"
+								v-else-if="item.references && !Array.isArray(item.references)"
 								:references="item.references"
 							/>
 						</ai-message>

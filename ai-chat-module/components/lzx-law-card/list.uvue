@@ -58,6 +58,7 @@ const handleLoadMore = () => {
 				<view class="header-icon">
 					<cl-icon name="fxzh-falvfagui" size="18px" color="#3b82f6" />
 				</view>
+				<text class="header-title">检索结果</text>
 			</view>
 			<view class="header-right">
 				<cl-icon
@@ -140,6 +141,11 @@ const handleLoadMore = () => {
 
 .header-icon {
 	@apply mr-2;
+}
+
+.header-title {
+	@apply text-base font-semibold;
+	color: #3b82f6;
 }
 
 .header-right {

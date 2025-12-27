@@ -34,7 +34,7 @@ export interface FabaoCaseReferenceItem {
 	cause_of_action?: string;
 }
 
-export interface CaseMessageReferences {
+export interface CaseMessageReferencesObject {
 	searchList?: Array<{
 		hostName?: string;
 		hostLogo?: string;
@@ -44,12 +44,16 @@ export interface CaseMessageReferences {
 		body?: string;
 		url?: string;
 	}>;
-	caseList?: string[];
-	// 法睿返回的案例列表 (用于卡片渲染)
-	faruiResults?: FaruiCaseResultItem[];
 	// 法宝返回的案例列表 (直接展示)
 	fabaoCaseList?: FabaoCaseReferenceItem[];
 }
+
+/**
+ * 案例消息引用
+ * - 法睿: 直接是 FaruiCaseResultItem[]
+ * - 法宝: CaseMessageReferencesObject 对象
+ */
+export type CaseMessageReferences = FaruiCaseResultItem[] | CaseMessageReferencesObject;
 
 export interface CaseMessage {
 	role: "user" | "system";
@@ -229,12 +233,8 @@ export class CaseSessionStore {
 
 		if (caseResult.length > 0) {
 			aiMsg.content = `根据您的检索，找到以下相关案例：`;
-			aiMsg.references = {
-				faruiResults: caseResult,
-				caseList: caseResult.map(
-					(item: FaruiCaseResultItem) => item.caseDomain?.caseId || ""
-				)
-			};
+			// 法睿：references 直接存储结果数组
+			aiMsg.references = caseResult;
 			hooks?.onTextChunk?.(aiMsg.content);
 		} else {
 			aiMsg.content = "未找到相关案例，请尝试其他关键词。";
@@ -273,19 +273,9 @@ export class CaseSessionStore {
 				const lastAiMsg = [...this.messages.value]
 					.reverse()
 					.find((m) => m.role === "system");
-				if (lastAiMsg && lastAiMsg.references?.faruiResults) {
-					lastAiMsg.references.faruiResults = [
-						...lastAiMsg.references.faruiResults,
-						...newResults
-					];
-					// 追加 caseList
-					const newCaseIds = newResults.map(
-						(item: FaruiCaseResultItem) => item.caseDomain?.caseId || ""
-					);
-					lastAiMsg.references.caseList = [
-						...(lastAiMsg.references.caseList || []),
-						...newCaseIds
-					];
+				if (lastAiMsg && Array.isArray(lastAiMsg.references)) {
+					// 直接追加到数组
+					lastAiMsg.references = [...lastAiMsg.references, ...newResults];
 					// 触发响应式更新
 					this.messages.value = [...this.messages.value];
 				}
@@ -354,10 +344,12 @@ export class CaseSessionStore {
 						case "mcp_result":
 							// 保存法宝案例引用数据
 							if (evt.cases && Array.isArray(evt.cases)) {
-								if (!aiMsg.references) {
-									aiMsg.references = {};
-								}
-								aiMsg.references.fabaoCaseList = evt.cases.map((item) => ({
+								const refsObj: CaseMessageReferencesObject = !aiMsg.references
+									? {}
+									: Array.isArray(aiMsg.references)
+										? {}
+										: aiMsg.references;
+								refsObj.fabaoCaseList = evt.cases.map((item) => ({
 									title: item.title,
 									content: item.content,
 									url: item.url,
@@ -367,6 +359,7 @@ export class CaseSessionStore {
 									decision_date: item.decision_date,
 									cause_of_action: item.cause_of_action
 								}));
+								aiMsg.references = refsObj;
 							}
 							break;
 

@@ -182,11 +182,8 @@ async function restoreCaseSession(sessionId: string, sessionData: any): Promise<
 		fromVoice: false,
 		voiceUrl: undefined,
 		voiceLength: undefined,
-		references: msg.references || {
-			searchList: [],
-			caseList: [],
-			faruiResults: msg.references?.faruiResults || [] // 恢复法睿结果
-		}
+		// 直接透传 references (兼容新旧格式: 数组或对象)
+		references: msg.references
 	}));
 
 	chatFlowStore.startModule("case", {
