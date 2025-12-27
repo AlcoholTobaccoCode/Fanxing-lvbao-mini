@@ -5,7 +5,14 @@ import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
 import type { SendData, Tools } from "@/cool/types/chat-input";
 import { showLoginModal } from "@/cool/store/login-modal";
-import { chatFlowStore, lawSessionStore, chatInputStore, type LawModelType } from "@/cool/store";
+import {
+	chatFlowStore,
+	lawSessionStore,
+	chatInputStore,
+	type LawModelType,
+	type LawMessageReferences
+} from "@/cool/store";
+import type { LzxLawResultItem } from "@/api/retrieve";
 import { CHAT_MODULE_CONFIGS } from "@/cool/store/chatInput-store/moduleConfigs";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
@@ -21,6 +28,15 @@ const log = new Logger("LawChatPage");
 const ui = useUi();
 const { user } = useStore();
 
+/**
+ * 获取律之星结果
+ * 律之星模式下 references 直接是 LzxLawResultItem[]
+ */
+const getLzxResults = (refs: LawMessageReferences | undefined): LzxLawResultItem[] | undefined => {
+	if (!refs) return undefined;
+	return Array.isArray(refs) ? refs : undefined;
+};
+
 const inputValue = ref("");
 const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
 
@@ -35,6 +51,13 @@ const modelType = computed({
 	set: (val: LawModelType) => lawSessionStore.setModelType(val)
 });
 const modelLocked = computed(() => lawSessionStore.modelLocked.value);
+
+// 律之星前端分页
+const lzxDisplayCount = computed(() => lawSessionStore.lzxDisplayCount.value);
+const lzxLoadingMore = computed(() => lawSessionStore.lzxLoadingMore.value);
+const handleLoadMoreLzx = () => {
+	lawSessionStore.loadMoreLzxResults();
+};
 
 // 是否从历史记录恢复
 const isFromHistory = ref(false);
@@ -199,15 +222,18 @@ const handleSend = async (data: SendData) => {
 
 						<!-- AI 消息 -->
 						<ai-message v-else :content="item.content">
-							<!-- 律之星结果：卡片列表展示 -->
+							<!-- 律之星结果：卡片列表展示（前端分页） -->
 							<lzx-law-list
-								v-if="item.references?.lzxResults?.length"
-								:items="item.references.lzxResults"
+								v-if="getLzxResults(item.references)?.length"
+								:items="getLzxResults(item.references)!"
+								:display-count="lzxDisplayCount"
+								:loading-more="lzxLoadingMore"
+								@load-more="handleLoadMoreLzx"
 							/>
 
 							<!-- 法宝/其他引用展示 -->
 							<references-panel
-								v-else-if="item.references"
+								v-else-if="item.references && !Array.isArray(item.references)"
 								:references="item.references"
 							/>
 						</ai-message>

@@ -12,8 +12,6 @@ import {
 } from "@/api/retrieve";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
-import { GetLawCardDetail, type LawDetailResponse } from "@/api/references";
-import type { CaseModelType } from "./caseSession";
 /**
  * 法规检索模型类型
  * - lzx: 律之星 (专业版) - 非流式，专业死板
@@ -30,7 +28,7 @@ export interface FabaoLawReferenceItem {
 	url: string;
 }
 
-export interface LawMessageReferences {
+export interface LawMessageReferencesObject {
 	searchList?: Array<{
 		hostName?: string;
 		hostLogo?: string;
@@ -40,18 +38,16 @@ export interface LawMessageReferences {
 		body?: string;
 		url?: string;
 	}>;
-	// 律之星返回的法规 ID 列表 (用于查询详情)
-	lawList?: Array<{
-		lawId?: string;
-		lawItemId?: string;
-	}>;
-	// 律之星返回的原始结果列表 (用于卡片渲染)
-	lzxResults?: LzxLawResultItem[];
 	// 法宝返回的法规列表 (直接展示)
 	fabaoLawList?: FabaoLawReferenceItem[];
-	lawDetails?: LawDetailResponse[];
-	loadingLaw?: boolean;
 }
+
+/**
+ * 法规消息引用
+ * - 律之星: 直接是 LzxLawResultItem[]
+ * - 法宝: LawMessageReferencesObject 对象
+ */
+export type LawMessageReferences = LzxLawResultItem[] | LawMessageReferencesObject;
 
 export interface LawMessage {
 	role: "user" | "system";
@@ -73,8 +69,13 @@ export class LawSessionStore {
 	streamStatus = ref<string | null>(null);
 
 	// 模型选择相关
-	modelType = ref<LawModelType | CaseModelType | undefined>("fabao"); // 默认通用版
+	modelType = ref<LawModelType>("fabao"); // 默认通用版
 	modelLocked = ref(false); // 对话开始后锁定
+
+	// 律之星前端分页相关 (一次查询100条，前端分页展示)
+	lzxPageSize = ref(10); // 每页展示数量
+	lzxDisplayCount = ref(10); // 当前展示数量
+	lzxLoadingMore = ref(false); // 加载更多状态
 
 	/**
 	 * 设置模型类型 (仅在未锁定时可用)
@@ -90,7 +91,7 @@ export class LawSessionStore {
 		this.sessionId.value = null;
 		this.modelLocked.value = false;
 		// 使用启动参数中的模型类型，默认通用版
-		this.modelType.value = launch.modelType || "fabao";
+		this.modelType.value = (launch.modelType as LawModelType) || "fabao";
 	}
 
 	private buildSessionForSave(sessionId: string, msgList?: LawMessage[]) {
@@ -110,7 +111,6 @@ export class LawSessionStore {
 			content: m.content,
 			role: m.role,
 			timestamp: dateTimeStr,
-			isStreaming: false,
 			references: m.references
 		}));
 
@@ -204,32 +204,60 @@ export class LawSessionStore {
 	}
 
 	/**
-	 * 律之星查询 (非流式)
+	 * 律之星查询 (非流式，一次查100条，前端分页)
 	 */
 	private async sendLzxQuery(text: string, aiMsg: LawMessage, hooks?: LawStreamHooks) {
 		this.streamStatus.value = "正在检索法规...";
 
-		const res = await QueryLzxLaw({ vector: text, rows: 10 });
+		// 一次性查询100条（律之星最大支持数量）
+		const res = await QueryLzxLaw({ vector: text, rows: 100 });
 		// request 函数在 code=200 时直接返回 data 字段，所以用 res?.result
 		const result = ((res as any)?.result || []) as LzxLawResultItem[];
 
+		// 重置前端分页状态
+		this.lzxDisplayCount.value = this.lzxPageSize.value;
+
 		if (result.length > 0) {
 			// 简要总结，详细内容由卡片组件展示
-			aiMsg.content = `根据您的查询，找到 **${result.length}** 条相关法规：`;
-			aiMsg.references = {
-				// 保存原始结果用于卡片渲染
-				lzxResults: result,
-				// 兼容：保留 lawList 用于可能的详情查询
-				lawList: result.map((item) => ({
-					lawId: item.lawId,
-					lawItemId: item.rawnumber
-				}))
-			};
+			aiMsg.content = `根据您的查询，找到以下相关法规：`;
+			// 律之星：references 直接存储结果数组
+			aiMsg.references = result;
 			hooks?.onTextChunk?.(aiMsg.content);
 		} else {
 			aiMsg.content = "未找到相关法规，请尝试其他关键词。";
 			hooks?.onTextChunk?.(aiMsg.content);
 		}
+	}
+
+	/**
+	 * 加载更多律之星结果 (前端分页)
+	 * @returns 是否还有更多数据
+	 */
+	async loadMoreLzxResults(): Promise<boolean> {
+		if (this.lzxLoadingMore.value) return false;
+
+		// 获取当前律之星结果总数
+		const lastAiMsg = [...this.messages.value].reverse().find((m) => m.role === "system");
+		const totalCount = Array.isArray(lastAiMsg?.references) ? lastAiMsg.references.length : 0;
+
+		// 检查是否已经展示全部
+		if (this.lzxDisplayCount.value >= totalCount) {
+			return false;
+		}
+
+		this.lzxLoadingMore.value = true;
+
+		// 模拟加载效果 (多端体验一致)
+		await new Promise((resolve) => setTimeout(resolve, 600));
+
+		// 增加展示数量，但不超过总数
+		const nextCount = this.lzxDisplayCount.value + this.lzxPageSize.value;
+		this.lzxDisplayCount.value = Math.min(nextCount, totalCount);
+
+		this.lzxLoadingMore.value = false;
+
+		// 返回是否还有更多
+		return this.lzxDisplayCount.value < totalCount;
 	}
 
 	/**
@@ -287,14 +315,17 @@ export class LawSessionStore {
 						case "mcp_result":
 							// 保存法宝引用数据 (直接使用，无需二次查询)
 							if (evt.result && Array.isArray(evt.result)) {
-								if (!aiMsg.references) {
-									aiMsg.references = {};
-								}
-								aiMsg.references.fabaoLawList = evt.result.map((item) => ({
+								const refsObj: LawMessageReferencesObject = !aiMsg.references
+									? {}
+									: Array.isArray(aiMsg.references)
+										? {}
+										: aiMsg.references;
+								refsObj.fabaoLawList = evt.result.map((item) => ({
 									title: item.title,
 									article: item.article,
 									url: item.url
 								}));
+								aiMsg.references = refsObj;
 							}
 							break;
 
@@ -399,63 +430,7 @@ export class LawSessionStore {
 		});
 	}
 
-	/**
-	 * 获取法规详情 (仅律之星模式需要)
-	 */
-	private async fetchReferencesDetail(aiMsg: LawMessage) {
-		try {
-			if (!aiMsg.references) return;
-
-			const msgIndex = this.messages.value.findIndex((m) => m === aiMsg);
-			if (msgIndex === -1) return;
-
-			const updateMessage = (updater: (refs: LawMessageReferences) => void) => {
-				const msg = this.messages.value[msgIndex];
-				if (msg.references) {
-					updater(msg.references);
-					this.messages.value = [...this.messages.value];
-				}
-			};
-
-			const refs = aiMsg.references;
-
-			if (refs.lawList && refs.lawList.length > 0) {
-				updateMessage((r) => (r.loadingLaw = true));
-
-				const lawDetailList = refs.lawList
-					.filter((item) => item.lawId)
-					.map((item) => ({
-						lawId: item.lawId!,
-						lawItemId: item.lawItemId || ""
-					}));
-
-				if (lawDetailList.length > 0) {
-					try {
-						const res = await GetLawCardDetail(lawDetailList);
-						const lawData = (res as any)?.data ?? res ?? [];
-						updateMessage((r) => {
-							r.lawDetails = Array.isArray(lawData) ? lawData : [];
-							r.loadingLaw = false;
-						});
-					} catch (err) {
-						console.error("[LawSession] 获取法规详情失败", err);
-						updateMessage((r) => {
-							r.lawDetails = [];
-							r.loadingLaw = false;
-						});
-					}
-
-					await this.saveCurrentSessionSnapshot();
-				} else {
-					updateMessage((r) => (r.loadingLaw = false));
-				}
-			}
-		} catch (err) {
-			console.error("[LawSession] 获取引用详情失败", err);
-		}
-	}
-
-	/**
+/**
 	 * 从历史记录恢复会话
 	 */
 	restoreFromHistory(sessionId: string, messages: LawMessage[], modelType?: LawModelType) {
@@ -465,21 +440,6 @@ export class LawSessionStore {
 		this.streamStatus.value = null;
 		this.modelType.value = modelType || "fabao";
 		this.modelLocked.value = true; // 恢复时锁定模型
-
-		this.loadMissingReferencesDetail();
-	}
-
-	private async loadMissingReferencesDetail() {
-		for (const msg of this.messages.value) {
-			if (msg.role !== "system" || !msg.references) continue;
-
-			const refs = msg.references;
-			const needLoadLaw = refs.lawList?.length && !refs.lawDetails?.length;
-
-			if (needLoadLaw) {
-				await this.fetchReferencesDetail(msg);
-			}
-		}
 	}
 
 	clear() {
@@ -487,6 +447,9 @@ export class LawSessionStore {
 		this.sessionId.value = null;
 		this.modelLocked.value = false;
 		this.modelType.value = "fabao"; // 重置为默认
+		// 重置律之星分页状态
+		this.lzxDisplayCount.value = this.lzxPageSize.value;
+		this.lzxLoadingMore.value = false;
 	}
 }
 

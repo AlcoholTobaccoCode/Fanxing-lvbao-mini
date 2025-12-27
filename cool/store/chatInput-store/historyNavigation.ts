@@ -154,11 +154,8 @@ async function restoreLawSession(sessionId: string, sessionData: any): Promise<v
 		fromVoice: false,
 		voiceUrl: undefined,
 		voiceLength: undefined,
-		references: msg.references || {
-			searchList: [],
-			lawList: [],
-			lzxResults: msg.references?.lzxResults || [] // 恢复律之星结果
-		}
+		// 直接透传 references
+		references: msg.references
 	}));
 
 	chatFlowStore.startModule("law", {

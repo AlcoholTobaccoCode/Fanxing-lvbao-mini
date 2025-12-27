@@ -116,7 +116,6 @@ export class CaseSessionStore {
 			content: m.content,
 			role: m.role,
 			timestamp: dateTimeStr,
-			isStreaming: false,
 			references: m.references
 		}));
 

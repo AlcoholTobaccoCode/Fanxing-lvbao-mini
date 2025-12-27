@@ -109,8 +109,6 @@ export class ConsultSessionStore {
 				content: m.content,
 				role: m.role,
 				timestamp: dateTimeStr,
-				// 小程序端目前没有流式中断的概念，这里统一按已完成落库
-				isStreaming: false,
 				deepThink: m.deepThink,
 				thinkingTime,
 				references: m.references,

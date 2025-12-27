@@ -1,22 +1,41 @@
 <!--
-@description: 律之星法规检索结果列表组件
+@description: 律之星法规检索结果列表组件（前端分页）
 -->
 <script lang="ts" setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import type { LzxLawResultItem } from "@/api/retrieve";
 import LzxLawCard from "./index.uvue";
 
 const props = defineProps<{
+	/** 全部结果 */
 	items: LzxLawResultItem[];
+	/** 当前展示数量 */
+	displayCount?: number;
+	/** 初次加载中 */
 	loading?: boolean;
+	/** 加载更多中 */
+	loadingMore?: boolean;
 }>();
 
 const emit = defineEmits<{
 	(e: "view-detail", item: LzxLawResultItem): void;
+	(e: "load-more"): void;
 }>();
 
 // 列表展开/收起状态
 const isExpanded = ref(true);
+
+// 当前展示的列表（前端分页）
+const displayItems = computed(() => {
+	const count = props.displayCount ?? props.items.length;
+	return props.items.slice(0, count);
+});
+
+// 是否还有更多
+const hasMore = computed(() => {
+	const count = props.displayCount ?? props.items.length;
+	return count < props.items.length;
+});
 
 const toggleExpand = () => {
 	isExpanded.value = !isExpanded.value;
@@ -24,6 +43,10 @@ const toggleExpand = () => {
 
 const handleViewDetail = (item: LzxLawResultItem) => {
 	emit("view-detail", item);
+};
+
+const handleLoadMore = () => {
+	emit("load-more");
 };
 </script>
 
@@ -34,10 +57,6 @@ const handleViewDetail = (item: LzxLawResultItem) => {
 			<view class="header-left">
 				<view class="header-icon">
 					<cl-icon name="fxzh-falvfagui" size="18px" color="#3b82f6" />
-				</view>
-				<text class="header-title">检索结果</text>
-				<view class="header-count">
-					<text class="count-text">{{ items.length }} 条</text>
 				</view>
 			</view>
 			<view class="header-right">
@@ -60,12 +79,38 @@ const handleViewDetail = (item: LzxLawResultItem) => {
 			<!-- 结果列表 -->
 			<template v-else-if="items && items.length">
 				<lzx-law-card
-					v-for="(item, index) in items"
+					v-for="(item, index) in displayItems"
 					:key="item.lawId || index"
 					:item="item"
 					:index="index"
 					@view-detail="handleViewDetail"
 				/>
+
+				<!-- 加载更多按钮 -->
+				<view v-if="hasMore" class="load-more-wrapper">
+					<view
+						class="load-more-btn"
+						:class="{ disabled: loadingMore }"
+						hover-class="hover-darker"
+						@click="handleLoadMore"
+					>
+						<template v-if="loadingMore">
+							<view class="loading-spinner-small"></view>
+							<text class="load-more-text">加载中...</text>
+						</template>
+						<template v-else>
+							<cl-icon name="arrow-down-line" size="16px" color="#3b82f6" />
+							<text class="load-more-text"
+								>加载更多 ({{ displayItems.length }}/{{ items.length }})</text
+							>
+						</template>
+					</view>
+				</view>
+
+				<!-- 没有更多数据 -->
+				<view v-else-if="displayItems.length > 0" class="no-more-wrapper">
+					<text class="no-more-text">— 已加载全部法规 —</text>
+				</view>
 			</template>
 
 			<!-- 空状态 -->
@@ -95,21 +140,6 @@ const handleViewDetail = (item: LzxLawResultItem) => {
 
 .header-icon {
 	@apply mr-2;
-}
-
-.header-title {
-	@apply text-base font-semibold;
-	color: #3b82f6;
-}
-
-.header-count {
-	@apply ml-2 px-2 py-0.5 rounded-full;
-	background-color: #eff6ff;
-}
-
-.count-text {
-	@apply text-xs font-medium;
-	color: #3b82f6;
 }
 
 .header-right {
@@ -149,6 +179,44 @@ const handleViewDetail = (item: LzxLawResultItem) => {
 
 .empty-hint {
 	@apply text-sm mt-1;
+	color: #9ca3af;
+}
+
+.load-more-wrapper {
+	@apply flex justify-center mt-3 mb-2;
+}
+
+.load-more-btn {
+	@apply flex flex-row items-center justify-center px-6 py-2.5 rounded-full;
+	background-color: #eff6ff;
+	border: 1px solid #dbeafe;
+
+	&.disabled {
+		opacity: 0.6;
+	}
+}
+
+.loading-spinner-small {
+	width: 16px;
+	height: 16px;
+	border-radius: 50%;
+	border: 2px solid #dbeafe;
+	border-top-color: #3b82f6;
+	animation: spin 1s linear infinite;
+	margin-right: 8px;
+}
+
+.load-more-text {
+	@apply text-sm ml-1;
+	color: #3b82f6;
+}
+
+.no-more-wrapper {
+	@apply flex justify-center py-4 items-center;
+}
+
+.no-more-text {
+	@apply text-xs;
 	color: #9ca3af;
 }
 
