@@ -234,11 +234,6 @@ const handleConfirm = () => {
 	handleSend();
 };
 
-// 打开通话组件
-const handleOpenCall = () => {
-	emit("open-call");
-};
-
 // 打开底部工具栏
 const handleOpenToolbar = () => {
 	showMoreAction.value = true;
@@ -468,11 +463,7 @@ watch(
 }
 
 .chat-tools-area {
-	@apply flex flex-col gap-2 mb-2;
-}
-
-.chat-intent-row {
-	// 移除 mb-2，由父级 chat-tools-area 控制间距
+	@apply flex flex-col gap-2;
 }
 
 .chat-intent-row__inner {
@@ -492,7 +483,7 @@ watch(
 }
 
 .chat-main {
-	@apply mt-1;
+	@apply mt-2;
 }
 
 // 单行布局（情况1和3）

@@ -14,7 +14,7 @@ const handleContractTypeClick = (type: string) => {
 </script>
 
 <template>
-	<view class="flex flex-col gap-4">
+	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="flex flex-row items-center gap-2">

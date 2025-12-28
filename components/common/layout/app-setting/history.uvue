@@ -5,6 +5,7 @@
 import { ref } from "vue";
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
 import { useHistorySessions, type HistorySessionItem } from "./hook";
+
 import { navigateToHistorySession } from "@/cool/store/chatInput-store/historyNavigation";
 
 //#region tab 切换
@@ -60,12 +61,35 @@ defineExpose({
 				></cl-tabs>
 			</view>
 			<view class="app-setting-tabs__right">
-				<template v-if="!isEditMode">
-					<cl-button text @click="handleChangeEditMode"> 编辑 </cl-button>
-				</template>
-				<template v-else>
-					<cl-button text type="info" @click="historyClearAll"> 清空 </cl-button>
-					<cl-button @click="handleChangeEditMode"> 完成 </cl-button>
+				<template v-if="userId">
+					<template v-if="!isEditMode">
+						<cl-button
+							text
+							:pt="{
+								label: {
+									className: '!text-primary-500'
+								}
+							}"
+							@click="handleChangeEditMode"
+						>
+							编辑
+						</cl-button>
+					</template>
+					<template v-else>
+						<cl-button
+							text
+							:pt="{
+								label: {
+									className: '!text-primary-500'
+								}
+							}"
+							type="info"
+							@click="historyClearAll"
+						>
+							清空
+						</cl-button>
+						<cl-button @click="handleChangeEditMode"> 完成 </cl-button>
+					</template>
 				</template>
 			</view>
 		</view>

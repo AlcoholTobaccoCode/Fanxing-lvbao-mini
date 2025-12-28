@@ -4,11 +4,7 @@ import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { router, useStore } from "@/cool";
 import { showLoginModal } from "@/cool/store/login-modal";
-import {
-	chatFlowStore,
-	chatInputStore,
-	moduleSwitchStore
-} from "@/cool/store";
+import { chatFlowStore, chatInputStore, moduleSwitchStore } from "@/cool/store";
 import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
 import type { LawModelType } from "@/cool/store/chatInput-store/lawSession";
 import type { CaseModelType } from "@/cool/store/chatInput-store/caseSession";
@@ -164,36 +160,38 @@ const toTestPage = () => {
 					<view @click="showTestPageBtn++">
 						<module-switch @change="handleModuleChange"></module-switch>
 					</view>
-					<view class="flex-1 p-4 !px-8">
+					<view class="flex-1">
 						<!-- 动态渲染各模块起始页 -->
-						<consult-starter
-							v-if="currentModule === 'consult'"
-							@preset-select="handlePresetSelect"
-						/>
-						<law-starter
-							v-else-if="currentModule === 'law'"
-							@preset-select="handlePresetSelect"
-						/>
-						<case-starter
-							v-else-if="currentModule === 'case'"
-							@preset-select="handlePresetSelect"
-						/>
-						<complaint-starter
-							v-else-if="currentModule === 'complaint'"
-							@preset-select="handlePresetSelect"
-						/>
-						<defense-starter
-							v-else-if="currentModule === 'defense'"
-							@preset-select="handlePresetSelect"
-						/>
-						<contract-review-starter
-							v-else-if="currentModule === 'contractReview'"
-							@preset-select="handlePresetSelect"
-						/>
-						<contract-gen-starter
-							v-else-if="currentModule === 'contractGen'"
-							@preset-select="handlePresetSelect"
-						/>
+						<scroll-view scroll-y class="w-full h-full">
+							<consult-starter
+								v-if="currentModule === 'consult'"
+								@preset-select="handlePresetSelect"
+							/>
+							<law-starter
+								v-else-if="currentModule === 'law'"
+								@preset-select="handlePresetSelect"
+							/>
+							<case-starter
+								v-else-if="currentModule === 'case'"
+								@preset-select="handlePresetSelect"
+							/>
+							<complaint-starter
+								v-else-if="currentModule === 'complaint'"
+								@preset-select="handlePresetSelect"
+							/>
+							<defense-starter
+								v-else-if="currentModule === 'defense'"
+								@preset-select="handlePresetSelect"
+							/>
+							<contract-review-starter
+								v-else-if="currentModule === 'contractReview'"
+								@preset-select="handlePresetSelect"
+							/>
+							<contract-gen-starter
+								v-else-if="currentModule === 'contractGen'"
+								@preset-select="handlePresetSelect"
+							/>
+						</scroll-view>
 					</view>
 					<view v-if="showTestPageBtn >= 10" class="p-4">
 						<cl-button @click="toTestPage">前往测试页面</cl-button>

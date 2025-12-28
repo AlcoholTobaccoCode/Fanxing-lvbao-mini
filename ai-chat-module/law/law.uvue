@@ -18,13 +18,10 @@ const handleHotLawClick = (law: string) => {
 </script>
 
 <template>
-	<view class="flex flex-col gap-4">
+	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="flex flex-row items-center gap-2">
-				<view class="icon-wrapper">
-					<cl-icon name="fxzh-falvfagui" size="24px" color="info" />
-				</view>
 				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
 					法规查询
 				</cl-text>
@@ -45,7 +42,7 @@ const handleHotLawClick = (law: string) => {
 					hover-class="hover-darker"
 					@click="handleCategoryClick(item)"
 				>
-					<cl-icon :name="item.icon" size="20px" color="info" />
+					<cl-icon :name="item.icon" size="20px" color="primary" />
 					<text class="category-label text-surface-700">{{ item.label }}</text>
 				</view>
 			</view>
@@ -71,10 +68,6 @@ const handleHotLawClick = (law: string) => {
 </template>
 
 <style lang="scss" scoped>
-.icon-wrapper {
-	@apply w-10 h-10 rounded-xl flex items-center justify-center;
-}
-
 .category-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);

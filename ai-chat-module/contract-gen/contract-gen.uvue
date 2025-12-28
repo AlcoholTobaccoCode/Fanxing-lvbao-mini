@@ -21,21 +21,15 @@ const handleTemplateClick = (template: string) => {
 </script>
 
 <template>
-	<view class="flex flex-col gap-4">
+	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="flex flex-row items-center gap-2">
-				<view class="icon-wrapper bg-surface-200">
-					<cl-icon name="file-add-line" size="24px" color="info" />
-				</view>
 				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
 					合同生成
 				</cl-text>
-				<view class="coming-soon-badge bg-surface-200">
-					<text class="badge-text text-surface-500">即将上线</text>
-				</view>
 			</view>
-			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
 				描述你的需求，AI 智能生成规范合同，可自定义条款，一键导出 Word。
 			</cl-text>
 		</view>
@@ -47,22 +41,29 @@ const handleTemplateClick = (template: string) => {
 				<view
 					v-for="(item, i) in CONTRACT_GEN_CATEGORIES"
 					:key="i"
-					class="category-card disabled"
+					class="category-card"
 					:class="{
-						'bg-primary-50 border-primary-200': selectedCategory === i,
-						'bg-surface-50': selectedCategory !== i
+						selected: selectedCategory === i
 					}"
 					hover-class="hover-darker"
 					@click="handleCategoryClick(i)"
 				>
-					<cl-icon :name="item.icon" size="24px" color="info" />
-					<text class="category-label text-surface-700">{{ item.label }}</text>
+					<cl-icon
+						:name="item.icon"
+						size="24px"
+						:color="selectedCategory === i ? '#7c3aed' : '#8b5cf6'"
+					/>
+					<text
+						class="category-label"
+						:class="selectedCategory === i ? 'text-violet-700' : 'text-surface-700'"
+						>{{ item.label }}</text
+					>
 				</view>
 			</view>
 		</view>
 
 		<!-- 展开的模板列表 -->
-		<view v-if="selectedCategory !== null" class="template-expand bg-surface-50">
+		<view v-if="selectedCategory !== null" class="template-expand">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-2' }">
 				{{ CONTRACT_GEN_CATEGORIES[selectedCategory].label }}模板
 			</cl-text>
@@ -70,13 +71,13 @@ const handleTemplateClick = (template: string) => {
 				<view
 					v-for="(tpl, i) in CONTRACT_GEN_CATEGORIES[selectedCategory].templates"
 					:key="i"
-					class="template-item bg-white disabled"
+					class="template-item"
 					hover-class="hover-darker"
 					@click="handleTemplateClick(tpl)"
 				>
-					<cl-icon name="file-text-line" size="16px" color="info" />
+					<cl-icon name="article-line" size="16px" color="#8b5cf6" />
 					<text class="template-name text-surface-700">{{ tpl }}</text>
-					<cl-icon name="arrow-right-s-line" size="16px" color="info" />
+					<cl-icon name="arrow-right-s-line" size="16px" color="#a78bfa" />
 				</view>
 			</view>
 		</view>
@@ -88,43 +89,31 @@ const handleTemplateClick = (template: string) => {
 				<view
 					v-for="(item, i) in CONTRACT_GEN_HOT_TEMPLATES"
 					:key="i"
-					class="hot-template-card bg-surface-50 disabled"
+					class="hot-template-card"
 					hover-class="hover-darker"
 					@click="handleTemplateClick(item)"
 				>
-					<view class="hot-rank bg-surface-300 text-surface-600">{{ i + 1 }}</view>
+					<view class="hot-rank">{{ i + 1 }}</view>
 					<text class="hot-name text-surface-700">{{ item }}</text>
 				</view>
 			</view>
 		</view>
 
 		<!-- 自定义入口 -->
-		<view class="custom-entry bg-surface-50 border-surface-300 disabled">
-			<view class="custom-icon bg-surface-200">
-				<cl-icon name="magic-line" size="20px" color="info" />
+		<!-- <view class="custom-entry" @click="emit('preset-select', '')" v-if="false">
+			<view class="custom-icon">
+				<cl-icon name="magic-line" size="20px" color="#ffffff" />
 			</view>
 			<view class="custom-info">
 				<text class="custom-title text-surface-700">自定义合同</text>
-				<text class="custom-desc text-surface-400">描述需求，AI 智能生成（暂未开放）</text>
+				<text class="custom-desc text-surface-500">描述你的需求，AI 智能生成专属合同</text>
 			</view>
-			<cl-icon name="arrow-right-s-line" size="20px" color="info" />
-		</view>
+			<cl-icon name="arrow-right-s-line" size="20px" color="#8b5cf6" />
+		</view> -->
 	</view>
 </template>
 
 <style lang="scss" scoped>
-.icon-wrapper {
-	@apply w-10 h-10 rounded-xl flex items-center justify-center;
-}
-
-.coming-soon-badge {
-	@apply px-2 py-0.5 rounded-full;
-}
-
-.badge-text {
-	@apply text-xs;
-}
-
 .category-grid {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
@@ -133,12 +122,18 @@ const handleTemplateClick = (template: string) => {
 
 .category-card {
 	@apply flex flex-col items-center justify-center py-4 rounded-xl;
-	border-width: 1px;
-	border-color: transparent;
-}
+	background-color: #faf5ff;
+	border: 1px solid transparent;
+	transition: all 0.2s ease;
 
-.category-card.disabled {
-	opacity: 0.6;
+	&.selected {
+		background-color: #ede9fe;
+		border-color: #c4b5fd;
+	}
+
+	&:active {
+		transform: scale(0.98);
+	}
 }
 
 .category-label {
@@ -147,6 +142,7 @@ const handleTemplateClick = (template: string) => {
 
 .template-expand {
 	@apply p-3 rounded-xl;
+	background-color: #faf5ff;
 }
 
 .template-list {
@@ -154,11 +150,13 @@ const handleTemplateClick = (template: string) => {
 }
 
 .template-item {
-	@apply flex flex-row items-center gap-2 p-2 rounded-lg;
-}
+	@apply flex flex-row items-center gap-2 p-3 rounded-lg;
+	background-color: #ffffff;
+	border: 1px solid #ede9fe;
 
-.template-item.disabled {
-	opacity: 0.6;
+	&:active {
+		background-color: #f5f3ff;
+	}
 }
 
 .template-name {
@@ -173,14 +171,17 @@ const handleTemplateClick = (template: string) => {
 
 .hot-template-card {
 	@apply flex flex-row items-center gap-2 p-3 rounded-xl;
-}
+	background-color: #faf5ff;
 
-.hot-template-card.disabled {
-	opacity: 0.6;
+	&:active {
+		background-color: #ede9fe;
+	}
 }
 
 .hot-rank {
-	@apply w-5 h-5 rounded-full flex items-center justify-center text-xs;
+	@apply w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium;
+	background-color: #e9d5ff;
+	color: #7c3aed;
 }
 
 .hot-name {
@@ -189,16 +190,17 @@ const handleTemplateClick = (template: string) => {
 
 .custom-entry {
 	@apply flex flex-row items-center p-4 rounded-xl mt-4;
-	border-width: 1px;
-	border-style: dashed;
-}
+	background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+	border: 1px solid #c4b5fd;
 
-.custom-entry.disabled {
-	opacity: 0.6;
+	&:active {
+		background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+	}
 }
 
 .custom-icon {
 	@apply w-10 h-10 rounded-full flex items-center justify-center;
+	background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
 }
 
 .custom-info {
@@ -210,6 +212,6 @@ const handleTemplateClick = (template: string) => {
 }
 
 .custom-desc {
-	@apply text-xs;
+	@apply text-xs mt-0.5;
 }
 </style>

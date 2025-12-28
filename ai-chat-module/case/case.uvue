@@ -25,12 +25,12 @@ const handleHotCaseClick = (caseName: string) => {
 </script>
 
 <template>
-	<view class="flex flex-col gap-4">
+	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="flex flex-row items-center gap-2">
 				<view class="icon-wrapper bg-warning-100">
-					<cl-icon name="fxzh-falvfagui1" size="24px" color="warning" />
+					<cl-icon name="fxzh-falvfagui1" size="24px" color="orange" />
 				</view>
 				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
 					案例检索
@@ -58,7 +58,7 @@ const handleHotCaseClick = (caseName: string) => {
 		</view>
 
 		<!-- 法院级别筛选 -->
-		<view class="mt-4">
+		<view class="mt-4" v-if="false">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">法院级别</cl-text>
 			<view class="court-level-wrap">
 				<view
@@ -111,9 +111,9 @@ const handleHotCaseClick = (caseName: string) => {
 }
 
 .case-type-wrap {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 10px;
+	display: inline-grid;
+	gap: 4px;
+	grid-template-columns: repeat(auto-fill, 80px);
 }
 
 .case-type-tag {

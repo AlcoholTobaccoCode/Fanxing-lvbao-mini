@@ -100,7 +100,19 @@ defineExpose({
 				</view>
 				<view class="app-setting-footer__right">
 					<view @click="openSettingPage">
-						<cl-icon name="settings-line" :size="32"></cl-icon>
+						<!-- <cl-icon name="settings-line" :size="32"></cl-icon> -->
+						<cl-button
+							type="primary"
+							text
+							:pt="{
+								label: {
+									className: '!text-primary-500'
+								}
+							}"
+							@tap="handleLogin"
+						>
+							设置
+						</cl-button>
 					</view>
 
 					<!-- <view class="reactive" @click="openCSChat"> -->

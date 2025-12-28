@@ -18,13 +18,10 @@ const handleTemplateClick = (template: string) => {
 </script>
 
 <template>
-	<view class="flex flex-col gap-4">
+	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="flex flex-row items-center gap-2">
-				<view class="icon-wrapper bg-error-100">
-					<cl-icon name="file-text-line" size="24px" color="error" />
-				</view>
 				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
 					起诉状生成
 				</cl-text>
@@ -42,10 +39,12 @@ const handleTemplateClick = (template: string) => {
 					<view class="step-num bg-error-500">{{ step.num }}</view>
 					<view class="step-content">
 						<text class="step-title text-surface-700">{{ step.title }}</text>
-						<text class="step-desc text-surface-400">{{ step.desc }}</text>
-					</view>
-					<view v-if="i < COMPLAINT_STEPS.length - 1" class="step-arrow">
-						<cl-icon name="arrow-right-s-line" size="16px" color="info" />
+						<view class="flex flex-row items-center">
+							<text class="step-desc text-surface-400">{{ step.desc }}</text>
+							<view v-if="i < COMPLAINT_STEPS.length - 1">
+								<cl-icon name="arrow-right-s-line" size="16px" color="info" />
+							</view>
+						</view>
 					</view>
 				</view>
 			</view>
@@ -99,11 +98,11 @@ const handleTemplateClick = (template: string) => {
 }
 
 .steps-container {
-	@apply flex flex-row items-center justify-between p-3 rounded-xl;
+	@apply flex flex-row items-center justify-between py-2 px-1 rounded-xl;
 }
 
 .step-item {
-	@apply flex flex-row items-center;
+	@apply flex flex-col items-center;
 	flex: 1;
 }
 
@@ -112,7 +111,7 @@ const handleTemplateClick = (template: string) => {
 }
 
 .step-content {
-	@apply flex flex-col ml-2;
+	@apply flex items-center justify-center flex-col ml-2;
 }
 
 .step-title {
@@ -122,11 +121,6 @@ const handleTemplateClick = (template: string) => {
 .step-desc {
 	@apply text-xs;
 }
-
-.step-arrow {
-	@apply mx-2;
-}
-
 .category-list {
 	@apply flex flex-col gap-3;
 }

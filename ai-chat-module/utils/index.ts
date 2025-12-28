@@ -62,8 +62,8 @@ export const CASE_HOT_ITEMS: string[] = [
 // ==================== 起诉状模块 ====================
 export const COMPLAINT_CATEGORIES = [
 	{ label: "民事起诉", icon: "file-list-line", desc: "合同、侵权、婚姻等" },
-	{ label: "劳动仲裁", icon: "team-line", desc: "劳动争议申请书" },
-	{ label: "行政起诉", icon: "government-line", desc: "行政复议、诉讼" }
+	{ label: "劳动仲裁", icon: "file-list-line", desc: "劳动争议申请书" },
+	{ label: "行政起诉", icon: "file-list-line", desc: "行政复议、诉讼" }
 ];
 
 export const COMPLAINT_STEPS = [
@@ -77,8 +77,8 @@ export const COMPLAINT_TEMPLATES: string[] = ["借款纠纷起诉状", "劳动�
 // ==================== 答辩状模块 ====================
 export const DEFENSE_TYPES = [
 	{ label: "民事答辩", icon: "shield-check-line", desc: "应对民事起诉" },
-	{ label: "仲裁答辩", icon: "scales-3-line", desc: "劳动仲裁答辩" },
-	{ label: "行政答辩", icon: "building-line", desc: "行政诉讼应诉" }
+	{ label: "仲裁答辩", icon: "shield-check-line", desc: "劳动仲裁答辩" },
+	{ label: "行政答辩", icon: "shield-check-line", desc: "行政诉讼应诉" }
 ];
 
 export const DEFENSE_TIPS = [
@@ -112,15 +112,19 @@ export const CONTRACT_REVIEW_POINTS = [
 
 // ==================== 合同生成模块 ====================
 export const CONTRACT_GEN_CATEGORIES = [
-	{ label: "劳动用工", icon: "team-line", templates: ["劳动合同", "劳务协议", "保密协议"] },
+	{ label: "劳动用工", icon: "profile-line", templates: ["劳动合同", "劳务协议", "保密协议"] },
 	{ label: "房屋租赁", icon: "home-line", templates: ["房屋租赁", "商铺租赁", "转租协议"] },
-	{ label: "买卖交易", icon: "shopping-bag-line", templates: ["买卖合同", "采购协议", "分销合同"] },
+	{
+		label: "买卖交易",
+		icon: "shopping-bag-line",
+		templates: ["买卖合同", "采购协议", "分销合同"]
+	},
 	{
 		label: "借贷融资",
 		icon: "money-cny-circle-line",
 		templates: ["借款合同", "担保协议", "抵押合同"]
 	},
-	{ label: "合作经营", icon: "handshake-line", templates: ["合作协议", "股权转让", "投资协议"] },
+	{ label: "合作经营", icon: "store-2-line", templates: ["合作协议", "股权转让", "投资协议"] },
 	{
 		label: "服务委托",
 		icon: "customer-service-line",
