@@ -1,0 +1,150 @@
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import { type BtnListItem } from "@/components/float-Menu/types";
+import { requestMultiplePermissions, PermissionScope } from "@/utils/permission";
+import { router, useStore, unReadCount as imUnReadCount } from "@/cool";
+import { isDev } from "@/config";
+
+import FloatPopupMenu from "./index.vue";
+import RemixIcon from "@/test/icon-all/remixicon.uvue";
+
+const { user } = useStore();
+
+const emits = defineEmits(["use-login"]);
+
+//#region 浮动菜单
+// 动态获取屏幕高度，计算浮动菜单 y 坐标
+const floatMenuY = computed(() => {
+	const windowInfo = uni.getWindowInfo();
+	return windowInfo.windowHeight - 200;
+	// 160
+});
+
+// 首页菜单项
+const homeMenuItem: BtnListItem = {
+	icon: "home-2-line",
+	text: "首页",
+	menuBgColor: "#2e3e5b",
+	cb: () => {
+		router.home();
+	}
+};
+
+//#region IM 相关
+
+// 格式化未读消息数（99+）
+const unReadCountText = computed(() => {
+	const count = imUnReadCount.value;
+	if (count <= 0) return "";
+	if (count > 99) return "99+";
+	return String(count);
+});
+
+// 是否显示未读角标
+const showUnReadBadge = computed(() => imUnReadCount.value > 0);
+//#endregion// 基础菜单项（不包含首页）
+const baseMenuItems: BtnListItem[] = [
+	{
+		icon: "phone-line",
+		text: "AI通话",
+		menuBgColor: "#2e3e5b",
+		cb: async () => {
+			// 申请麦克风和摄像头权限
+			const results = await requestMultiplePermissions(
+				[
+					PermissionScope.RECORD
+					// PermissionScope.CAMERA
+				],
+				{
+					showConfirm: true
+				}
+			);
+
+			// 检查权限申请结果
+			const recordGranted = results[PermissionScope.RECORD]?.success;
+			// const cameraGranted = results[PermissionScope.CAMERA]?.success;
+
+			if (!recordGranted) {
+				console.warn("权限申请失败", { recordGranted });
+				return uni.showToast({
+					title: "需要麦克风和摄像头权限才能进行通话",
+					icon: "none",
+					duration: 2000
+				});
+			}
+
+			if (user.token) {
+				router.to("/ai-chat-module/voice-call/index");
+			} else {
+				emits("use-login");
+			}
+		}
+	},
+	{
+		icon: "user-2-line",
+		text: "律师",
+		menuBgColor: "#2e3e5b",
+		cb: () => {
+			if (user.token) {
+				router.to("/ease-im/index");
+			} else {
+				emits("use-login");
+			}
+		}
+	},
+	{
+		icon: "user-settings-line",
+		text: "设置",
+		menuBgColor: "#2e3e5b",
+		cb: () => {
+			router.to("/pages/user/settings/index");
+		}
+	}
+];
+
+// 动态菜单项：非首页时添加"首页"选项
+const customMenuItems = computed<BtnListItem[]>(() => {
+	const items = [...baseMenuItems];
+	if (isDev) {
+		items.push({
+			text: "Icon",
+			menuBgColor: "#2e3e5b",
+			cb: () => {
+				iconVisible.value = true;
+			}
+		});
+	}
+
+	if (router.isHomePage()) {
+		return items;
+	}
+	return [homeMenuItem, ...items];
+});
+
+const onMenuClick = (item: BtnListItem) => {
+	console.log("点击了菜单项:", item);
+	item?.cb?.();
+};
+//#endregion
+
+//#region 测试区域
+const iconVisible = ref(false);
+//#endregion
+</script>
+
+<template>
+	<!-- 浮动菜单 -->
+	<float-popup-menu
+		:y="floatMenuY"
+		:menuItems="customMenuItems"
+		:use-mask="false"
+		@menuClick="onMenuClick"
+	>
+	</float-popup-menu>
+
+	<cl-popup v-model="iconVisible" title="RemixIcon">
+		<view class="h-[500px]">
+			<remix-icon v-model:icon-visible="iconVisible"></remix-icon>
+		</view>
+	</cl-popup>
+</template>

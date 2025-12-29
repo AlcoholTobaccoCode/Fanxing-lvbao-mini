@@ -17,7 +17,8 @@ const props = defineProps({
 	buttonBgColor: {
 		// 按钮背景颜色
 		type: String,
-		default: "linear-gradient(165deg, #2B5BDB 0%, #00C9FF 100%)"
+		default: "#fff"
+		// default: "linear-gradient(165deg, #2B5BDB 0%, #00C9FF 100%)"
 	},
 	iconColor: {
 		// 按钮图标
@@ -236,11 +237,29 @@ const handleMenuClick = (item: { text: string }) => {
 							}"
 							@click="handleMenuClick(item)"
 						>
-							<view class="menu-item-inner" :style="{ background: item.menuBgColor }">
-								<uni-icons :type="item.icon" size="24" :color="item.iconColor" />
-								<text class="menu-item-text" :style="{ color: item.textColor }">{{
-									item.text
-								}}</text>
+							<view
+								class="menu-item-inner"
+								:style="{ background: item.menuBgColor || buttonBgColor }"
+							>
+								<cl-icon
+									:name="item.icon"
+									:color="item.iconColor || iconColor"
+								></cl-icon>
+								<text
+									class="menu-item-text"
+									:style="{ color: item.textColor || textColor }"
+									>{{ item.text }}</text
+								>
+								<cl-badge
+									v-if="item.badge"
+									type="error"
+									:value="item.badgeVal"
+									position
+									:pt="{
+										className: '!top-[4rpx] !right-[4rpx] text-2xl p-4'
+									}"
+								>
+								</cl-badge>
 							</view>
 						</view>
 					</view>
@@ -255,12 +274,7 @@ const handleMenuClick = (item: { text: string }) => {
 							height: floatingButtonHeight
 						}"
 					>
-						{{ buttonY }}
-						<uni-icons
-							:type="isMenuOpen ? 'close' : 'plusempty'"
-							size="28"
-							:color="iconColor"
-						/>
+						<cl-icon :name="isMenuOpen ? 'close-line' : 'add-line'"></cl-icon>
 					</view>
 				</view>
 			</movable-view>
@@ -317,7 +331,8 @@ const handleMenuClick = (item: { text: string }) => {
 	transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 	transform: rotate(0deg) translateZ(0) perspective(1000px);
 	backdrop-filter: blur(12px);
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	border: 1px solid rgba(0, 0, 0, 0.2);
+	box-shadow: rgba(0, 0, 0, 0.24) 0px 2px 6px;
 }
 
 .button-active {
@@ -351,6 +366,7 @@ const handleMenuClick = (item: { text: string }) => {
 }
 
 .menu-item-inner {
+	margin-top: 2px;
 	width: 96rpx;
 	height: 96rpx;
 	border-radius: 48rpx;

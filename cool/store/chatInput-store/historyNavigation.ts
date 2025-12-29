@@ -223,19 +223,19 @@ async function restoreDocGenSession(
 	// 转换为 DocGenMessage 格式
 	const docGenMessages: DocGenMessage[] = messages.map((msg: any) => {
 		const content = msg.content || "";
-		const role = msg.role ?? (msg.sender === "user" ? "user" : "ai");
+		const role = msg.role ?? (msg.sender === "user" ? "user" : "system");
 
 		// 对于 AI 消息，检测是否包含完整文书
 		let hasDocument = false;
 		let documentContent: string | undefined;
-		if (role === "ai" && content) {
+		if (role === "system" && content) {
 			const detection = detectDocumentInText(content);
 			hasDocument = detection.hasDocument;
 			documentContent = detection.documentContent;
 		}
 
 		return {
-			role: role as "user" | "ai",
+			role: role as "user" | "system",
 			content,
 			fromVoice: false,
 			voiceUrl: undefined,

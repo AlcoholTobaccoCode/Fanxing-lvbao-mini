@@ -65,7 +65,7 @@ export interface DocGenStageItem {
  * 文书生成消息
  */
 export interface DocGenMessage {
-	role: "user" | "ai";
+	role: "user" | "system";
 	content: string;
 	fromVoice?: boolean;
 	voiceUrl?: string;
@@ -85,7 +85,10 @@ export interface DocGenStreamHooks {
  * 检测文本中是否包含完整的文书内容
  * 根据特定标题格式判断（如 "# 劳 动 合 同"、"# 民事起诉状"、"# 民事答辩状"）
  */
-export function detectDocumentInText(text: string): { hasDocument: boolean; documentContent?: string } {
+export function detectDocumentInText(text: string): {
+	hasDocument: boolean;
+	documentContent?: string;
+} {
 	// 文书标题匹配模式
 	const documentPatterns = [
 		// 合同类
@@ -156,7 +159,11 @@ export class DocGenSessionStore {
 		this.historySessionId.value = null;
 
 		// 根据 moduleKey 设置文书类型
-		if (launch.moduleKey === "complaint" || launch.moduleKey === "defense" || launch.moduleKey === "contractGen") {
+		if (
+			launch.moduleKey === "complaint" ||
+			launch.moduleKey === "defense" ||
+			launch.moduleKey === "contractGen"
+		) {
 			this.docType.value = launch.moduleKey;
 		}
 	}
@@ -242,11 +249,9 @@ export class DocGenSessionStore {
 
 		// 添加 AI 回复占位
 		this.messages.value.push({
-			role: "ai",
+			role: "system",
 			content: "",
-			stages: [
-				{ stage: "analyzing", status: "active", message: "正在分析您的需求..." }
-			]
+			stages: [{ stage: "analyzing", status: "active", message: "正在分析您的需求..." }]
 		});
 		const aiMsg = this.messages.value[this.messages.value.length - 1];
 

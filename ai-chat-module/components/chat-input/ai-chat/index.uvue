@@ -10,7 +10,7 @@ import type { ToolItem, Tools, ActionItems, SendData, VoiceResult } from "@/cool
 import SimpleCard from "@/components/card/simple-card.uvue";
 import VoiceRecord from "../voice-record.uvue";
 import ActionsPopup from "../actions-popup.uvue";
-import RealtimeVoiceInput from "../realtime-voice-input.uvue";
+// import RealtimeVoiceInput from "../realtime-voice-input.uvue";
 
 const ui = useUi();
 
@@ -350,7 +350,7 @@ watch(
 
 					<!-- 右侧：实时语音 + 加号 -->
 					<view class="chat-main__actions">
-						<realtime-voice-input v-model="modelValueModal" />
+						<!-- <realtime-voice-input v-model="modelValueModal" /> -->
 						<view class="chat-main__icon-btn" @tap.stop="handleOpenToolbar">
 							<cl-icon name="add-circle-line" :size="40"></cl-icon>
 						</view>
@@ -396,7 +396,7 @@ watch(
 
 						<!-- 右侧：实时语音 + 加号 -->
 						<view class="chat-main__actions">
-							<realtime-voice-input v-model="modelValueModal" />
+							<!-- <realtime-voice-input v-model="modelValueModal" /> -->
 							<view class="chat-main__icon-btn" @tap.stop="handleConfirm">
 								<cl-icon
 									:name="`arrow-up-circle-${modelValueModal ? 'fill' : 'line'}`"
