@@ -18,10 +18,12 @@ const props = withDefaults(
 		voiceName?: string;
 		backTop?: boolean;
 		titleAction?: boolean;
+		titlePlaceholder?: string;
 	}>(),
 	{
 		backTop: false,
-		titleAction: true
+		titleAction: true,
+		titlePlaceholder: "内容由 AI 生成，仅供参考"
 	}
 );
 
@@ -137,8 +139,8 @@ const handleClickRecord = () => {
 					></cl-icon>
 				</view>
 
-				<view class="chat-tips">
-					<cl-text size="10px" color="info">内容由 AI 生成，仅供参考</cl-text>
+				<view class="chat-tips" v-if="titlePlaceholder.length">
+					<cl-text size="10px" color="info">{{ titlePlaceholder }}</cl-text>
 				</view>
 			</view>
 

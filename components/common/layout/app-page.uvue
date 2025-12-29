@@ -23,6 +23,8 @@ const props = withDefaults(
 		titleAction?: boolean;
 		// 是否打开 icon 选择器
 		openIconPicker?: boolean;
+		//
+		titlePlaceholder?: string;
 	}>(),
 	{
 		backTop: false,
@@ -126,6 +128,7 @@ const handleHeaderClickRecord = () => {
 					:voice-name="props.voiceName"
 					:back-top="props.backTop"
 					:title-action="props.titleAction"
+					:title-placeholder="props.titlePlaceholder"
 					@new-chat="handleOpenNewChat"
 					@voice-play-change="handleHeaderVoiceChange"
 					@voice-select="handleHeaderVoiceSelect"

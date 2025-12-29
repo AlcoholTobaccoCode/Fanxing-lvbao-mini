@@ -82,6 +82,14 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 		}
 	},
 	{
+		icon: "user-settings-line",
+		text: "设置",
+		menuBgColor: "#2e3e5b",
+		cb: () => {
+			router.to("/setting/index");
+		}
+	},
+	{
 		icon: "user-2-line",
 		text: "律师",
 		menuBgColor: "#2e3e5b",
@@ -94,20 +102,26 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 				emits("use-login");
 			}
 		}
-	},
-	{
-		icon: "user-settings-line",
-		text: "设置",
-		menuBgColor: "#2e3e5b",
-		cb: () => {
-			router.to("/pages/user/settings/index");
-		}
 	}
 ]);
 
-// 动态菜单项：非首页时添加"首页"选项
+// 动态菜单项：根据当前页面过滤菜单
 const customMenuItems = computed<BtnListItem[]>(() => {
-	const items = [...baseMenuItems.value];
+	const currentPath = router.path();
+	const isHomePage = router.isHomePage();
+	const isLawyerPage = currentPath.includes("/ease-im/");
+	const isSettingsPage = currentPath.includes("/pages/user/settings/");
+
+	// 过滤基础菜单项
+	let items = baseMenuItems.value.filter((item) => {
+		// 律师消息页面隐藏「律师」
+		if (isLawyerPage && item.text === "律师") return false;
+		// 设置页面隐藏「设置」
+		if (isSettingsPage && item.text === "设置") return false;
+		return true;
+	});
+
+	// 开发模式添加 Icon 入口
 	if (isDev) {
 		items.push({
 			text: "Icon",
@@ -118,10 +132,12 @@ const customMenuItems = computed<BtnListItem[]>(() => {
 		});
 	}
 
-	if (router.isHomePage()) {
-		return items;
+	// 非首页时添加「首页」选项
+	if (!isHomePage) {
+		items = [homeMenuItem, ...items];
 	}
-	return [homeMenuItem, ...items];
+
+	return items;
 });
 
 const onMenuClick = (item: BtnListItem) => {

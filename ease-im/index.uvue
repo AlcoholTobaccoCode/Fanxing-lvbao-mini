@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import { isDark, router, usePager } from "@/cool";
+import { isDark, router, usePager, unReadCount } from "@/cool";
 import { type EasemobConversationItem, getEasemobServerConversations } from "@/utils/easemob";
 import { imBus } from "@/utils/easemob/events";
 import { useChatUsernames, formatUnread } from "./hook";
@@ -12,11 +12,6 @@ import AppPage from "@/components/common/layout/app-page.uvue";
 	TODO
 	- 合并环信、本地接口
 */
-
-const unReadCountModal = defineModel("unReadCount", {
-	type: Number,
-	default: () => 0
-});
 
 const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
 
@@ -67,10 +62,7 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 	if (userIds.length) {
 		try {
 			const { userNames } = await fetchUsernames({ userIds });
-			unReadCountModal.value = 0;
 			conversations.forEach((conv, idx) => {
-				// 统计当前页面未读数量
-				unReadCountModal.value += conv.unReadCount || 0;
 				const name = userNames[idx];
 				if (!name) return;
 				const m: any = (conv as any).lastMessage || {};
@@ -194,7 +186,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-	<app-page title="历史对话" back-top :chat-list-btn="false" :title-action="false" openIconPicker>
+	<app-page
+		:title="`历史对话(${unReadCount > 999 ? '...' : unReadCount})`"
+		back-top
+		:chat-list-btn="false"
+		:title-action="false"
+		openIconPicker
+		titlePlaceholder=""
+	>
 		<template #content>
 			<view class="easeim-history-list-root">
 				<view v-if="loading && !list.length && isUsernamesLoading" class="px-3">
