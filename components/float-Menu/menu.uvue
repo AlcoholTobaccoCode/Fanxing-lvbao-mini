@@ -75,7 +75,16 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 			}
 
 			if (user.token) {
-				router.to("/ai-chat-module/voice-call/index");
+				const isHomePage = router.isHomePage();
+				const path = "/ai-chat-module/voice-call/index";
+				if (isHomePage) {
+					router.to(path);
+				} else {
+					router.push({
+						path,
+						mode: "redirectTo"
+					});
+				}
 			} else {
 				emits("use-login");
 			}
@@ -86,7 +95,16 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 		text: "设置",
 		menuBgColor: "#2e3e5b",
 		cb: () => {
-			router.to("/setting/index");
+			const isHomePage = router.isHomePage();
+			const path = "/setting/index";
+			if (isHomePage) {
+				router.to(path);
+			} else {
+				router.push({
+					path,
+					mode: "redirectTo"
+				});
+			}
 		}
 	},
 	{
@@ -97,7 +115,16 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 		badgeVal: unReadCountText.value,
 		cb: () => {
 			if (user.token) {
-				router.to("/ease-im/index");
+				const isHomePage = router.isHomePage();
+				const path = "/ease-im/index";
+				if (isHomePage) {
+					router.to(path);
+				} else {
+					router.push({
+						path,
+						mode: "redirectTo"
+					});
+				}
 			} else {
 				emits("use-login");
 			}

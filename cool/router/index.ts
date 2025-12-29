@@ -220,7 +220,8 @@ export class Router {
 	// 回到首页
 	home() {
 		this.push({
-			path: this.defaultPath("home")
+			path: this.defaultPath("home"),
+			mode: "redirectTo"
 		});
 	}
 
