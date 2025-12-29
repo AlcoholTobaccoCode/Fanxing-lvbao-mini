@@ -137,7 +137,7 @@ function createScaleFromBase(baseHex, levels, factors) {
 	return palette;
 }
 
-// 针对律先锋当前主色的快捷方法
+// 针对律先峰当前主色的快捷方法
 function createFanxingzhihuiScale() {
 	return createScaleFromBase("#296D9D");
 }

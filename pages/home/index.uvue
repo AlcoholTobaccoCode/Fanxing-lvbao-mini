@@ -153,7 +153,7 @@ const toTestPage = () => {
 </script>
 
 <template>
-	<app-page title="律先锋" :back-top="false" open-icon-picker @new-chat="handleOpenNewChat">
+	<app-page title="律先峰" :back-top="false" open-icon-picker @new-chat="handleOpenNewChat">
 		<template #content>
 			<view class="h-full flex flex-col">
 				<simple-card class="flex-1 !p-0 !rounded-none">

@@ -38,7 +38,7 @@ const handleRefresh = () => {
 			<text class="title-line">Hi,</text>
 			<text class="title-line">欢迎使用</text>
 			<view class="title-brand">
-				<text class="brand-text text-primary-500">律先锋</text>
+				<text class="brand-text text-primary-500">律先峰</text>
 				<text class="brand-suffix text-primary-500">AI</text>
 			</view>
 			<text class="desc-text text-surface-400">

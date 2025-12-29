@@ -6,7 +6,7 @@
 		{
 			"path": "pages/home/index",
 			"style": {
-				"navigationBarTitleText": "律先锋",
+				"navigationBarTitleText": "律先峰",
 				"navigationStyle": "custom",
 				"usingComponents": {
 					"chat-input": "/ai-chat-module/components/chat-input/ai-chat/index",
@@ -233,7 +233,7 @@
 		}
 	},
 	"globalStyle": {
-		"navigationBarTitleText": "律先锋",
+		"navigationBarTitleText": "律先峰",
 		"navigationBarTextStyle": "@navTextStyle",
 		"backgroundColorContent": "@bgContentColor",
 		"backgroundColor": "@bgColor",

@@ -35,7 +35,7 @@ const emit = defineEmits<{
 const showMenu = ref(false);
 const isVoicePlay = ref<boolean>(props.initialVoicePlay ?? false);
 
-const title = computed(() => props.title ?? "律先锋");
+const title = computed(() => props.title ?? "律先峰");
 const voiceName = computed(() => props.voiceName ?? "七七");
 
 // 右侧需要为小程序胶囊预留的 padding（px）

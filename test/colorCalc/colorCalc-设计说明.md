@@ -12,7 +12,7 @@
 
 **典型使用场景**：
 
-- 给设计只提供了一个主色的项目（当前的律先锋 `#296D9D`），快速构造完整主题色板，用于 Tailwind / cool 主题配置。
+- 给设计只提供了一个主色的项目（当前的律先峰 `#296D9D`），快速构造完整主题色板，用于 Tailwind / cool 主题配置。
 
 对应代码文件：`test/other.bac/colorCalc.js`
 
@@ -168,9 +168,9 @@ if (levels[j] === 500) {
 
 ---
 
-## 五、针对律先锋的封装：createFanxingzhihuiScale
+## 五、针对律先峰的封装：createFanxingzhihuiScale
 
-因为当前律先锋项目的主色是 `#296D9D`，所以单独提供了一个快捷方法：
+因为当前律先峰项目的主色是 `#296D9D`，所以单独提供了一个快捷方法：
 
 ```js
 function createFanxingzhihuiScale() {
