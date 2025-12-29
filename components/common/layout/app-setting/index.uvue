@@ -99,7 +99,7 @@ defineExpose({
 					</template>
 				</view>
 				<view class="app-setting-footer__right">
-					<view @click="openSettingPage">
+					<view>
 						<!-- <cl-icon name="settings-line" :size="32"></cl-icon> -->
 						<cl-button
 							type="primary"
@@ -109,7 +109,7 @@ defineExpose({
 									className: '!text-primary-500'
 								}
 							}"
-							@tap="handleLogin"
+							@click="openSettingPage"
 						>
 							设置
 						</cl-button>
