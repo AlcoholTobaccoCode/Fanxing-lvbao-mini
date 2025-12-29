@@ -21,7 +21,7 @@ const handleTemplateClick = (template: string) => {
 	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
-			<view class="placeholder-box h-[40px]"></view>
+			<view class="placeholder-box h-[20px]"></view>
 			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
 				智能生成规范法律文书，根据案情自动引用法条，让诉讼准备更高效。
 			</cl-text>

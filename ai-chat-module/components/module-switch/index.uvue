@@ -1,8 +1,11 @@
+<!-- 
+顶部模块选择
+-->
 <script lang="ts" setup>
 import type { ClTabsItem } from "@/uni_modules/cool-ui";
 import { moduleSwitchStore } from "@/cool/store";
 import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
-import { computed } from "vue";
+import { computed, ref, nextTick, watch } from "vue";
 
 const emit = defineEmits<{
 	(e: "change", value: ChatModuleKey): void;
@@ -27,8 +30,165 @@ const currentValue = computed({
 		}
 	}
 });
+
+// 滚动位置
+const scrollLeft = ref(0);
+
+// 点击切换模块
+const onItemClick = (item: ClTabsItem) => {
+	if (item.disabled) return;
+	currentValue.value = item.value as string;
+	// 滚动到选中项居中
+	scrollToCenter(item.value as string);
+};
+
+// 滚动到选中项居中
+const scrollToCenter = (value: string) => {
+	const index = list.value.findIndex((item) => item.value === value);
+	if (index < 0) return;
+
+	nextTick(() => {
+		// 计算滚动位置，使选中项居中
+		// 每个未选中项约 80rpx，选中项约 70% 宽度
+		const itemWidth = 80; // rpx
+		const targetScroll = index * itemWidth - 100; // 向左偏移让选中项居中
+		scrollLeft.value = Math.max(0, targetScroll);
+	});
+};
+
+// 监听当前值变化，自动滚动到居中
+watch(
+	() => currentValue.value,
+	(val) => {
+		scrollToCenter(val);
+	},
+	{ immediate: true }
+);
 </script>
 
 <template>
-	<cl-tabs v-model="currentValue" :list="list" :show-line="false"></cl-tabs>
+	<view class="module-switch">
+		<!-- 左侧虚化遮罩 -->
+		<view class="mask-left" v-if="currentValue !== 'consult'"></view>
+
+		<!-- 滚动区域 -->
+		<view class="scroll-content">
+			<scroll-view
+				scroll-x
+				:scroll-left="scrollLeft"
+				scroll-with-animation
+				class="scroll-container"
+				:show-scrollbar="false"
+			>
+				<view
+					v-for="item in list"
+					:key="item.value"
+					class="module-item"
+					:class="{
+						'module-item--active': currentValue === item.value,
+						'module-item--disabled': item.disabled
+					}"
+					@click="onItemClick(item)"
+				>
+					<text
+						class="module-text"
+						:class="{ 'module-text--active': currentValue === item.value }"
+					>
+						{{ item.label }}
+					</text>
+				</view>
+			</scroll-view>
+		</view>
+
+		<!-- 右侧虚化遮罩 -->
+		<view class="mask-right" v-if="currentValue !== 'contractReview'"></view>
+	</view>
 </template>
+
+<style lang="scss" scoped>
+.module-switch {
+	position: relative;
+	width: 100%;
+	height: 54px;
+	overflow: hidden;
+}
+
+.scroll-content {
+	display: inline-flex;
+	align-items: center;
+	height: 100%;
+	padding: 0 4%;
+}
+
+.scroll-container {
+	width: 100%;
+	height: 100%;
+	white-space: nowrap;
+	display: flex;
+	align-items: center;
+	flex-direction: row;
+	gap: 12px;
+}
+
+.module-item {
+	flex-shrink: 0;
+	padding: 6px 12px;
+	margin: 0 4px;
+	border-radius: 16px;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	opacity: 0.5;
+	margin-top: 20px;
+
+	&--active {
+		opacity: 1;
+		background: linear-gradient(
+			135deg,
+			rgba(43, 91, 219, 0.15) 0%,
+			rgba(0, 201, 255, 0.15) 100%
+		);
+		transform: scale(1.4);
+		margin: 0 12px;
+		margin-top: 20px;
+	}
+
+	&--disabled {
+		opacity: 0.3;
+		pointer-events: none;
+	}
+}
+
+.module-text {
+	color: #666;
+	transition: all 0.3s ease;
+	white-space: nowrap;
+
+	&--active {
+		color: #2b5bdb;
+		font-weight: 600;
+	}
+}
+
+// 左侧虚化遮罩
+.mask-left {
+	position: absolute;
+	left: 0;
+	top: 0;
+	width: 80px;
+	height: 100%;
+	background: linear-gradient(to right, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+	z-index: 10;
+	pointer-events: none;
+}
+
+// 右侧虚化遮罩
+.mask-right {
+	position: absolute;
+	right: 0;
+	top: 0;
+	width: 80px;
+	height: 100%;
+	background: linear-gradient(to left, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
+	z-index: 10;
+	pointer-events: none;
+}
+</style>

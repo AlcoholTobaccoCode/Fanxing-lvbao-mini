@@ -21,7 +21,7 @@ const handleHotLawClick = (law: string) => {
 	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
-			<view class="placeholder-box h-[40px]"></view>
+			<view class="placeholder-box h-[20px]"></view>
 			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
 				精准检索全量法律法规，快速定位条款内容，了解法规沿革与适用范围。
 			</cl-text>

@@ -1,0 +1,37 @@
+<!-- 
+顶部模块选择备份 
+-->
+<script lang="ts" setup>
+import type { ClTabsItem } from "@/uni_modules/cool-ui";
+import { moduleSwitchStore } from "@/cool/store";
+import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
+import { computed } from "vue";
+
+const emit = defineEmits<{
+	(e: "change", value: ChatModuleKey): void;
+}>();
+
+// 转换为 cl-tabs 需要的格式
+const list = computed<ClTabsItem[]>(() => {
+	return moduleSwitchStore.tabList.map((item) => ({
+		label: item.label,
+		value: item.value,
+		disabled: item.disabled
+	}));
+});
+
+// 双向绑定当前模块
+const currentValue = computed({
+	get: () => moduleSwitchStore.currentModule.value,
+	set: (val: string) => {
+		const success = moduleSwitchStore.switchModule(val as ChatModuleKey);
+		if (success) {
+			emit("change", val as ChatModuleKey);
+		}
+	}
+});
+</script>
+
+<template>
+	<cl-tabs v-model="currentValue" :list="list" :show-line="false"></cl-tabs>
+</template>

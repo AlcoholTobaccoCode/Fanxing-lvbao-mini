@@ -28,7 +28,7 @@ const handleHotCaseClick = (caseName: string) => {
 	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
-			<view class="placeholder-box h-[40px]"></view>
+			<view class="placeholder-box h-[20px]"></view>
 			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
 				海量真实判例智能检索，快速找到相似案例，了解法院裁判观点与判决趋势。
 			</cl-text>

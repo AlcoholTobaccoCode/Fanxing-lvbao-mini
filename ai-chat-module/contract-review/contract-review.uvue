@@ -17,7 +17,7 @@ const handleContractTypeClick = (type: string) => {
 	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
-			<view class="placeholder-box h-[40px]"></view>
+			<view class="placeholder-box h-[20px]"></view>
 			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
 				智能审查合同条款，识别风险点，提供专业修改建议，让签约更安心。
 			</cl-text>
