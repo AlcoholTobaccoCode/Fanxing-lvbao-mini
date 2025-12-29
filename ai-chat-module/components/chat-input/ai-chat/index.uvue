@@ -437,10 +437,6 @@ watch(
 			</template>
 		</view>
 
-		<view class="chat-tips">
-			<cl-text size="10px" color="info">AI检索结果仅供参考，以官方法条和权威案例为准</cl-text>
-		</view>
-
 		<!-- 底部工具栏 -->
 		<actions-popup
 			v-model:is-show="showMoreAction"
@@ -546,9 +542,5 @@ watch(
 	&:active {
 		transform: scale(0.95);
 	}
-}
-
-.chat-tips {
-	@apply flex items-center justify-center mt-2;
 }
 </style>

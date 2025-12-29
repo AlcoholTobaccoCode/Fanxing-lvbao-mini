@@ -123,16 +123,22 @@ const handleClickRecord = () => {
 				</view>
 			</template>
 
-			<view class="flex flex-row items-center justify-center" @tap.stop="toggleMenu">
-				<cl-text :pt="{ className: 'text-base font-bold tracking-wide' }">
-					{{ title }}
-				</cl-text>
-				<cl-icon
-					v-if="title && titleAction"
-					name="arrow-up-s-fill"
-					:size="32"
-					:pt="{ className: 'ml-1' }"
-				></cl-icon>
+			<view class="flex flex-col" @tap.stop="toggleMenu">
+				<view class="flex flex-row items-center justify-center">
+					<cl-text :pt="{ className: 'text-base font-bold tracking-wide' }">
+						{{ title }}
+					</cl-text>
+					<cl-icon
+						v-if="title && titleAction"
+						name="arrow-up-s-fill"
+						:size="32"
+						:pt="{ className: 'ml-1' }"
+					></cl-icon>
+				</view>
+
+				<view class="chat-tips">
+					<cl-text size="10px" color="info">内容由 AI 生成，仅供参考</cl-text>
+				</view>
 			</view>
 
 			<template #append>
@@ -203,5 +209,9 @@ const handleClickRecord = () => {
 <style lang="scss" scoped>
 :deep(.cl-topbar__inner) {
 	position: relative;
+}
+
+.chat-tips {
+	@apply flex items-center justify-center mt-2;
 }
 </style>
