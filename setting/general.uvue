@@ -23,8 +23,8 @@
 <script setup lang="ts">
 import { isDark, toggleTheme, useRefs } from "@/cool";
 import { t } from "@/locale";
-import LocaleSet from "@/components/common/locale-set.uvue";
-import SizeSet from "@/components/common/size-set.uvue";
+import LocaleSet from "./components/locale-set.uvue";
+import SizeSet from "./components/size-set.uvue";
 
 const refs = useRefs();
 
