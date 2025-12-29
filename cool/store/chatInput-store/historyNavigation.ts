@@ -6,8 +6,14 @@ import { useStore } from "@/cool";
 import { LoadMessages } from "@/api/history-chat";
 import { chatFlowStore } from "./flow";
 import { consultSessionStore, type ConsultMessage } from "./consultSession";
-import { lawSessionStore, type LawMessage, type LawModelType } from "./lawSession";
+import { lawSessionStore, type LawMessage } from "./lawSession";
 import { caseSessionStore, type CaseMessage } from "./caseSession";
+import {
+	docGenSessionStore,
+	type DocGenMessage,
+	type DocGenKey,
+	detectDocumentInText
+} from "./docGenSession";
 import { CHAT_MODULE_CONFIGS } from "./moduleConfigs";
 import type { ChatModuleKey } from "./types";
 import type {
@@ -78,9 +84,15 @@ export async function navigateToHistorySession(item: HistorySessionItem): Promis
 				await restoreCaseSession(item.session_id, sessionData);
 				break;
 			case "complaint":
+				await restoreDocGenSession(item.session_id, sessionData, "complaint");
+				break;
 			case "defense":
-			case "contractReview":
+				await restoreDocGenSession(item.session_id, sessionData, "defense");
+				break;
 			case "contractGen":
+				await restoreDocGenSession(item.session_id, sessionData, "contractGen");
+				break;
+			case "contractReview":
 			default:
 				uni.hideLoading();
 				uni.showToast({ title: "该功能即将上线", icon: "none" });
@@ -195,6 +207,54 @@ async function restoreCaseSession(sessionId: string, sessionData: any): Promise<
 
 	// 传递 modelType 给 restoreFromHistory
 	caseSessionStore.restoreFromHistory(sessionId, caseMessages, modelType);
+}
+
+/**
+ * 恢复文书生成会话（起诉状/答辩状/合同生成）
+ */
+async function restoreDocGenSession(
+	sessionId: string,
+	sessionData: any,
+	docType: DocGenKey
+): Promise<void> {
+	const messages = sessionData?.messages ?? [];
+	const historySessionId = sessionData?.historySessionId; // 后端返回的会话ID（用于多轮对话）
+
+	// 转换为 DocGenMessage 格式
+	const docGenMessages: DocGenMessage[] = messages.map((msg: any) => {
+		const content = msg.content || "";
+		const role = msg.role ?? (msg.sender === "user" ? "user" : "ai");
+
+		// 对于 AI 消息，检测是否包含完整文书
+		let hasDocument = false;
+		let documentContent: string | undefined;
+		if (role === "ai" && content) {
+			const detection = detectDocumentInText(content);
+			hasDocument = detection.hasDocument;
+			documentContent = detection.documentContent;
+		}
+
+		return {
+			role: role as "user" | "ai",
+			content,
+			fromVoice: false,
+			voiceUrl: undefined,
+			voiceLength: undefined,
+			stages: msg.stages,
+			hasDocument,
+			documentContent
+		};
+	});
+
+	// 启动模块
+	chatFlowStore.startModule(docType, {
+		text: "",
+		tools: [],
+		inputMode: "text"
+	});
+
+	// 恢复 docGenSessionStore
+	docGenSessionStore.restoreFromHistory(sessionId, docGenMessages, docType, historySessionId);
 }
 
 /**

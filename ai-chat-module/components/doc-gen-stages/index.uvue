@@ -1,0 +1,434 @@
+<!--
+@description: 文书生成阶段进度展示组件
+显示分步状态：分析需求 → 生成文书 → 完成
+-->
+<script lang="ts" setup>
+import { computed } from "vue";
+import type {
+	DocGenStageItem,
+	DocGenStageType,
+	DocGenKey
+} from "@/cool/store/chatInput-store/docGenSession";
+
+const props = defineProps<{
+	/** 阶段状态列表 */
+	stages: DocGenStageItem[];
+	/** 是否正在加载中 */
+	loading?: boolean;
+	/** 文书类型 */
+	docType?: DocGenKey;
+}>();
+
+/** 主题类型 */
+const themeClass = computed(() => {
+	return props.docType === "contractGen" ? "theme-violet" : "theme-red";
+});
+
+/** 文书类型文案 */
+const docTypeText = computed(() => {
+	switch (props.docType) {
+		case "complaint":
+			return "起诉状";
+		case "defense":
+			return "答辩状";
+		case "contractGen":
+			return "合同";
+		default:
+			return "文书";
+	}
+});
+
+/** 阶段配置 */
+const STAGE_CONFIG = computed(
+	() =>
+		({
+			analyzing: {
+				label: "分析需求",
+				icon: "search-line",
+				activeLabel: "正在分析需求...",
+				desc: "理解您的需求"
+			},
+			generating: {
+				label: `生成${docTypeText.value}`,
+				icon: "file-edit-line",
+				activeLabel: `正在生成${docTypeText.value}...`,
+				desc: "AI 正在撰写"
+			},
+			completed: {
+				label: "完成",
+				icon: "check-double-line",
+				activeLabel: "已完成",
+				desc: `${docTypeText.value}已生成`
+			}
+		}) as Record<
+			DocGenStageType,
+			{ label: string; icon: string; activeLabel: string; desc: string }
+		>
+);
+
+/** 需要展示的核心阶段 */
+const DISPLAY_STAGES: DocGenStageType[] = ["analyzing", "generating", "completed"];
+
+/** 计算展示的阶段列表 */
+const displayStages = computed(() => {
+	return DISPLAY_STAGES.map((stageType) => {
+		const stageData = props.stages.find((s) => s.stage === stageType);
+		const config = STAGE_CONFIG.value[stageType];
+
+		let status: "pending" | "active" | "completed" = "pending";
+		if (stageData) {
+			status = stageData.status;
+		}
+
+		return {
+			type: stageType,
+			label: config.label,
+			activeLabel: config.activeLabel,
+			icon: config.icon,
+			desc: config.desc,
+			status,
+			message: stageData?.message
+		};
+	});
+});
+
+/** 是否全部完成 */
+const isAllCompleted = computed(() => {
+	const completedStage = props.stages.find((s) => s.stage === "completed");
+	return completedStage?.status === "completed";
+});
+
+/** 当前激活的阶段 */
+const activeStage = computed(() => {
+	return displayStages.value.find((s) => s.status === "active");
+});
+
+/** 已完成的阶段数量 */
+const completedCount = computed(() => {
+	return displayStages.value.filter((s) => s.status === "completed").length;
+});
+</script>
+
+<template>
+	<view
+		class="doc-gen-stages"
+		:class="[{ themeClass: !isAllCompleted }, { completed: isAllCompleted }]"
+	>
+		<!-- 当前状态标题 -->
+		<view class="stages-header">
+			<view class="header-left">
+				<template v-if="isAllCompleted">
+					<view class="status-icon completed">
+						<cl-icon name="check-line" size="16px" color="#ffffff" />
+					</view>
+					<text class="status-text completed">生成完成</text>
+				</template>
+				<template v-else-if="activeStage">
+					<view class="status-icon active">
+						<view class="loading-spinner-white"></view>
+					</view>
+					<text class="status-text active">{{ activeStage.activeLabel }}</text>
+				</template>
+			</view>
+			<view class="header-right">
+				<text class="progress-text">{{ completedCount }}/{{ displayStages.length }}</text>
+			</view>
+		</view>
+
+		<!-- 阶段进度条 -->
+		<view class="stages-progress">
+			<view
+				v-for="(stage, index) in displayStages"
+				:key="stage.type"
+				class="stage-item"
+				:class="{
+					active: stage.status === 'active',
+					completed: stage.status === 'completed',
+					pending: stage.status === 'pending'
+				}"
+			>
+				<!-- 圆点和连接线容器 -->
+				<view class="stage-indicator">
+					<view class="indicator-dot">
+						<template v-if="stage.status === 'completed'">
+							<cl-icon name="check-line" size="10px" color="#ffffff" />
+						</template>
+						<template v-else-if="stage.status === 'active'">
+							<view class="dot-pulse"></view>
+						</template>
+					</view>
+					<!-- 连接线（绝对定位） -->
+					<view
+						v-if="index < displayStages.length - 1"
+						class="connector-line"
+						:class="{ filled: stage.status === 'completed' }"
+					></view>
+				</view>
+
+				<!-- 阶段信息（居中对齐） -->
+				<view class="stage-info">
+					<text class="stage-label">{{ stage.label }}</text>
+					<text class="stage-desc">{{ stage.desc }}</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 完成状态摘要 -->
+		<view v-if="isAllCompleted" class="completion-summary">
+			<cl-icon name="checkbox-circle-line" size="14px" color="#10b981" />
+			<text class="summary-text">{{ docTypeText }}已生成，可点击下方按钮导出</text>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.doc-gen-stages {
+	@apply mb-3 px-4 py-3 rounded-xl;
+
+	// 红色主题（起诉状、答辩状）
+	&.theme-red {
+		background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+		border: 1px solid #fecaca;
+
+		.status-icon.active {
+			background-color: #ef4444;
+		}
+		.status-text.active {
+			color: #ef4444;
+		}
+		.progress-text {
+			background-color: #fecaca;
+			color: #b91c1c;
+		}
+		.stage-item.active {
+			.stage-label {
+				color: #ef4444;
+			}
+			.indicator-dot {
+				background-color: #ef4444;
+			}
+		}
+		.connector-line {
+			background-color: #fecaca;
+		}
+	}
+
+	// 紫色主题（合同生成）
+	&.theme-violet {
+		background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);
+		border: 1px solid #c4b5fd;
+
+		.status-icon.active {
+			background-color: #8b5cf6;
+		}
+		.status-text.active {
+			color: #8b5cf6;
+		}
+		.progress-text {
+			background-color: #e9d5ff;
+			color: #7c3aed;
+		}
+		.stage-item.active {
+			.stage-label {
+				color: #8b5cf6;
+			}
+			.indicator-dot {
+				background-color: #8b5cf6;
+			}
+		}
+		.connector-line {
+			background-color: #c4b5fd;
+		}
+	}
+
+	&.completed {
+		background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+		border-color: #bbf7d0;
+
+		.progress-text {
+			background-color: #bbf7d0;
+			color: #15803d;
+		}
+	}
+}
+
+.stages-header {
+	@apply flex flex-row items-center justify-between mb-3;
+}
+
+.header-left {
+	@apply flex flex-row items-center;
+}
+
+.status-icon {
+	@apply flex items-center justify-center mr-2;
+	width: 24px;
+	height: 24px;
+	border-radius: 12px;
+
+	&.active {
+		background-color: #ef4444;
+	}
+
+	&.completed {
+		background-color: #10b981;
+	}
+}
+
+.loading-spinner-white {
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	border-top-color: #ffffff;
+	animation: spin 1s linear infinite;
+}
+
+.status-text {
+	@apply text-sm font-medium;
+
+	&.active {
+		color: #ef4444;
+	}
+
+	&.completed {
+		color: #10b981;
+	}
+}
+
+.header-right {
+	@apply flex items-center;
+}
+
+.progress-text {
+	@apply text-xs px-2 py-1 rounded-full;
+	background-color: #fecaca;
+	color: #b91c1c;
+}
+
+.doc-gen-stages.completed .progress-text {
+	background-color: #bbf7d0;
+	color: #15803d;
+}
+
+.stages-progress {
+	@apply flex flex-row;
+}
+
+.stage-item {
+	@apply flex-1 flex flex-col items-center overflow-visible;
+	position: relative;
+
+	&.completed {
+		.stage-label {
+			color: #10b981;
+		}
+		.indicator-dot {
+			background-color: #10b981;
+		}
+	}
+
+	&.active {
+		.stage-label {
+			color: #ef4444;
+			font-weight: 500;
+		}
+		.indicator-dot {
+			background-color: #ef4444;
+		}
+	}
+
+	&.pending {
+		.stage-label {
+			color: #94a3b8;
+		}
+		.indicator-dot {
+			background-color: #cbd5e1;
+		}
+	}
+}
+
+.stage-indicator {
+	@apply flex items-center justify-center mb-2 overflow-visible;
+	position: relative;
+	width: 100%;
+}
+
+.indicator-dot {
+	@apply flex items-center justify-center;
+	width: 20px;
+	height: 20px;
+	border-radius: 10px;
+	flex-shrink: 0;
+	z-index: 1;
+}
+
+.dot-pulse {
+	width: 8px;
+	height: 8px;
+	background-color: #ffffff;
+	border-radius: 4px;
+	animation: pulse 1.5s ease-in-out infinite;
+}
+
+.connector-line {
+	position: absolute;
+	height: 2px;
+	background-color: #fecaca;
+	top: 50%;
+	left: 50%;
+	width: 100%;
+	transform: translateY(-50%);
+
+	&.filled {
+		background-color: #10b981;
+	}
+}
+
+.stage-info {
+	@apply flex flex-col items-center justify-center;
+}
+
+.stage-label {
+	@apply text-xs text-center font-medium;
+}
+
+.stage-desc {
+	@apply text-xs text-center mt-0.5;
+	color: #94a3b8;
+	font-size: 10px;
+	line-height: 1.3;
+	max-width: 80px;
+}
+
+.completion-summary {
+	@apply flex flex-row items-center mt-2 pt-2;
+	border-top: 1px dashed #bbf7d0;
+}
+
+.summary-text {
+	@apply text-xs ml-1.5;
+	color: #10b981;
+}
+
+@keyframes spin {
+	0% {
+		transform: rotate(0deg);
+	}
+	100% {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.5;
+		transform: scale(0.8);
+	}
+}
+</style>

@@ -67,6 +67,9 @@ const handleToggle = () => {
 
 		<!-- 额外内容插槽（引用、推荐等） -->
 		<slot></slot>
+
+		<!-- 后置插槽（导出栏等） -->
+		<slot name="append"></slot>
 	</view>
 </template>
 

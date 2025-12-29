@@ -1,0 +1,239 @@
+<!--
+@description: 文书预览占位盒子
+当检测到完整文书生成时显示，提供预览和操作入口
+-->
+<script lang="ts" setup>
+import { computed } from "vue";
+import type { DocGenKey } from "@/cool/store/chatInput-store/docGenSession";
+
+const props = defineProps<{
+	/** 文档内容 */
+	documentContent?: string;
+	/** 文书类型 */
+	docType?: DocGenKey;
+}>();
+
+const emit = defineEmits<{
+	(e: "preview"): void;
+	(e: "export"): void;
+	(e: "copy"): void;
+}>();
+
+/** 文书类型文案 */
+const docTypeText = computed(() => {
+	switch (props.docType) {
+		case "complaint":
+			return "起诉状";
+		case "defense":
+			return "答辩状";
+		case "contractGen":
+			return "合同";
+		default:
+			return "文书";
+	}
+});
+
+/** 主题类型 */
+const themeClass = computed(() => {
+	switch (props.docType) {
+		case "complaint":
+			return "theme-red";
+		case "defense":
+			return "theme-blue";
+		case "contractGen":
+			return "theme-violet";
+		default:
+			return "theme-green";
+	}
+});
+
+/** 图标颜色 */
+const iconColor = computed(() => {
+	switch (props.docType) {
+		case "complaint":
+			return "#ef4444";
+		case "defense":
+			return "#3b82f6";
+		case "contractGen":
+			return "#8b5cf6";
+		default:
+			return "#10b981";
+	}
+});
+
+/** 提取文书标题 */
+const documentTitle = computed(() => {
+	if (!props.documentContent) return `${docTypeText.value}已生成`;
+
+	// 尝试从内容中提取标题（第一个 # 开头的行）
+	const match = props.documentContent.match(/^#+\s*(.+)$/m);
+	if (match) {
+		// 去除标题中的空格（如 "劳 动 合 同" -> "劳动合同"）
+		return match[1].replace(/\s+/g, "");
+	}
+	return `${docTypeText.value}已生成`;
+});
+
+/** 预览文书 */
+const handlePreview = () => {
+	emit("preview");
+};
+
+/** 导出文书 */
+const handleExport = () => {
+	emit("export");
+};
+
+/** 复制文书 */
+const handleCopy = () => {
+	emit("copy");
+};
+</script>
+
+<template>
+	<view class="doc-preview-box" :class="themeClass">
+		<!-- 头部信息 -->
+		<view class="box-header">
+			<view class="header-icon">
+				<cl-icon name="file-text-line" size="24px" :color="iconColor" />
+			</view>
+			<view class="header-info">
+				<text class="header-title">{{ documentTitle }}</text>
+				<text class="header-desc">AI 已为您生成完整{{ docTypeText }}，可预览或导出</text>
+			</view>
+		</view>
+
+		<!-- 操作按钮 -->
+		<view class="box-actions">
+			<view class="action-btn preview-btn" hover-class="hover-darker" @click="handlePreview">
+				<cl-icon name="eye-line" size="16px" :color="iconColor" />
+				<text class="btn-text">预览</text>
+			</view>
+			<view class="action-btn copy-btn" hover-class="hover-darker" @click="handleCopy">
+				<cl-icon name="file-copy-line" size="16px" color="#6b7280" />
+				<text class="btn-text">复制</text>
+			</view>
+			<view class="action-btn export-btn" hover-class="hover-darker" @click="handleExport">
+				<cl-icon name="download-line" size="16px" color="#ffffff" />
+				<text class="btn-text-white">导出</text>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.doc-preview-box {
+	@apply mt-4 p-4 rounded-xl;
+	border: 1px solid;
+
+	// 红色主题（起诉状）
+	&.theme-red {
+		background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+		border-color: #fecaca;
+
+		.header-title {
+			color: #b91c1c;
+		}
+
+		.export-btn {
+			background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+		}
+	}
+
+	// 蓝色主题（答辩状）
+	&.theme-blue {
+		background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+		border-color: #93c5fd;
+
+		.header-title {
+			color: #1d4ed8;
+		}
+
+		.export-btn {
+			background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+		}
+	}
+
+	// 紫色主题（合同生成）
+	&.theme-violet {
+		background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);
+		border-color: #c4b5fd;
+
+		.header-title {
+			color: #7c3aed;
+		}
+
+		.export-btn {
+			background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+		}
+	}
+
+	// 绿色主题（默认）
+	&.theme-green {
+		background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+		border-color: #bbf7d0;
+
+		.header-title {
+			color: #15803d;
+		}
+
+		.export-btn {
+			background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+		}
+	}
+}
+
+.box-header {
+	@apply flex flex-row items-start mb-3;
+}
+
+.header-icon {
+	@apply w-10 h-10 rounded-lg flex items-center justify-center mr-3;
+	background-color: rgba(255, 255, 255, 0.8);
+}
+
+.header-info {
+	@apply flex-1 flex flex-col;
+}
+
+.header-title {
+	@apply text-base font-medium mb-1;
+}
+
+.header-desc {
+	@apply text-xs;
+	color: #6b7280;
+}
+
+.box-actions {
+	@apply flex flex-row items-center gap-2;
+}
+
+.action-btn {
+	@apply flex-1 flex flex-row items-center justify-center gap-1 py-2 rounded-lg;
+
+	&.preview-btn {
+		background-color: rgba(255, 255, 255, 0.8);
+		border: 1px solid rgba(0, 0, 0, 0.1);
+	}
+
+	&.copy-btn {
+		background-color: rgba(255, 255, 255, 0.8);
+		border: 1px solid rgba(0, 0, 0, 0.1);
+	}
+
+	&.export-btn {
+		// 背景色由主题控制
+	}
+}
+
+.btn-text {
+	@apply text-sm;
+	color: #374151;
+}
+
+.btn-text-white {
+	@apply text-sm;
+	color: #ffffff;
+}
+</style>

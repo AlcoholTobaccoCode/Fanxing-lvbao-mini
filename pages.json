@@ -139,6 +139,27 @@
 					}
 				},
 				{
+					"path": "complaint/index",
+					"style": {
+						"navigationBarTitleText": "起诉状生成",
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "defense/index",
+					"style": {
+						"navigationBarTitleText": "答辩状生成",
+						"navigationStyle": "custom"
+					}
+				},
+				{
+					"path": "contract-gen/index",
+					"style": {
+						"navigationBarTitleText": "合同生成",
+						"navigationStyle": "custom"
+					}
+				},
+				{
 					"path": "voice-call/index",
 					"style": {
 						"navigationBarTitleText": "实时通话",

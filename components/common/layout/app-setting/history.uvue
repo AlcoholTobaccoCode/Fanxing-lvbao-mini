@@ -248,5 +248,17 @@ defineExpose({
 		background: #e6fffb;
 		border-color: #87e8de;
 	}
+
+	&-red {
+		color: #cf1322;
+		background: #fff1f0;
+		border-color: #ffa39e;
+	}
+
+	&-purple {
+		color: #531dab;
+		background: #f9f0ff;
+		border-color: #d3adf7;
+	}
 }
 </style>

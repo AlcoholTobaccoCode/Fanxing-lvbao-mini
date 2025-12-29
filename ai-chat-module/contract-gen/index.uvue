@@ -1,0 +1,271 @@
+<!-- 
+@description: 合同生成对话页面
+-->
+<script lang="ts" setup>
+import { computed, ref, watch } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
+import { useStore } from "@/cool";
+import type { SendData, Tools } from "@/cool/types/chat-input";
+import { showLoginModal } from "@/cool/store/login-modal";
+import { chatFlowStore, docGenSessionStore, chatInputStore } from "@/cool/store";
+import { CHAT_MODULE_CONFIGS } from "@/cool/store/chatInput-store/moduleConfigs";
+
+import AppPage from "@/components/common/layout/app-page.uvue";
+import ChatLayout from "../components/chat-layout/index.uvue";
+import ChatInput from "../components/chat-input/ai-chat/index.uvue";
+import UserMessage from "../components/chat-layout/user-message.uvue";
+import AiMessage from "../components/chat-layout/ai-message.uvue";
+import DocGenStages from "../components/doc-gen-stages/index.uvue";
+import DocPreviewBox from "../components/doc-preview-box/index.uvue";
+
+const log = new Logger("ContractGenChatPage");
+const ui = useUi();
+const { user } = useStore();
+
+const inputValue = ref("");
+const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
+
+const sessionId = computed(() => docGenSessionStore.sessionId.value || "");
+const messages = docGenSessionStore.messages;
+const isGenerating = computed(() => docGenSessionStore.loading.value);
+const streamStatus = computed(() => docGenSessionStore.streamStatus.value);
+
+// 是否从历史记录恢复
+const isFromHistory = ref(false);
+
+const hasValidLaunch = computed(() => {
+	if (isFromHistory.value) {
+		return !!docGenSessionStore.sessionId.value;
+	}
+	const launch = chatFlowStore.launchPayload.value;
+	const cfg = chatFlowStore.currentConfig.value;
+	return !!launch && !!cfg && launch.moduleKey === "contractGen";
+});
+
+// 工具变化处理
+const handleToolsChange = (val: Tools) => {
+	chatInputStore.tools.value = val;
+};
+
+const handleInputModeChange = (mode: string) => {
+	chatInputStore.inputMode.value = mode as any;
+};
+
+// 监听消息变化，自动滚动
+watch(
+	messages,
+	() => {
+		chatLayoutRef.value?.scrollToBottom();
+	},
+	{ deep: true }
+);
+
+onLoad((options) => {
+	const fromHistory = options?.fromHistory === "true";
+	isFromHistory.value = fromHistory;
+
+	// 设置文书类型
+	docGenSessionStore.setDocType("contractGen");
+
+	if (fromHistory) {
+		const cfg = CHAT_MODULE_CONFIGS["contractGen"];
+		chatInputStore.setConfig({
+			tools: [],
+			inputMode: "text",
+			placeholder: cfg.placeholder,
+			showDefaultDeepThink: cfg.enableDeepThink,
+			showDefaultKnowledge: cfg.enableKnowledge,
+			showDefaultNetwork: cfg.enableNetwork
+		});
+
+		setTimeout(() => {
+			chatLayoutRef.value?.scrollToBottom();
+		}, 300);
+		return;
+	}
+
+	const launch = chatFlowStore.launchPayload.value;
+	const cfg = chatFlowStore.currentConfig.value;
+
+	if (!launch || !cfg || launch.moduleKey !== "contractGen") {
+		log.warn("[contractGen/chat] 无有效启动参数");
+		return;
+	}
+
+	docGenSessionStore.initFromLaunch(launch);
+
+	chatInputStore.setConfig({
+		tools: launch.tools,
+		inputMode: launch.inputMode,
+		placeholder: cfg.placeholder,
+		showDefaultDeepThink: cfg.enableDeepThink,
+		showDefaultKnowledge: cfg.enableKnowledge,
+		showDefaultNetwork: cfg.enableNetwork
+	});
+
+	if (launch.text) {
+		docGenSessionStore.sendTextQuestion(launch.text, launch.tools, undefined, {
+			fromVoice: !!launch.voice,
+			voiceUrl: launch.voice?.onlineUrl,
+			voiceLength: launch.voice ? Math.ceil((launch.voice.duration || 0) / 1000) : undefined
+		});
+	}
+
+	setTimeout(() => {
+		chatLayoutRef.value?.scrollToBottom();
+	}, 500);
+});
+
+onUnload(() => {
+	docGenSessionStore.clear();
+	chatFlowStore.clear();
+});
+
+const handleSend = async (data: SendData) => {
+	log.group("contractGen detail send");
+	log.debug("payload ==> ", data);
+	log.groupEnd();
+
+	if (!user.token) {
+		showLoginModal(() => {
+			handleSend(data);
+		});
+		return;
+	}
+
+	let questionText = "";
+	if (data.mode === "voice" && data.voice) {
+		questionText = (data.voice.text || data.text || "").trim();
+	} else {
+		questionText = (data.text || "").trim();
+	}
+
+	if (!questionText) {
+		ui.showToast({ message: "请输入或说出合同需求" });
+		return;
+	}
+
+	try {
+		chatLayoutRef.value?.resetAutoScroll();
+		inputValue.value = "";
+
+		await docGenSessionStore.sendTextQuestion(
+			questionText,
+			chatInputStore.tools.value,
+			{
+				onTextChunk: async (chunk: string) => {
+					console.debug("chunk ===> ", chunk);
+				}
+			},
+			{
+				fromVoice: data.mode === "voice",
+				voiceUrl: data.mode === "voice" ? data.voice?.onlineUrl : undefined,
+				voiceLength:
+					data.mode === "voice" && data.voice
+						? Math.ceil((data.voice.duration || 0) / 1000)
+						: undefined
+			}
+		);
+	} catch (err) {
+		console.error("contractGen send error", err);
+		ui.showToast({ message: "生成失败，请稍后重试" });
+	}
+};
+
+// 预览文档
+const handlePreview = (item: any) => {
+	log.debug("预览文档", item.documentContent);
+	ui.showToast({ message: "预览功能开发中..." });
+};
+
+// 复制文档
+const handleCopy = (item: any) => {
+	if (!item.documentContent) {
+		ui.showToast({ message: "暂无可复制的内容" });
+		return;
+	}
+	uni.setClipboardData({
+		data: item.documentContent,
+		success: () => {
+			ui.showToast({ message: "已复制到剪贴板" });
+		},
+		fail: () => {
+			ui.showToast({ message: "复制失败" });
+		}
+	});
+};
+
+// 导出文档
+const handleExport = (item: any) => {
+	log.debug("导出文档", item.documentContent);
+	ui.showToast({ message: "文档导出功能开发中..." });
+};
+</script>
+
+<template>
+	<app-page title="合同生成" back-top :use-history-layout="false" :chat-list-btn="false">
+		<template #content>
+			<chat-layout
+				ref="chatLayoutRef"
+				:loading="isGenerating"
+				:status-text="streamStatus || ''"
+				:show-empty="!hasValidLaunch"
+				empty-text="暂未检测到会话启动参数，请从首页发起新的生成。"
+			>
+				<template #messages>
+					<template v-for="(item, index) in messages" :key="index">
+						<!-- 用户消息 -->
+						<user-message
+							v-if="item.role === 'user'"
+							:content="item.content"
+							:from-voice="item.fromVoice"
+							:voice-url="item.voiceUrl"
+							:voice-length="item.voiceLength"
+						/>
+
+						<!-- AI 消息 -->
+						<ai-message v-else :content="item.content">
+							<!-- 生成阶段进度（放在内容上方） -->
+							<template #prepend>
+								<doc-gen-stages
+									v-if="item.stages?.length"
+									:stages="item.stages"
+									:loading="isGenerating && index === messages.length - 1"
+									doc-type="contractGen"
+								/>
+							</template>
+
+							<!-- 文书预览占位盒子（放在内容下方） -->
+							<template #append>
+								<doc-preview-box
+									v-if="item.hasDocument"
+									:document-content="item.documentContent"
+									doc-type="contractGen"
+									@preview="handlePreview(item)"
+									@copy="handleCopy(item)"
+									@export="handleExport(item)"
+								/>
+							</template>
+						</ai-message>
+					</template>
+				</template>
+
+				<template #input>
+					<chat-input
+						v-model:model-value="inputValue"
+						v-model:input-mode="chatInputStore.inputMode.value"
+						:tools="chatInputStore.tools.value"
+						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
+						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
+						:show-default-network="chatInputStore.showDefaultNetwork.value"
+						:show-intent-chips="false"
+						@send="handleSend"
+						@tool-change="handleToolsChange"
+						@input-mode-change="handleInputModeChange"
+					/>
+				</template>
+			</chat-layout>
+		</template>
+	</app-page>
+</template>
