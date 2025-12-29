@@ -18,7 +18,6 @@ const props = defineProps({
 		// 按钮背景颜色
 		type: String,
 		default: "#fff"
-		// default: "linear-gradient(165deg, #2B5BDB 0%, #00C9FF 100%)"
 	},
 	iconColor: {
 		// 按钮图标
@@ -202,6 +201,18 @@ const handleMenuClick = (item: { text: string }) => {
 	toggleMenu();
 	emits("menuClick", item);
 };
+
+// 判断是否显示 badge
+const handleShowBadge = (item: BtnListItem) => {
+	if (item.badge === false) {
+		return false;
+	}
+	const val = item.badgeVal;
+	if (val === undefined || val === null || val === "" || val === 0) {
+		return false;
+	}
+	return true;
+};
 </script>
 <template>
 	<view>
@@ -251,12 +262,12 @@ const handleMenuClick = (item: { text: string }) => {
 									>{{ item.text }}</text
 								>
 								<cl-badge
-									v-if="item.badge"
+									v-if="handleShowBadge(item)"
 									type="error"
 									:value="item.badgeVal"
 									position
 									:pt="{
-										className: '!top-[4rpx] !right-[4rpx] text-2xl p-4'
+										className: '!top-[2px] !right-[16px] p-2'
 									}"
 								>
 								</cl-badge>
@@ -274,7 +285,10 @@ const handleMenuClick = (item: { text: string }) => {
 							height: floatingButtonHeight
 						}"
 					>
-						<cl-icon :name="isMenuOpen ? 'close-line' : 'add-line'"></cl-icon>
+						<cl-icon
+							:name="isMenuOpen ? 'close-line' : 'add-line'"
+							:size="48"
+						></cl-icon>
 					</view>
 				</view>
 			</movable-view>
@@ -359,6 +373,7 @@ const handleMenuClick = (item: { text: string }) => {
 	opacity: 0;
 	transform: scale(0);
 	transform-origin: bottom right;
+	overflow: visible;
 }
 
 .menu-open .menu-item {
@@ -366,6 +381,7 @@ const handleMenuClick = (item: { text: string }) => {
 }
 
 .menu-item-inner {
+	position: relative;
 	margin-top: 2px;
 	width: 96rpx;
 	height: 96rpx;
@@ -378,7 +394,7 @@ const handleMenuClick = (item: { text: string }) => {
 	transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
 	backdrop-filter: blur(12px);
 	border: 1px solid rgba(255, 255, 255, 0.2);
-	overflow: hidden;
+	overflow: visible;
 }
 
 .menu-item-inner:active {

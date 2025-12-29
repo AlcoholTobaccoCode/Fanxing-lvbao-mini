@@ -17,7 +17,6 @@ const emits = defineEmits(["use-login"]);
 const floatMenuY = computed(() => {
 	const windowInfo = uni.getWindowInfo();
 	return windowInfo.windowHeight - 200;
-	// 160
 });
 
 // 首页菜单项
@@ -42,8 +41,10 @@ const unReadCountText = computed(() => {
 
 // 是否显示未读角标
 const showUnReadBadge = computed(() => imUnReadCount.value > 0);
-//#endregion// 基础菜单项（不包含首页）
-const baseMenuItems: BtnListItem[] = [
+//#endregion
+
+// 基础菜单项（不包含首页）
+const baseMenuItems = computed<BtnListItem[]>(() => [
 	{
 		icon: "phone-line",
 		text: "AI通话",
@@ -84,6 +85,8 @@ const baseMenuItems: BtnListItem[] = [
 		icon: "user-2-line",
 		text: "律师",
 		menuBgColor: "#2e3e5b",
+		badge: showUnReadBadge.value,
+		badgeVal: unReadCountText.value,
 		cb: () => {
 			if (user.token) {
 				router.to("/ease-im/index");
@@ -100,11 +103,11 @@ const baseMenuItems: BtnListItem[] = [
 			router.to("/pages/user/settings/index");
 		}
 	}
-];
+]);
 
 // 动态菜单项：非首页时添加"首页"选项
 const customMenuItems = computed<BtnListItem[]>(() => {
-	const items = [...baseMenuItems];
+	const items = [...baseMenuItems.value];
 	if (isDev) {
 		items.push({
 			text: "Icon",
