@@ -17,17 +17,7 @@ const handleContractTypeClick = (type: string) => {
 	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
-			<view class="flex flex-row items-center gap-2">
-				<view class="icon-wrapper bg-surface-200">
-					<cl-icon name="file-search-line" size="24px" color="info" />
-				</view>
-				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
-					合同审查
-				</cl-text>
-				<view class="coming-soon-badge bg-surface-200">
-					<text class="badge-text text-surface-500">即将上线</text>
-				</view>
-			</view>
+			<view class="placeholder-box h-[40px]"></view>
 			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
 				智能审查合同条款，识别风险点，提供专业修改建议，让签约更安心。
 			</cl-text>
@@ -80,10 +70,6 @@ const handleContractTypeClick = (type: string) => {
 </template>
 
 <style lang="scss" scoped>
-.icon-wrapper {
-	@apply w-10 h-10 rounded-xl flex items-center justify-center;
-}
-
 .coming-soon-badge {
 	@apply px-2 py-0.5 rounded-full;
 }

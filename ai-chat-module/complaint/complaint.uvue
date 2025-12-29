@@ -21,18 +21,14 @@ const handleTemplateClick = (template: string) => {
 	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
-			<view class="flex flex-row items-center gap-2">
-				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
-					起诉状生成
-				</cl-text>
-			</view>
+			<view class="placeholder-box h-[40px]"></view>
 			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
 				智能生成规范法律文书，根据案情自动引用法条，让诉讼准备更高效。
 			</cl-text>
 		</view>
 
 		<!-- 生成步骤 -->
-		<view class="mt-4">
+		<!-- <view class="mt-4">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">生成流程</cl-text>
 			<view class="steps-container bg-error-50">
 				<view v-for="(step, i) in COMPLAINT_STEPS" :key="i" class="step-item">
@@ -48,10 +44,10 @@ const handleTemplateClick = (template: string) => {
 					</view>
 				</view>
 			</view>
-		</view>
+		</view> -->
 
 		<!-- 案件类型 -->
-		<view class="mt-4">
+		<!-- <view class="mt-4">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">选择类型</cl-text>
 			<view class="category-list">
 				<view
@@ -69,6 +65,26 @@ const handleTemplateClick = (template: string) => {
 						<text class="category-desc text-surface-400">{{ item.desc }}</text>
 					</view>
 					<cl-icon name="arrow-right-s-line" size="18px" color="info" />
+				</view>
+			</view>
+		</view> -->
+		<view class="mt-4">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">选择类型</cl-text>
+			<view class="type-list">
+				<view
+					v-for="(item, i) in COMPLAINT_CATEGORIES"
+					:key="i"
+					class="type-card bg-surface-50 border-surface-200"
+					hover-class="hover-darker"
+					@click="handleCategoryClick(item)"
+				>
+					<view class="type-icon-wrap">
+						<cl-icon :name="item.icon" size="22px" color="error" />
+					</view>
+					<view class="type-info">
+						<text class="type-title text-surface-700">{{ item.label }}</text>
+						<text class="type-desc text-surface-400">{{ item.desc }}</text>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -157,5 +173,32 @@ const handleTemplateClick = (template: string) => {
 
 .template-text {
 	@apply text-sm;
+}
+
+// 新类型样式
+.type-list {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 10px;
+}
+.type-card {
+	@apply flex flex-col items-center p-3 rounded-xl;
+	border-width: 1px;
+}
+
+.type-icon-wrap {
+	@apply w-10 h-10 rounded-full flex items-center justify-center mb-2;
+}
+
+.type-info {
+	@apply text-center;
+}
+
+.type-title {
+	@apply text-sm font-medium block;
+}
+
+.type-desc {
+	@apply text-xs block mt-1 whitespace-nowrap;
 }
 </style>

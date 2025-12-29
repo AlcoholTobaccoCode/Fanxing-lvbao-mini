@@ -21,11 +21,7 @@ const handleScenarioClick = (scenario: string) => {
 	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
-			<view class="flex flex-row items-center gap-2">
-				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
-					答辩状生成
-				</cl-text>
-			</view>
+			<view class="placeholder-box h-[40px]"></view>
 			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
 				收到起诉状后，AI 帮你分析案情、梳理抗辩要点，生成专业答辩状。
 			</cl-text>

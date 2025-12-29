@@ -24,11 +24,7 @@ const handleTemplateClick = (template: string) => {
 	<view class="flex flex-col gap-4 px-6">
 		<!-- 标题区域 -->
 		<view class="mt-2">
-			<view class="flex flex-row items-center gap-2">
-				<cl-text size="24px" :pt="{ className: 'font-bold text-surface-800' }">
-					合同生成
-				</cl-text>
-			</view>
+			<view class="placeholder-box h-[40px]"></view>
 			<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
 				描述你的需求，AI 智能生成规范合同，可自定义条款，一键导出 Word。
 			</cl-text>

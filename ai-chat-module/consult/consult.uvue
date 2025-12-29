@@ -91,7 +91,7 @@ const handleRefresh = () => {
 
 .title-line {
 	@apply text-surface-800;
-	font-size: 28px;
+	font-size: 24px;
 	font-weight: 700;
 	line-height: 1.3;
 }
