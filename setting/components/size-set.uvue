@@ -65,15 +65,15 @@ const list = [
 	{
 		label: "1.6",
 		value: 1.6
-	},
-	{
-		label: "1.7",
-		value: 1.7
-	},
-	{
-		label: "1.8",
-		value: 1.8
 	}
+	// {
+	// 	label: "1.7",
+	// 	value: 1.7
+	// },
+	// {
+	// 	label: "1.8",
+	// 	value: 1.8
+	// }
 ] as ClSelectOption[];
 
 // 当前语言

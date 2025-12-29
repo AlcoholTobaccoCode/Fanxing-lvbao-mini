@@ -6,7 +6,7 @@
 					<cl-switch :model-value="isDark" @change="onThemeChange"></cl-switch>
 				</cl-list-item> -->
 
-				<cl-list-item :label="t('多语言')" arrow hoverable @tap="setLocale"> </cl-list-item>
+				<!-- <cl-list-item :label="t('多语言')" arrow hoverable @tap="setLocale"> </cl-list-item> -->
 
 				<cl-list-item :label="t('字体大小')" arrow hoverable @tap="setSize"> </cl-list-item>
 			</cl-list>

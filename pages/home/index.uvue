@@ -8,6 +8,7 @@ import { chatFlowStore, chatInputStore, moduleSwitchStore } from "@/cool/store";
 import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
 import type { LawModelType } from "@/cool/store/chatInput-store/lawSession";
 import type { CaseModelType } from "@/cool/store/chatInput-store/caseSession";
+import { isDev, config } from "@/config";
 
 import type { SendData, Tools } from "@/cool/types/chat-input";
 
@@ -58,6 +59,8 @@ const handleModuleChange = (moduleKey: ChatModuleKey) => {
 	log.info("切换模块 => ", moduleKey);
 	// 清空输入框
 	inputValue.value = "";
+
+	showTestPageBtn.value = 0;
 };
 
 // 发送当前对话输入：发起咨询模块并跳转到咨询对话页
@@ -153,7 +156,7 @@ const toTestPage = () => {
 </script>
 
 <template>
-	<app-page title="律先峰" :back-top="false" open-icon-picker @new-chat="handleOpenNewChat">
+	<app-page :title="config.name" :back-top="false" open-icon-picker @new-chat="handleOpenNewChat">
 		<template #content>
 			<view class="h-full flex flex-col">
 				<simple-card class="flex-1 !p-0 !rounded-none">
@@ -194,7 +197,10 @@ const toTestPage = () => {
 						</scroll-view>
 					</view>
 					<view v-if="showTestPageBtn >= 10" class="p-4">
-						<cl-button @click="toTestPage">前往测试页面</cl-button>
+						<cl-button @click="toTestPage">
+							<cl-text>前往测试页面</cl-text>
+							<cl-text>当前模式: {{ isDev ? "开发" : "生产" }}</cl-text>
+						</cl-button>
 					</view>
 					<chat-input
 						v-model:model-value="inputValue"

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, useSlots } from "vue";
 import { router } from "@/cool";
+import { config } from "@/config";
 
 // #ifdef MP-WEIXIN
 defineOptions({
@@ -35,7 +36,7 @@ const emit = defineEmits<{
 const showMenu = ref(false);
 const isVoicePlay = ref<boolean>(props.initialVoicePlay ?? false);
 
-const title = computed(() => props.title ?? "律先峰");
+const title = computed(() => props.title ?? config.name);
 const voiceName = computed(() => props.voiceName ?? "七七");
 
 // 右侧需要为小程序胶囊预留的 padding（px）
@@ -212,6 +213,6 @@ const handleClickRecord = () => {
 }
 
 .chat-tips {
-	@apply flex items-center justify-center mt-2;
+	@apply flex items-center justify-center;
 }
 </style>
