@@ -49,9 +49,8 @@ const scrollToCenter = (value: string) => {
 
 	nextTick(() => {
 		// 计算滚动位置，使选中项居中
-		// 每个未选中项约 80rpx，选中项约 70% 宽度
-		const itemWidth = 80; // rpx
-		const targetScroll = index * itemWidth - 100; // 向左偏移让选中项居中
+		const itemWidth = 114; // rpx
+		const targetScroll = index * itemWidth - 160; // 向左偏移让选中项居中
 		scrollLeft.value = Math.max(0, targetScroll);
 	});
 };
@@ -117,27 +116,26 @@ watch(
 	display: inline-flex;
 	align-items: center;
 	height: 100%;
-	padding: 0 4%;
 }
 
 .scroll-container {
-	width: 100%;
+	width: 90%;
 	height: 100%;
-	white-space: nowrap;
 	display: flex;
 	align-items: center;
 	flex-direction: row;
-	gap: 12px;
 }
 
 .module-item {
+	box-sizing: border-box;
 	flex-shrink: 0;
 	padding: 6px 12px;
-	margin: 0 4px;
-	border-radius: 16px;
+	margin-top: 20px;
+	margin-left: 10px;
+	margin-right: 10px;
+	border-radius: 14px;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 	opacity: 0.5;
-	margin-top: 20px;
 
 	&--active {
 		opacity: 1;
@@ -147,8 +145,9 @@ watch(
 			rgba(0, 201, 255, 0.15) 100%
 		);
 		transform: scale(1.4);
-		margin: 0 12px;
-		margin-top: 20px;
+		width: 140px;
+		text-align: center;
+		margin-left: 34px;
 	}
 
 	&--disabled {
