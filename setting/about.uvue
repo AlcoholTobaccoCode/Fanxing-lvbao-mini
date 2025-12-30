@@ -18,8 +18,13 @@ function toWebSite() {
 	<cl-page>
 		<view class="p-3">
 			<view class="flex flex-col items-center justify-center py-10">
-				<view class="p-3 bg-primary-500 rounded-xl">
-					<cl-image :src="config.logo" :height="80" :width="80"></cl-image>
+				<view class="p-3 rounded-xl">
+					<cl-image
+						:src="config.logo"
+						:height="300"
+						:width="300"
+						mode="aspectFit"
+					></cl-image>
 				</view>
 				<cl-text :pt="{ className: 'mt-3 mb-1' }">{{ config.name }}</cl-text>
 				<cl-text

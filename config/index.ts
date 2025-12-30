@@ -45,7 +45,7 @@ export const config = {
 	version: "1.0.0",
 	locale: "zh",
 	website: "https://lvbao.fanxingzhihui.com",
-	logo: "https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/logo-%E5%8E%9F%E5%9B%BE.png",
+	logo: "https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/logo.png",
 	showDarkButton: isMp() ? false : true,
 	isCustomTabBar: true,
 	backTop: true,
