@@ -1,24 +1,29 @@
 <template>
 	<view class="zero-markdown-view">
-		<mp-html :key="mpkey" :selectable="selectable" :scroll-table='scrollTable' :tag-style="tagStyle"
-			:markdown="true" :content="contentAi">
+		<mp-html
+			:key="mpkey"
+			:selectable="selectable"
+			:scroll-table="scrollTable"
+			:tag-style="tagStyle"
+			:markdown="true"
+			:content="contentAi"
+		>
 		</mp-html>
 	</view>
 </template>
 
 <script>
-import mpHtml from '../mp-html/mp-html';
-
+import mpHtml from "../mp-html/mp-html";
 
 export default {
-	name: 'zero-markdown-view',
+	name: "zero-markdown-view",
 	components: {
 		mpHtml
 	},
 	props: {
 		markdown: {
 			type: String,
-			default: ''
+			default: ""
 		},
 		selectable: {
 			type: [Boolean, String],
@@ -30,11 +35,11 @@ export default {
 		},
 		themeColor: {
 			type: String,
-			default: '#007AFF'
+			default: "#007AFF"
 		},
 		codeBgColor: {
 			type: String,
-			default: '#2d2d2d'
+			default: "#2d2d2d"
 		},
 		aiMode: {
 			type: Boolean,
@@ -43,32 +48,32 @@ export default {
 	},
 	data() {
 		return {
-			content: '',
-			tagStyle: '',
-			mpkey: 'zero'
+			content: "",
+			tagStyle: "",
+			mpkey: "zero"
 		};
 	},
 	computed: {
 		contentAi() {
 			if (!this.content) {
-				return //处理特殊情况，比如网络异常导致的响应的 content 的值为空
+				return; //处理特殊情况，比如网络异常导致的响应的 content 的值为空
 			}
-			let htmlString = ''
+			let htmlString = "";
 			// 检查是否有未闭合的代码块
-			const codeBlocks = this.content.match(/```[\s\S]*?```|```[\s\S]*?$/g) || []
-			const lastBlock = codeBlocks[codeBlocks.length - 1]
-			if (lastBlock && !lastBlock.endsWith('```')) {
+			const codeBlocks = this.content.match(/```[\s\S]*?```|```[\s\S]*?$/g) || [];
+			const lastBlock = codeBlocks[codeBlocks.length - 1];
+			if (lastBlock && !lastBlock.endsWith("```")) {
 				// 最后一个代码块未闭合,需要补上结束标识符
-				htmlString = this.content + '\n'
+				htmlString = this.content + "\n";
 			} else {
-				htmlString = this.content
+				htmlString = this.content;
 			}
-			return htmlString
-		},
+			return htmlString;
+		}
 	},
 	watch: {
 		markdown: function (val) {
-			this.content = this.markdown
+			this.content = this.markdown;
 		}
 	},
 	created() {
@@ -79,14 +84,13 @@ export default {
 		}
 	},
 	mounted() {
-		this.content = this.markdown
+		this.content = this.markdown;
 	},
 
 	methods: {
-
 		initTagStyle() {
-			const themeColor = this.themeColor
-			const codeBgColor = this.codeBgColor
+			const themeColor = this.themeColor;
+			const codeBgColor = this.codeBgColor;
 			let zeroStyle = {
 				p: `
 				margin:5px 5px;
@@ -133,7 +137,7 @@ export default {
 				border-left: 4px solid #dddddd;
 				padding: 0 10px;
 				 `,
-				// 列表 
+				// 列表
 				ul: `
 				margin: 10px 0;
 				color: #555;
@@ -187,13 +191,13 @@ export default {
 				background: ${codeBgColor};
 				font-size:12px;
 				position: relative;
-				`,
-			}
-			this.tagStyle = zeroStyle
+				`
+			};
+			this.tagStyle = zeroStyle;
 		},
 		initTagStyleForAi() {
-			const themeColor = this.themeColor
-			const codeBgColor = this.codeBgColor
+			const themeColor = this.themeColor;
+			const codeBgColor = this.codeBgColor;
 			let zeroStyle = {
 				p: `
 				font-size: 16px;
@@ -242,7 +246,7 @@ export default {
 				border-left: 4px solid #dddddd;
 				padding: 0 10px;
 				 `,
-				// 列表 
+				// 列表
 				ul: `
 				margin: 10px 0;
 				color: #555;
@@ -296,10 +300,10 @@ export default {
 				background: ${codeBgColor};
 				font-size:12px;
 				position: relative;
-				`,
-			}
-			this.tagStyle = zeroStyle
-		},
+				`
+			};
+			this.tagStyle = zeroStyle;
+		}
 	}
 };
 </script>

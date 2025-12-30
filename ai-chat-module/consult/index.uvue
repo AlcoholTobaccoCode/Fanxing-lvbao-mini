@@ -201,6 +201,17 @@ const handleSend = async (data: SendData) => {
 		ui.showToast({ message: "咨询失败，请稍后重试" });
 	}
 };
+
+//#region 法条/案例/引用 交互事件
+const handleRefTap = (e) => {
+	console.info("handleRefTap ===> ", e);
+	if (e.type === "case") {
+		// 跳转案例详情
+	} else if (e.type === "lawItem") {
+		// 跳转法条详情
+	}
+};
+//#endregion
 </script>
 
 <template>
@@ -233,6 +244,7 @@ const handleSend = async (data: SendData) => {
 							:deep-think-end-time="item.deepThinkEndTime"
 							:deep-think-expanded="isDeepThinkExpanded(index)"
 							@toggle-deep-think="toggleDeepThink(index)"
+							@ref-tap="handleRefTap"
 						>
 							<!-- 推荐律师展示 -->
 							<lawyer-list

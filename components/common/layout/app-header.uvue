@@ -135,7 +135,7 @@ const handleClickLeft = () => {
 				</view>
 
 				<view class="chat-tips" v-if="titlePlaceholder.length">
-					<cl-text size="10px" color="info">{{ titlePlaceholder }}</cl-text>
+					<cl-text :size="14" color="info">{{ titlePlaceholder }}</cl-text>
 				</view>
 			</view>
 

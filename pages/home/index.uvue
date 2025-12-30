@@ -149,8 +149,8 @@ const handleOpenNewChat = () => {
 //#region 测试入口
 const showTestPageBtn = ref(0);
 const toTestPage = () => {
-	// router.to("/test-pages/setting/index");
-	router.to("/test-pages/index");
+	router.to("/test-pages/setting/index");
+	// router.to("/test-pages/index");
 };
 //#endregion
 </script>
