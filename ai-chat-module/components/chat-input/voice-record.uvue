@@ -44,6 +44,24 @@ const isShowModal = defineModel("isShow", {
  */
 const status = ref<"recording" | "cancel" | "translate">("recording");
 
+/** 起始触摸 Y 坐标 */
+const startTouchY = ref(0);
+/** 当前触摸 Y 坐标 */
+const currentTouchY = ref(0);
+/** 上划取消阈值（px） */
+const CANCEL_THRESHOLD = 80;
+
+/** 是否处于取消区域 */
+const isInCancelArea = computed(() => {
+	return startTouchY.value - currentTouchY.value > CANCEL_THRESHOLD;
+});
+
+/** 底部提示文字 */
+const bottomTipText = computed(() => {
+	if (status.value === "cancel") return "松开取消";
+	return "松开发送";
+});
+
 const tipText = computed(() => {
 	if (status.value === "cancel") return "松开 手指，取消发送";
 	if (status.value === "translate") return "松开 手指，转为文字";
@@ -53,7 +71,7 @@ const tipText = computed(() => {
 const subText = computed(() => {
 	if (status.value === "cancel") return "松开即可取消";
 	if (status.value === "translate") return "松开即可转为文字";
-	return "上滑 取消 / 转文字";
+	return "上滑取消";
 });
 
 //#region 声波动画相关
@@ -229,7 +247,7 @@ watch(
 );
 //#endregion
 
-const startFromPress = async () => {
+const startFromPress = async (e?: TouchEvent) => {
 	status.value = "recording";
 	await ensureRecordPermission();
 	if (!hasRecordPermission.value) {
@@ -237,6 +255,12 @@ const startFromPress = async () => {
 		return ui.showToast({
 			message: "请设置中打开录音权限"
 		});
+	}
+
+	// 记录起始触摸位置
+	if (e && e.touches && e.touches[0]) {
+		startTouchY.value = e.touches[0].clientY;
+		currentTouchY.value = e.touches[0].clientY;
 	}
 
 	isShowModal.value = true;
@@ -252,11 +276,39 @@ const cancelFromPress = () => {
 	isShowModal.value = false;
 };
 
+/** 更新触摸位置（供外部调用） */
+const updateTouchPosition = (e: TouchEvent) => {
+	if (!isShowModal.value) return;
+
+	const touch = e.touches[0];
+	if (touch) {
+		currentTouchY.value = touch.clientY;
+
+		// 根据滑动距离更新状态
+		if (isInCancelArea.value) {
+			status.value = "cancel";
+		} else {
+			status.value = "recording";
+		}
+	}
+};
+
+/** 结束录音（根据当前状态自动决定发送或取消） */
+const finishRecording = () => {
+	if (status.value === "cancel") {
+		cancelFromPress();
+	} else {
+		endFromPress();
+	}
+};
+
 defineExpose({
 	ensureRecordPermission,
 	startFromPress,
 	endFromPress,
-	cancelFromPress
+	cancelFromPress,
+	updateTouchPosition,
+	finishRecording
 });
 </script>
 
@@ -264,9 +316,8 @@ defineExpose({
 	<view v-if="isShowModal" class="voice-record-mask" @contextmenu.prevent @longpress.prevent>
 		<view class="voice-record-center">
 			<!-- 语音气泡 -->
-			<view class="voice-record-bubble">
+			<view class="voice-record-bubble" :class="{ 'is-cancel': status === 'cancel' }">
 				<view class="voice-record-wave">
-					<!-- width: `${waveConfig.width / 4}px`, -->
 					<canvas
 						v-show="waveType === 'WaveView'"
 						type="2d"
@@ -281,26 +332,32 @@ defineExpose({
 			</view>
 
 			<view class="voice-record-tip-wrap">
-				<text class="voice-record-tip-text">{{ tipText }}</text>
+				<text class="voice-record-tip-text" :class="{ 'is-cancel': status === 'cancel' }">
+					{{ tipText }}
+				</text>
 				<text class="voice-record-sub-text">{{ subText }}</text>
 			</view>
 		</view>
 
-		<!-- 底部操作区：取消 / 松开发送 / 转文字 -->
-		<!-- <view class="voice-record-bottom"> 底部 </view> -->
+		<!-- 底部操作区 -->
+		<view class="voice-record-bottom">
+			<view class="voice-record-bottom-inner" :class="{ 'is-cancel': status === 'cancel' }">
+				<text class="voice-record-bottom-text">{{ bottomTipText }}</text>
+			</view>
+		</view>
 	</view>
 </template>
 
 <style scoped lang="scss">
 .voice-record-mask {
-	@apply fixed inset-0 z-[9999] flex flex-col justify-center items-center;
-	background-color: rgba(0, 0, 0, 0.4);
+	@apply fixed inset-0 z-[9999] flex flex-col justify-between items-center;
+	background-color: rgba(0, 0, 0, 0.6);
 }
 
 .voice-record-center {
-	@apply flex flex-col items-center justify-end w-full;
+	@apply flex flex-col items-center justify-center flex-1 w-full;
 	padding-top: 120px;
-	padding-bottom: 120px;
+	padding-bottom: 40px;
 	box-sizing: border-box;
 }
 
@@ -308,6 +365,11 @@ defineExpose({
 	@apply rounded-[24px] px-16 py-2 flex items-center justify-center shadow-lg mx-6 bg-primary-500;
 	min-width: 260px;
 	position: relative;
+	transition: all 0.2s ease;
+
+	&.is-cancel {
+		@apply bg-red-500;
+	}
 }
 
 .voice-record-wave {
@@ -322,6 +384,11 @@ defineExpose({
 .voice-record-tip-text {
 	font-size: 16px;
 	font-weight: 500;
+	transition: color 0.2s ease;
+
+	&.is-cancel {
+		color: #ff6b6b;
+	}
 }
 
 .voice-record-sub-text {
@@ -331,6 +398,21 @@ defineExpose({
 }
 
 .voice-record-bottom {
-	@apply h-[300px] absolute bottom-0 left-0 right-0 pb-16 px-6 flex flex-row items-end justify-between;
+	@apply w-full pb-16 px-6 flex flex-row items-center justify-center;
+}
+
+.voice-record-bottom-inner {
+	@apply px-8 py-4 rounded-full bg-white/20 flex items-center justify-center;
+	transition: all 0.2s ease;
+
+	&.is-cancel {
+		@apply bg-red-500/80;
+	}
+}
+
+.voice-record-bottom-text {
+	font-size: 14px;
+	color: #ffffff;
+	font-weight: 500;
 }
 </style>

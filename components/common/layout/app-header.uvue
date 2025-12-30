@@ -32,7 +32,6 @@ const emit = defineEmits<{
 	(e: "voice-play-change", value: boolean): void;
 	(e: "voice-select"): void;
 	(e: "click-left"): void;
-	(e: "click-record"): void;
 }>();
 
 const showMenu = ref(false);
@@ -93,10 +92,6 @@ const handleClickLeft = () => {
 		router.back();
 	}
 	emit("click-left");
-};
-
-const handleClickRecord = () => {
-	emit("click-record");
 };
 </script>
 

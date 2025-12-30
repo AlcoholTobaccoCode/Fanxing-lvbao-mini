@@ -18,8 +18,8 @@
 					@tap="router.to('/setting/notice')"
 				>
 				</cl-list-item> -->
-				<cl-list-item :label="t('隐私设置')" icon="lock-line" arrow hoverable>
-				</cl-list-item>
+				<!-- <cl-list-item :label="t('隐私设置')" icon="lock-line" arrow hoverable>
+				</cl-list-item> -->
 
 				<cl-list-item
 					:label="$t('关于{name}', { name: config.name })"

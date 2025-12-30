@@ -58,7 +58,6 @@ onLoad(async () => {
 
 // 模块切换处理
 const handleModuleChange = (moduleKey: ChatModuleKey) => {
-	log.info("切换模块 moduleKey => ", moduleKey);
 	// 清空输入框
 	inputValue.value = "";
 
