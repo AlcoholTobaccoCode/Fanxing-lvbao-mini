@@ -14,7 +14,7 @@ import {
 	type CaseDetailResponse
 } from "@/api/references";
 
-// MOCK
+// TODO - MOCK
 import { LawyerList } from "./mockData";
 
 export interface ConsultMessageReferences {
@@ -111,7 +111,10 @@ export class ConsultSessionStore {
 				thinkingTime,
 				references: m.references,
 				haveRecommendLawyer: m.haveRecommendLawyer,
-				recommendedLawyers: m.recommendedLawyers
+				recommendedLawyers: m.recommendedLawyers,
+				// 语音消息
+				voice: m.voiceUrl,
+				voiceLength: m.voiceLength
 			};
 		});
 

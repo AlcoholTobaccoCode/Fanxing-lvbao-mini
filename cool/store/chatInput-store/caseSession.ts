@@ -128,7 +128,9 @@ export class CaseSessionStore {
 			content: m.content,
 			role: m.role,
 			timestamp: dateTimeStr,
-			references: m.references
+			references: m.references,
+			voice: m.voiceUrl,
+			voiceLength: m.voiceLength
 		}));
 
 		return {

@@ -126,9 +126,9 @@ async function restoreConsultSession(sessionId: string, sessionData: any): Promi
 	const consultMessages: ConsultMessage[] = messages.map((msg: any) => ({
 		role: msg.role ?? (msg.sender === "user" ? "user" : "system"),
 		content: msg.content || "",
-		fromVoice: false,
-		voiceUrl: undefined,
-		voiceLength: undefined,
+		fromVoice: !!msg.voice,
+		voiceUrl: msg.voice,
+		voiceLength: msg.voiceLength,
 		deepThink: msg.deepThink,
 		deepThinkStartTime: msg.thinkingTime ? Date.now() - msg.thinkingTime * 1000 : undefined,
 		deepThinkEndTime: msg.thinkingTime ? Date.now() : undefined,
@@ -161,9 +161,9 @@ async function restoreLawSession(sessionId: string, sessionData: any): Promise<v
 	const lawMessages: LawMessage[] = messages.map((msg: any) => ({
 		role: msg.role ?? (msg.sender === "user" ? "user" : "system"),
 		content: msg.content || "",
-		fromVoice: false,
-		voiceUrl: undefined,
-		voiceLength: undefined,
+		fromVoice: !!msg.voice,
+		voiceUrl: msg.voice,
+		voiceLength: msg.voiceLength,
 		// 直接透传 references
 		references: msg.references
 	}));
@@ -189,9 +189,9 @@ async function restoreCaseSession(sessionId: string, sessionData: any): Promise<
 	const caseMessages: CaseMessage[] = messages.map((msg: any) => ({
 		role: msg.role ?? (msg.sender === "user" ? "user" : "system"),
 		content: msg.content || "",
-		fromVoice: false,
-		voiceUrl: undefined,
-		voiceLength: undefined,
+		fromVoice: !!msg.voice,
+		voiceUrl: msg.voice,
+		voiceLength: msg.voiceLength,
 		// 直接透传 references (兼容新旧格式: 数组或对象)
 		references: msg.references
 	}));
@@ -235,9 +235,9 @@ async function restoreDocGenSession(
 		return {
 			role: role as "user" | "system",
 			content,
-			fromVoice: false,
-			voiceUrl: undefined,
-			voiceLength: undefined,
+			fromVoice: !!msg.voice,
+			voiceUrl: msg.voice,
+			voiceLength: msg.voiceLength,
 			stages: msg.stages,
 			hasDocument,
 			documentContent

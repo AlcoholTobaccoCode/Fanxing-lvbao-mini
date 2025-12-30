@@ -52,7 +52,7 @@ const displayLength = computed(() => {
 	if (props.length && props.length > 0) {
 		return `${props.length}"`;
 	}
-	return "语音";
+	return "语音消息";
 });
 
 const bubbleWidth = computed(() => {

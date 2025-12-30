@@ -184,7 +184,9 @@ export class DocGenSessionStore {
 			id: generateUUID(),
 			content: m.content,
 			role: m.role,
-			timestamp: dateTimeStr
+			timestamp: dateTimeStr,
+			voice: m.voiceUrl,
+			voiceLength: m.voiceLength
 		}));
 
 		return {
