@@ -4,7 +4,6 @@ import { router, unReadCount as imUnReadCount, useStore } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { loginModalVisible } from "@/cool/store/login-modal";
 import { chatInputStore } from "@/cool/store";
-import onPageBack from "mp-weixin-back-helper";
 
 import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
@@ -101,19 +100,6 @@ const handleHeaderClickLeft = () => {
 };
 
 //#endregion
-
-// // 带配置的监听
-// onPageBack(
-// 	() => {
-// 		console.log("返回事件被触发返回事件被触发返回事件被触发返回事件被触发");
-// 		// 自定义处理逻辑
-// 	},
-// 	{
-// 		initialValue: true, // 立即生效，默认值为`true`
-// 		preventDefault: true, // 阻止默认返回行为
-// 		frequency: 999
-// 	}
-// );
 </script>
 
 <template>

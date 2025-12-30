@@ -81,6 +81,7 @@ async function toLogin() {
 							[isDark, '!bg-surface-70', '!bg-transparent']
 						])
 					}"
+					placeholderClass="!text-ms"
 				></cl-input>
 			</view>
 		</view>
@@ -103,6 +104,7 @@ async function toLogin() {
 							[isDark, '!bg-surface-70', '!bg-transparent']
 						])
 					}"
+					placeholderClass="!text-ms"
 				></cl-input>
 			</view>
 		</view>

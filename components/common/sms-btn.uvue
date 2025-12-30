@@ -1,6 +1,6 @@
 <template>
 	<slot :disabled="isDisabled" :countdown="countdown" :btnText="btnText">
-		<cl-button text :disabled="isDisabled" :loading="sending" @tap="open">
+		<cl-button text size="small" :disabled="isDisabled" :loading="sending" @tap="open">
 			{{ btnText }}
 		</cl-button>
 	</slot>

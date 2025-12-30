@@ -121,6 +121,7 @@ async function toLogin() {
 							[isDark, '!bg-surface-70', '!bg-transparent']
 						])
 					}"
+					placeholderClass="!text-ms"
 				></cl-input>
 			</view>
 		</view>
@@ -146,9 +147,10 @@ async function toLogin() {
 								[isDark, '!bg-surface-70', '!bg-transparent']
 							])
 						}"
+						placeholderClass="!text-ms"
 					></cl-input>
 				</view>
-				<view class="h-[90rpx] px-4 flex items-center">
+				<view class="h-[90rpx] w-fit px-2 flex items-center">
 					<sms-btn
 						:ref="refs.set('smsBtn')"
 						:phone="form.phone"
@@ -172,6 +174,7 @@ async function toLogin() {
 							[isDark, '!bg-surface-70', '!bg-transparent']
 						])
 					}"
+					placeholderClass="!text-ms"
 				></cl-input>
 			</view>
 		</view>
@@ -197,6 +200,7 @@ async function toLogin() {
 							[isDark, '!bg-surface-70', '!bg-transparent']
 						])
 					}"
+					placeholderClass="!text-ms"
 				></cl-input>
 			</view>
 		</view>
