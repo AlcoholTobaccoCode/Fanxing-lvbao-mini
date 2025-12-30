@@ -180,13 +180,15 @@ const iconVisible = ref(false);
 
 <template>
 	<!-- 浮动菜单 -->
-	<float-popup-menu
-		:y="floatMenuY"
-		:menuItems="customMenuItems"
-		:use-mask="false"
-		@menuClick="onMenuClick"
-	>
-	</float-popup-menu>
+	<view class="overflow-visible">
+		<float-popup-menu
+			:y="floatMenuY"
+			:menuItems="customMenuItems"
+			:use-mask="false"
+			@menuClick="onMenuClick"
+		>
+		</float-popup-menu>
+	</view>
 
 	<cl-popup v-model="iconVisible" title="RemixIcon">
 		<view class="h-[500px]">

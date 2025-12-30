@@ -1,6 +1,7 @@
 <script lang="ts" setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { type BtnListItem } from "./types";
+import { unReadCount as imUnReadCount } from "@/cool";
 
 // 定义 props
 const props = defineProps({
@@ -202,7 +203,8 @@ const handleMenuClick = (item: { text: string }) => {
 	emits("menuClick", item);
 };
 
-// 判断是否显示 badge
+//#region IM 相关
+// 菜单子项 - 判断是否显示 badge
 const handleShowBadge = (item: BtnListItem) => {
 	if (item.badge === false) {
 		return false;
@@ -213,6 +215,19 @@ const handleShowBadge = (item: BtnListItem) => {
 	}
 	return true;
 };
+
+// 全局
+// 格式化未读消息数（99+）
+const unReadCountText = computed(() => {
+	const count = imUnReadCount.value;
+	if (count <= 0) return "";
+	if (count > 99) return "99+";
+	return String(count);
+});
+
+// 是否显示未读角标
+const showUnReadBadge = computed(() => imUnReadCount.value > 0);
+//#endregion
 </script>
 <template>
 	<view>
@@ -289,6 +304,16 @@ const handleShowBadge = (item: BtnListItem) => {
 							:name="isMenuOpen ? 'close-line' : 'add-line'"
 							:size="48"
 						></cl-icon>
+						<cl-badge
+							v-if="!isMenuOpen"
+							type="error"
+							:value="unReadCountText"
+							position
+							:pt="{
+								className: '!top-[2px] !right-[16px] p-2'
+							}"
+						>
+						</cl-badge>
 					</view>
 				</view>
 			</movable-view>
@@ -347,6 +372,7 @@ const handleShowBadge = (item: BtnListItem) => {
 	backdrop-filter: blur(12px);
 	border: 1px solid rgba(0, 0, 0, 0.2);
 	box-shadow: rgba(0, 0, 0, 0.24) 0px 2px 6px;
+	overflow: visible;
 }
 
 .button-active {
