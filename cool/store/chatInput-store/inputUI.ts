@@ -1,5 +1,5 @@
 import { ref, computed } from "vue";
-import type { Tools, ToolItem } from "@/cool/types/chat-input";
+import type { Tools, ToolItem, InputLine } from "@/cool/types/chat-input";
 
 export type InputMode = "text" | "voice";
 
@@ -21,6 +21,12 @@ export class ChatInputStore {
 
 	inputExtend = ref(false);
 
+	inputLineDetail = ref<InputLine>({
+		height: 22,
+		lineCount: 1,
+		lineHeight: 22
+	});
+
 	/** 占位文案 */
 	placeholder = ref("在这里输入你的问题");
 
@@ -35,6 +41,9 @@ export class ChatInputStore {
 	// ==================== 计算属性 ====================
 	/** 是否有输入内容 */
 	hasInput = computed(() => !!this.inputValue.value.trim());
+
+	/** 当前输入框行数 */
+	inputLine = computed(() => this.inputLineDetail.value.lineCount);
 
 	/** 获取已启用的工具列表 */
 	enabledTools = computed(() => this.tools.value.filter((t) => t.enable));
@@ -92,6 +101,7 @@ export class ChatInputStore {
 		showDefaultNetwork?: boolean;
 		isVoiceRecordVisible?: boolean;
 		inputExtend?: boolean;
+		inputLineDetail?: InputLine;
 	}) {
 		if (config.inputValue != null) this.inputValue.value = config.inputValue;
 		if (config.tools) this.tools.value = config.tools;
@@ -106,6 +116,7 @@ export class ChatInputStore {
 		if (config.isVoiceRecordVisible != null)
 			this.isVoiceRecordVisible.value = config.isVoiceRecordVisible;
 		if (config.inputExtend != null) this.inputExtend.value = config.inputExtend;
+		if (config.inputLineDetail) this.inputLineDetail.value = config.inputLineDetail;
 	}
 
 	/** 重置所有状态 */
@@ -119,6 +130,7 @@ export class ChatInputStore {
 		this.showDefaultNetwork.value = true;
 		this.isVoiceRecordVisible.value = false;
 		this.inputExtend.value = false;
+		this.inputLineDetail.value = { height: 22, lineCount: 1, lineHeight: 22 };
 	}
 }
 

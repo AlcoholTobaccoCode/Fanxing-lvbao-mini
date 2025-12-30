@@ -5,7 +5,14 @@ import { isDark } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { uploadToOss } from "@/utils/aliyun/oss";
 import { recognizeOnceFromBuffer } from "@/utils/aliyun/asr";
-import type { ToolItem, Tools, ActionItems, SendData, VoiceResult } from "@/cool/types/chat-input";
+import type {
+	ToolItem,
+	Tools,
+	ActionItems,
+	SendData,
+	VoiceResult,
+	InputLine
+} from "@/cool/types/chat-input";
 import { chatInputStore } from "@/cool/store";
 
 import SimpleCard from "@/components/card/simple-card.uvue";
@@ -212,8 +219,21 @@ const handleRecording = () => {
 
 // 展开输入框
 const inputExtend = ref(false);
+const inputLineInfo = ref<InputLine>({
+	height: 22,
+	lineCount: 1,
+	lineHeight: 22
+});
 const handleInputExtend = () => {
 	inputExtend.value = !inputExtend.value;
+};
+
+// 输入框行数变化
+const handleLineChange = (line: { detail: InputLine }) => {
+	inputLineInfo.value = line.detail;
+	if (inputLineInfo.value.lineCount < 7) {
+		inputExtend.value = false;
+	}
 };
 
 // 发送
@@ -309,6 +329,24 @@ watch(
 		chatInputStore.inputExtend.value = val;
 	}
 );
+
+watch(
+	() => inputLineInfo.value,
+	(val) => {
+		chatInputStore.inputLineDetail.value = val;
+	},
+	{
+		deep: true,
+		immediate: true
+	}
+);
+
+watch(
+	() => isShowVoiceRecord.value,
+	(val) => {
+		chatInputStore.isVoiceRecordVisible.value = val;
+	}
+);
 //#endregion
 </script>
 
@@ -356,7 +394,7 @@ watch(
 					:class="(modelValueModal.length ?? 0) > 110 ? 'justify-between' : 'justify-end'"
 				>
 					<view
-						v-if="(modelValueModal.length ?? 0) > 110 && inputModeModal === 'text'"
+						v-if="inputLineInfo.lineCount >= 7 && inputModeModal === 'text'"
 						class="chat-main__icon-btn"
 						@tap.stop="handleInputExtend"
 					>
@@ -382,19 +420,23 @@ watch(
 						v-if="inputModeModal === 'text'"
 						class="chat-main__input-wrap"
 						:style="{
-							maxHeight: inputExtend ? '550px' : '200px',
-							height: inputExtend ? '550px' : 'unset'
+							maxHeight: inputExtend ? '350px' : '200px',
+							height: inputExtend ? '350px' : 'unset'
 						}"
 					>
 						<cl-textarea
 							v-model="modelValueModal"
+							clearable
 							auto-height
 							:border="false"
 							:maxlength="20000"
+							:cursorSpacing="10"
 							:showWordLimit="false"
+							:showConfirmBar="false"
 							:disabled="disabled"
 							:placeholder="placeholder"
 							@confirm="handleConfirm"
+							@linechange="handleLineChange"
 						></cl-textarea>
 					</scroll-view>
 					<view v-else class="chat-main__voice">

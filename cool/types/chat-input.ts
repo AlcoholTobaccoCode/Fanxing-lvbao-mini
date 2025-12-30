@@ -37,3 +37,9 @@ export type SendData = {
 };
 
 export type ActionItems = "camera" | "album" | "file" | "wechat" | "phoneCall";
+
+export type InputLine = {
+	height: number;
+	lineCount: number;
+	lineHeight: number;
+};
