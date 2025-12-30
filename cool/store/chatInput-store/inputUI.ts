@@ -19,6 +19,8 @@ export class ChatInputStore {
 	/** 当前输入模式：文本 / 语音 */
 	inputMode = ref<InputMode>("text");
 
+	inputExtend = ref(false);
+
 	/** 占位文案 */
 	placeholder = ref("在这里输入你的问题");
 
@@ -89,6 +91,7 @@ export class ChatInputStore {
 		showDefaultKnowledge?: boolean;
 		showDefaultNetwork?: boolean;
 		isVoiceRecordVisible?: boolean;
+		inputExtend?: boolean;
 	}) {
 		if (config.inputValue != null) this.inputValue.value = config.inputValue;
 		if (config.tools) this.tools.value = config.tools;
@@ -102,6 +105,7 @@ export class ChatInputStore {
 			this.showDefaultNetwork.value = config.showDefaultNetwork;
 		if (config.isVoiceRecordVisible != null)
 			this.isVoiceRecordVisible.value = config.isVoiceRecordVisible;
+		if (config.inputExtend != null) this.inputExtend.value = config.inputExtend;
 	}
 
 	/** 重置所有状态 */
@@ -114,6 +118,7 @@ export class ChatInputStore {
 		this.showDefaultKnowledge.value = true;
 		this.showDefaultNetwork.value = true;
 		this.isVoiceRecordVisible.value = false;
+		this.inputExtend.value = false;
 	}
 }
 

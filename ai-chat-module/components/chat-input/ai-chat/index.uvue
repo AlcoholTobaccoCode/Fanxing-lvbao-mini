@@ -356,7 +356,7 @@ watch(
 					:class="(modelValueModal.length ?? 0) > 110 ? 'justify-between' : 'justify-end'"
 				>
 					<view
-						v-if="(modelValueModal.length ?? 0) > 110"
+						v-if="(modelValueModal.length ?? 0) > 110 && inputModeModal === 'text'"
 						class="chat-main__icon-btn"
 						@tap.stop="handleInputExtend"
 					>
