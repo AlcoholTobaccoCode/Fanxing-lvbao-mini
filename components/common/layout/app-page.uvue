@@ -3,12 +3,11 @@ import { computed, ref, useSlots } from "vue";
 import { router, unReadCount as imUnReadCount, useStore } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { loginModalVisible } from "@/cool/store/login-modal";
-import { type BtnListItem } from "@/components/float-Menu/types";
-import { requestMultiplePermissions, PermissionScope } from "@/utils/permission";
+import { chatInputStore } from "@/cool/store";
+import onPageBack from "mp-weixin-back-helper";
 
 import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
-import DragButton from "@/components/dragon-dragButton/index.vue";
 import LoginContent from "@/components/login/login-content.uvue";
 import FloatMenu from "@/components/float-Menu/menu.uvue";
 
@@ -57,6 +56,18 @@ const hasHistorySlot = computed(() => !!slots.history);
 
 //#region 交互区域
 
+const isHideFloatMenu = computed(() => {
+	// 隐藏浮动菜单按钮
+	// 1. 打开历史记录时
+	// 2. 按住说话时
+	// 3. 输入内容 > 110 个长度时
+	return (
+		isHistoryOpen.value ||
+		chatInputStore.isVoiceRecordVisible.value ||
+		(chatInputStore.inputValue.value?.length ?? 0) > 110
+	);
+});
+
 // 打开新对话（来自页面按钮或头部菜单）
 const handleOpenNewChat = () => {
 	emit("new-chat");
@@ -89,12 +100,20 @@ const handleHeaderClickLeft = () => {
 	emit("click-left");
 };
 
-// header 右侧录音按钮点击
-const handleHeaderClickRecord = () => {
-	emit("click-record");
-};
-
 //#endregion
+
+// // 带配置的监听
+// onPageBack(
+// 	() => {
+// 		console.log("返回事件被触发返回事件被触发返回事件被触发返回事件被触发");
+// 		// 自定义处理逻辑
+// 	},
+// 	{
+// 		initialValue: true, // 立即生效，默认值为`true`
+// 		preventDefault: true, // 阻止默认返回行为
+// 		frequency: 999
+// 	}
+// );
 </script>
 
 <template>
@@ -133,7 +152,6 @@ const handleHeaderClickRecord = () => {
 					@voice-play-change="handleHeaderVoiceChange"
 					@voice-select="handleHeaderVoiceSelect"
 					@click-left="handleHeaderClickLeft"
-					@click-record="handleHeaderClickRecord"
 				>
 					<template #left>
 						<slot name="header-left">
@@ -160,8 +178,8 @@ const handleHeaderClickRecord = () => {
 		<!-- 浮动菜单 -->
 		<view
 			:style="{
-				opacity: isHistoryOpen ? 0 : 1,
-				pointerEvents: isHistoryOpen ? 'none' : 'auto',
+				opacity: isHideFloatMenu ? 0 : 1,
+				pointerEvents: isHideFloatMenu ? 'none' : 'auto',
 				transition: 'opacity 0.3s ease'
 			}"
 		>

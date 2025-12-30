@@ -305,7 +305,7 @@ const showUnReadBadge = computed(() => imUnReadCount.value > 0);
 							:size="48"
 						></cl-icon>
 						<cl-badge
-							v-if="!isMenuOpen"
+							v-if="!isMenuOpen && showUnReadBadge"
 							type="error"
 							:value="unReadCountText"
 							position
