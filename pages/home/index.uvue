@@ -10,7 +10,7 @@ import type { LawModelType } from "@/cool/store/chatInput-store/lawSession";
 import type { CaseModelType } from "@/cool/store/chatInput-store/caseSession";
 import { isDev, config } from "@/config";
 
-import type { SendData, Tools } from "@/cool/types/chat-input";
+import type { SendData } from "@/cool/types/chat-input";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/ai-chat-module/components/chat-input/ai-chat/index.uvue";
@@ -65,11 +65,6 @@ const handleModuleChange = (moduleKey: ChatModuleKey) => {
 		showTestPageBtn.value = 0;
 	}
 	lastModule.value = moduleKey;
-};
-
-// 发送当前对话输入：发起咨询模块并跳转到咨询对话页
-const handleToolsChange = (val: Tools) => {
-	chatInputStore.tools.value = val;
 };
 
 const handleInputModeChange = (mode: string) => {
@@ -210,14 +205,12 @@ const toTestPage = () => {
 						v-model:model-value="inputValue"
 						v-model:input-mode="chatInputStore.inputMode.value"
 						:use-module="currentModule"
-						:tools="chatInputStore.tools.value"
 						:show-default-deep-think="currentConfig?.enableDeepThink ?? false"
 						:show-default-knowledge="currentConfig?.enableKnowledge ?? false"
 						:show-default-network="currentConfig?.enableNetwork ?? false"
 						:show-intent-chips="currentModule !== 'law'"
 						:placeholder="currentConfig?.placeholder"
 						@send="handleSend"
-						@tool-change="handleToolsChange"
 						@input-mode-change="handleInputModeChange"
 					>
 						<!-- 法规模块：模型选择器 -->
