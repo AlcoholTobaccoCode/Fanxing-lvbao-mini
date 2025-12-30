@@ -196,7 +196,7 @@ const handleRealtimeRecordingChange = (isRecording: boolean) => {
 				<view class="chat-main__left">
 					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 						<cl-icon
-							:name="inputModeVal === 'text' ? 'mic-line' : 'keyboard-box-line'"
+							:name="inputModeVal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
 							:size="48"
 							color="currentColor"
 						></cl-icon>
@@ -235,10 +235,10 @@ const handleRealtimeRecordingChange = (isRecording: boolean) => {
 
 				<view class="chat-main__right">
 					<!-- 实时语音输入按钮 -->
-					<realtime-voice-input
+					<!-- <realtime-voice-input
 						v-model="modelValue"
 						@recording-change="handleRealtimeRecordingChange"
-					/>
+					/> -->
 
 					<!-- 发送按钮 -->
 					<view class="chat-main__icon-btn">
