@@ -300,10 +300,7 @@ const showUnReadBadge = computed(() => imUnReadCount.value > 0);
 							height: floatingButtonHeight
 						}"
 					>
-						<cl-icon
-							:name="isMenuOpen ? 'close-line' : 'add-line'"
-							:size="48"
-						></cl-icon>
+						<cl-icon name="fxzh-caidan2" :size="40"></cl-icon>
 						<cl-badge
 							v-if="!isMenuOpen && showUnReadBadge"
 							type="error"

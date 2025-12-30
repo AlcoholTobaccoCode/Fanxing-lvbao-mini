@@ -130,7 +130,7 @@ watch(
 	box-sizing: border-box;
 	flex-shrink: 0;
 	padding: 6px 12px;
-	margin-top: 20px;
+	margin-top: 10px;
 	margin-left: 10px;
 	margin-right: 10px;
 	border-radius: 14px;

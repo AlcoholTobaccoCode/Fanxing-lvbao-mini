@@ -1,4 +1,10 @@
 export const fxzxiconfont = {
+	"fxzh-caidan": "e648",
+	"fxzh-caidan1": "e668",
+	"fxzh-fudongcaidan": "e66f",
+	"fxzh-caidan2": "e606",
+	"fxzh-caidan3": "e608",
+	"fxzh-caidan4": "e60e",
 	"fxzh-falvfagui": "e60b",
 	"fxzh-suyaniconchanpinleibufenzuodaohangbufen85-copy": "e740",
 	"fxzh-wangluo": "e617",
