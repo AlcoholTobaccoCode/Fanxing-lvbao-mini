@@ -132,8 +132,6 @@ async function restoreConsultSession(sessionId: string, sessionData: any): Promi
 		deepThink: msg.deepThink,
 		deepThinkStartTime: msg.thinkingTime ? Date.now() - msg.thinkingTime * 1000 : undefined,
 		deepThinkEndTime: msg.thinkingTime ? Date.now() : undefined,
-		haveRecommendLawyer: msg.haveRecommendLawyer,
-		recommendedLawyerIds: msg.recommendedLawyerIds || [],
 		recommendedLawyers: msg.recommendedLawyers || [],
 		references: msg.references || {
 			searchList: [],

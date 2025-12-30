@@ -123,20 +123,25 @@ const inputMaxHeight = computed(() => {
 
 //#region 语音录制相关
 
-const voiceRecordRef = ref<any>();
+const voiceRecordRef = ref<any>(null);
 const isShowVoiceRecord = ref<any>(false);
 
 // 输入框聚焦状态
 const isFocused = ref(false);
 
 // 按住说话：按下时显示语音浮层并通知开始
-const handlePressStart = () => {
-	isShowVoiceRecord.value = true;
+const handlePressStart = (e: TouchEvent) => {
+	voiceRecordRef.value?.startFromPress(e);
 };
 
-// 松开：关闭浮层并通知结束
+// 移动时更新触摸位置
+const handlePressMove = (e: TouchEvent) => {
+	voiceRecordRef.value?.updateTouchPosition(e);
+};
+
+// 松开：根据状态决定发送或取消
 const handlePressEnd = () => {
-	isShowVoiceRecord.value = false;
+	voiceRecordRef.value?.finishRecording();
 };
 
 const handleVoiceRecordFinish = async (result: VoiceResult) => {
@@ -419,6 +424,7 @@ watch(
 						<view
 							class="chat-main__voice-hit"
 							@touchstart.stop="handlePressStart"
+							@touchmove.stop="handlePressMove"
 							@touchend.stop="handlePressEnd"
 							@touchcancel.stop="handlePressEnd"
 						>

@@ -56,8 +56,6 @@ export interface ConsultMessage {
 	deepThinkEndTime?: number;
 	// 是否包含推荐律师信息
 	haveRecommendLawyer?: boolean;
-	// 推荐律师 ID 列表
-	recommendedLawyerIds?: number[];
 	// 推荐律师详细信息列表
 	recommendedLawyers?: RecommendLawyerItem[];
 	// AI 引用列表（互联网搜索、法条、案例）
@@ -113,7 +111,6 @@ export class ConsultSessionStore {
 				thinkingTime,
 				references: m.references,
 				haveRecommendLawyer: m.haveRecommendLawyer,
-				recommendedLawyerIds: m.recommendedLawyerIds,
 				recommendedLawyers: m.recommendedLawyers
 			};
 		});
@@ -503,19 +500,17 @@ export class ConsultSessionStore {
 			// 开始加载推荐律师
 			this.recommendLoading.value = true;
 
-			const res = await RecommendLawyers({
+			const res = (await RecommendLawyers({
 				session_id: this.sessionId.value,
 				// 默认按评分倒序
 				sort_by: "rating",
 				order: "desc",
 				limit: 5
-			});
-			const resList = (res as any)?.data as RecommendLawyerItem[] | undefined;
-			const list = resList ? [...resList] : [...LawyerList];
+			})) as any;
+			const list = res ? [...(res as RecommendLawyerItem[])] : [...LawyerList];
 
 			if (Array.isArray(list) && list.length) {
 				aiMsg.haveRecommendLawyer = true;
-				aiMsg.recommendedLawyerIds = list.map((i) => i.user_id);
 				aiMsg.recommendedLawyers = list;
 				// 推荐结果挂载后，再保存一份包含推荐律师信息的会话快照
 				await this.saveCurrentSessionSnapshot();

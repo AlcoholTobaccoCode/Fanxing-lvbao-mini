@@ -236,10 +236,14 @@ const handleSend = async (data: SendData) => {
 						>
 							<!-- 推荐律师展示 -->
 							<lawyer-list
-								v-if="item.haveRecommendLawyer"
+								v-if="item.recommendedLawyers && item.recommendedLawyers.length > 0"
 								:lawyers="item.recommendedLawyers || []"
 								:session-id="sessionId"
-								:loading="isRecommendLoading && !item.recommendedLawyers?.length"
+								:loading="
+									isRecommendLoading &&
+									(!item.recommendedLawyers ||
+										item.recommendedLawyers.length === 0)
+								"
 								@lawyer-click="handleLawyerClick"
 								@more-click="handleMoreLawyers"
 							/>
