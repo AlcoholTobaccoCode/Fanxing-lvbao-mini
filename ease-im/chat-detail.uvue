@@ -394,7 +394,14 @@ const handleJumpToLatest = () => {
 </script>
 
 <template>
-	<app-page :title="pageTitle" back-top :chat-list-btn="false" :title-action="false">
+	<app-page
+		:title="pageTitle"
+		back-top
+		:chat-list-btn="false"
+		:title-action="false"
+		:hide-float-menu="true"
+		titlePlaceholder=""
+	>
 		<template #content>
 			<view class="chat-detail-content">
 				<view class="flex-1 overflow-hidden">

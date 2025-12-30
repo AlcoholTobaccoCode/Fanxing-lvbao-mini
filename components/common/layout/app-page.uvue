@@ -19,16 +19,15 @@ const props = withDefaults(
 		backTop?: boolean;
 		// 标题右侧交互按钮
 		titleAction?: boolean;
-		// 是否打开 icon 选择器
-		openIconPicker?: boolean;
-		//
+		// 顶部提示性文本
 		titlePlaceholder?: string;
+		// 是否隐藏浮动菜单
+		hideFloatMenu?: boolean;
 	}>(),
 	{
 		backTop: false,
 		titleAction: true,
-		// TODO - 临时使用
-		openIconPicker: false
+		hideFloatMenu: false
 	}
 );
 
@@ -63,7 +62,8 @@ const isHideFloatMenu = computed(() => {
 	return (
 		isHistoryOpen.value ||
 		chatInputStore.isVoiceRecordVisible.value ||
-		(chatInputStore.inputValue.value?.length ?? 0) > 110
+		(chatInputStore.inputValue.value?.length ?? 0) > 110 ||
+		props.hideFloatMenu
 	);
 });
 
