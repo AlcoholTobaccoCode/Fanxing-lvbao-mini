@@ -9,6 +9,8 @@ import { showLoginModal } from "@/cool/store/login-modal";
 import { chatFlowStore, consultSessionStore, chatInputStore } from "@/cool/store";
 import { CHAT_MODULE_CONFIGS } from "@/cool/store/chatInput-store/moduleConfigs";
 
+import type { LawDetailResponse, CaseDetailResponse } from "@/api/references";
+
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatLayout from "../components/chat-layout/index.uvue";
 import ChatInput from "../components/chat-input/ai-chat/index.uvue";
@@ -16,6 +18,8 @@ import UserMessage from "../components/chat-layout/user-message.uvue";
 import AiMessage from "../components/chat-layout/ai-message.uvue";
 import LawyerList from "../components/lawyer-recommend/lawyer-list.uvue";
 import ReferencesPanel from "../components/references/index.uvue";
+import LawPopup from "./pop/law.uvue";
+import CasePopup from "./pop/case.uvue";
 
 const log = new Logger("ConsultChatPage");
 const ui = useUi();
@@ -203,86 +207,163 @@ const handleSend = async (data: SendData) => {
 };
 
 //#region 法条/案例/引用 交互事件
-const handleRefTap = (e) => {
-	console.info("handleRefTap ===> ", e);
-	if (e.type === "case") {
-		// 跳转案例详情
-	} else if (e.type === "lawItem") {
-		// 跳转法条详情
+const lawPopupVisible = ref(false);
+const casePopupVisible = ref(false);
+const currentLawRef = ref<{
+	lawId: string;
+	lawItemId?: string;
+	preloadData?: LawDetailResponse;
+} | null>(null);
+const currentCaseRef = ref<{
+	caseNo: string;
+	preloadData?: CaseDetailResponse;
+} | null>(null);
+
+const handleRefTap = (
+	e: { type: string; text: string; json: Record<string, any> | null },
+	item: any
+) => {
+	if (!e.json) return;
+
+	if (e.type === "lawItem") {
+		// 尝试从 item.references.lawDetails 查找预加载数据
+		let preloadData: LawDetailResponse | undefined;
+		if (item?.references?.lawDetails?.length) {
+			preloadData = item.references.lawDetails.find(
+				(law: LawDetailResponse) =>
+					law.lawId === e.json!.lawId &&
+					(!e.json!.lawItemId || law.lawItemId === e.json!.lawItemId)
+			);
+		}
+		currentLawRef.value = {
+			lawId: e?.json?.lawId,
+			lawItemId: e?.json?.lawItemId,
+			preloadData
+		};
+		lawPopupVisible.value = true;
+	} else if (e.type === "case") {
+		// 尝试从 item.references.caseDetails 查找预加载数据
+		let preloadData: CaseDetailResponse | undefined;
+		if (item?.references?.caseDetails?.length) {
+			preloadData = item.references.caseDetails.find(
+				(c: CaseDetailResponse) => c.caseDomain?.caseNo === e.json!.caseNo
+			);
+		}
+		currentCaseRef.value = {
+			caseNo: e?.json?.caseNo,
+			preloadData
+		};
+		casePopupVisible.value = true;
 	}
 };
 //#endregion
 </script>
 
 <template>
-	<app-page title="法律咨询" back-top :use-history-layout="false" :chat-list-btn="false">
-		<template #content>
-			<chat-layout
-				ref="chatLayoutRef"
-				:loading="isGenerating"
-				:status-text="streamStatus || ''"
-				:show-empty="!hasValidLaunch"
-				empty-text="暂未检测到会话启动参数，请从首页发起新的咨询。"
-			>
-				<template #messages>
-					<template v-for="(item, index) in messages" :key="index">
-						<!-- 用户消息 -->
-						<user-message
-							v-if="item.role === 'user'"
-							:content="item.content"
-							:from-voice="item.fromVoice"
-							:voice-url="item.voiceUrl"
-							:voice-length="item.voiceLength"
-						/>
-
-						<!-- AI 消息 -->
-						<ai-message
-							v-else
-							:content="item.content"
-							:deep-think="item.deepThink"
-							:deep-think-start-time="item.deepThinkStartTime"
-							:deep-think-end-time="item.deepThinkEndTime"
-							:deep-think-expanded="isDeepThinkExpanded(index)"
-							@toggle-deep-think="toggleDeepThink(index)"
-							@ref-tap="handleRefTap"
-						>
-							<!-- 推荐律师展示 -->
-							<lawyer-list
-								v-if="item.recommendedLawyers && item.recommendedLawyers.length > 0"
-								:lawyers="item.recommendedLawyers || []"
-								:session-id="sessionId"
-								:loading="
-									isRecommendLoading &&
-									(!item.recommendedLawyers ||
-										item.recommendedLawyers.length === 0)
-								"
-								@lawyer-click="handleLawyerClick"
-								@more-click="handleMoreLawyers"
+	<view class="consult-page-root">
+		<app-page
+			title="法律咨询"
+			back-top
+			:use-history-layout="false"
+			:chat-list-btn="false"
+			:hide-float-menu="true"
+		>
+			<template #content>
+				<chat-layout
+					ref="chatLayoutRef"
+					:loading="isGenerating"
+					:status-text="streamStatus || ''"
+					:show-empty="!hasValidLaunch"
+					empty-text="暂未检测到会话启动参数，请从首页发起新的咨询。"
+				>
+					<template #messages>
+						<template v-for="(item, index) in messages" :key="index">
+							<!-- 用户消息 -->
+							<user-message
+								v-if="item.role === 'user'"
+								:content="item.content"
+								:from-voice="item.fromVoice"
+								:voice-url="item.voiceUrl"
+								:voice-length="item.voiceLength"
 							/>
 
-							<!-- 参考引用展示 -->
-							<references-panel
-								v-if="item.references"
-								:references="item.references"
-							/>
-						</ai-message>
+							<!-- AI 消息 -->
+							<ai-message
+								v-else
+								:content="item.content"
+								:deep-think="item.deepThink"
+								:deep-think-start-time="item.deepThinkStartTime"
+								:deep-think-end-time="item.deepThinkEndTime"
+								:deep-think-expanded="isDeepThinkExpanded(index)"
+								@toggle-deep-think="toggleDeepThink(index)"
+								@ref-tap="handleRefTap($event, item)"
+							>
+								<!-- 推荐律师展示 -->
+								<lawyer-list
+									v-if="
+										item.recommendedLawyers &&
+										item.recommendedLawyers.length > 0
+									"
+									:lawyers="item.recommendedLawyers || []"
+									:session-id="sessionId"
+									:loading="
+										isRecommendLoading &&
+										(!item.recommendedLawyers ||
+											item.recommendedLawyers.length === 0)
+									"
+									@lawyer-click="handleLawyerClick"
+									@more-click="handleMoreLawyers"
+								/>
+
+								<!-- 参考引用展示 -->
+								<references-panel
+									v-if="item.references"
+									:references="item.references"
+								/>
+							</ai-message>
+						</template>
 					</template>
-				</template>
 
-				<template #input>
-					<chat-input
-						v-model:model-value="inputValue"
-						v-model:input-mode="chatInputStore.inputMode.value"
-						:tools="chatInputStore.tools.value"
-						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
-						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
-						:show-default-network="chatInputStore.showDefaultNetwork.value"
-						@send="handleSend"
-						@tool-change="handleToolsChange"
-						@input-mode-change="handleInputModeChange"
-					/>
-				</template>
-			</chat-layout>
-		</template>
-	</app-page>
+					<template #input>
+						<chat-input
+							v-model:model-value="inputValue"
+							v-model:input-mode="chatInputStore.inputMode.value"
+							:tools="chatInputStore.tools.value"
+							:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
+							:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
+							:show-default-network="chatInputStore.showDefaultNetwork.value"
+							@send="handleSend"
+							@tool-change="handleToolsChange"
+							@input-mode-change="handleInputModeChange"
+						/>
+					</template>
+				</chat-layout>
+			</template>
+		</app-page>
+
+		<!-- 法条详情弹窗 -->
+		<law-popup
+			:visible="lawPopupVisible"
+			:law-id="currentLawRef ? currentLawRef.lawId : ''"
+			:law-item-id="currentLawRef ? currentLawRef.lawItemId : ''"
+			:preload-data="currentLawRef ? currentLawRef.preloadData : null"
+			@update:visible="lawPopupVisible = $event"
+		/>
+
+		<!-- 案例详情弹窗 -->
+		<case-popup
+			:visible="casePopupVisible"
+			:case-no="currentCaseRef ? currentCaseRef.caseNo : ''"
+			:preload-data="currentCaseRef ? currentCaseRef.preloadData : null"
+			@update:visible="casePopupVisible = $event"
+		/>
+	</view>
 </template>
+
+<style lang="scss" scoped>
+.consult-page-root {
+	position: relative;
+	width: 100%;
+	height: 100vh;
+}
+</style>

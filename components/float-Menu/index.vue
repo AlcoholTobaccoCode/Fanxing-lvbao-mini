@@ -282,7 +282,7 @@ const showUnReadBadge = computed(() => imUnReadCount.value > 0);
 									:value="item.badgeVal"
 									position
 									:pt="{
-										className: '!top-[2px] !right-[16px] p-2'
+										className: '!top-[4px] !right-[160px] p-2'
 									}"
 								>
 								</cl-badge>

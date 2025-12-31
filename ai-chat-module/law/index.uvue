@@ -221,7 +221,13 @@ const handleSend = async (data: SendData) => {
 </script>
 
 <template>
-	<app-page title="法规查询" back-top :use-history-layout="false" :chat-list-btn="false">
+	<app-page
+		title="法规查询"
+		back-top
+		:use-history-layout="false"
+		:chat-list-btn="false"
+		:hide-float-menu="true"
+	>
 		<template #content>
 			<chat-layout
 				ref="chatLayoutRef"
