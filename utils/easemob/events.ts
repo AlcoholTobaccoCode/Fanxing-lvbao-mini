@@ -25,6 +25,12 @@ export interface IMEvents extends EventMap {
 	"im:onSendMsg": any;
 	"im:onSendMsgError": any;
 	"im:onTextMessage": OnTextMsgResult;
+	// 连接状态相关事件
+	"im:onConnected": null;
+	"im:onDisconnected": any;
+	"im:onReconnecting": null;
+	"im:onOfflineMessageSyncStart": null;
+	"im:onOfflineMessageSyncFinish": null;
 	// 本地已读状态更新完成后触发（调用 /chat/readStatus 成功后触发）
 	"im:onReadStatusUpdated": {
 		peerId: string;
@@ -49,6 +55,31 @@ export const sdkEvents = {
 	onLoginError: (reason) => {
 		console.info("[IM] 登录失败 reason =====> ", reason);
 		imBus.emit("im:onLoginError", reason);
+	},
+	// 连接成功
+	onConnected: () => {
+		console.info("[IM] 连接成功 ✨");
+		imBus.emit("im:onConnected", null);
+	},
+	// 连接断开
+	onDisconnected: (reason: any) => {
+		console.warn("[IM] 连接断开 reason =====> ", reason);
+		imBus.emit("im:onDisconnected", reason);
+	},
+	// 正在重连
+	onReconnecting: () => {
+		console.info("[IM] 正在重连...");
+		imBus.emit("im:onReconnecting", null);
+	},
+	// 离线消息同步开始
+	onOfflineMessageSyncStart: () => {
+		console.info("[IM] 离线消息同步开始");
+		imBus.emit("im:onOfflineMessageSyncStart", null);
+	},
+	// 离线消息同步完成
+	onOfflineMessageSyncFinish: () => {
+		console.info("[IM] 离线消息同步完成 ✨");
+		imBus.emit("im:onOfflineMessageSyncFinish", null);
 	},
 	// 发送消息成功
 	onSendMsg: (res) => {

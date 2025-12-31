@@ -1,51 +1,27 @@
 <script lang="ts">
-import { useStore } from "@/cool";
-import { ensureGlobalIMForUser, logoutEasemob, refreshTokenAndRelogin } from "@/utils/easemob";
-import { imBus } from "@/utils/easemob/events";
+import {
+	setupIMEventListeners,
+	handleIMAppShow,
+	handleIMAppHide
+} from "@/utils/easemob/lifecycle";
 
 // #ifdef H5
 import TouchEmulator from "hammer-touchemulator";
-// 模拟移动端调试的触摸事件
 TouchEmulator();
 // #endif
-
-const handleAppShow = async () => {
-	console.log("App Show");
-	// 根据业务情况判断是否要预先调用
-	const { user } = useStore();
-
-	// 获取用户信息，未登录不执行
-	await user.get();
-	if (!user.isNull() && user.info.value?.id != null) {
-		const uid = String(user.info.value.id);
-		ensureGlobalIMForUser(uid).catch((err) => {
-			console.error("[IM] 全局初始化失败", err);
-		});
-	}
-};
 
 export default {
 	onLaunch: function () {
 		console.log("App Launch");
+		setupIMEventListeners();
 	},
-	onShow: function async() {
-		// 登录 IM
-		handleAppShow();
-		// https://doc.easemob.com/document/applet/error.html#%E5%B8%B8%E8%A7%81%E9%94%99%E8%AF%AF%E7%A0%81
-		imBus.on("im:onLoginError", async (res) => {
-			if ([2, 28, 56].includes(res.type)) {
-				const { user } = useStore();
-				if (!user.isNull() && user.info.value?.id != null) {
-					await refreshTokenAndRelogin(String(user.info.value?.id));
-				}
-			}
-		});
+	onShow: function () {
+		console.log("App Show");
+		handleIMAppShow();
 	},
 	onHide: function () {
 		console.log("App Hide");
-		// 暂时退出
-		logoutEasemob();
-		imBus.off("im:onLoginError");
+		handleIMAppHide();
 	},
 	onExit: function () {
 		console.log("App Exit");

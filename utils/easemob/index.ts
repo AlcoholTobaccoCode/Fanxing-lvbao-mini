@@ -73,6 +73,11 @@ export interface sendMsgRead {
 export interface EasemobEventHandlers {
 	onOpened?: () => void;
 	onClosed?: () => void;
+	onConnected?: () => void;
+	onDisconnected?: (reason: any) => void;
+	onReconnecting?: () => void;
+	onOfflineMessageSyncStart?: () => void;
+	onOfflineMessageSyncFinish?: () => void;
 	onTextMessage?: (message: any) => void;
 	onError?: (error: any) => void;
 	onTokenWillExpire?: () => void;
@@ -239,10 +244,35 @@ export async function addEasemobEventHandlers(handlers: EasemobEventHandlers) {
 
 	const { user } = useStore();
 
-	const mergedHandlers: EasemobEventHandlers = {
+	const mergedHandlers: EasemobEventHandlers & Record<string, any> = {
 		onOpened: handlers.onOpened,
 		onClosed: handlers.onClosed,
 		onError: handlers.onError,
+		// 连接成功
+		onConnected: () => {
+			sdkEvents.onConnected();
+			handlers.onConnected && handlers.onConnected();
+		},
+		// 连接断开
+		onDisconnected: (reason: any) => {
+			sdkEvents.onDisconnected(reason);
+			handlers.onDisconnected && handlers.onDisconnected(reason);
+		},
+		// 正在重连
+		onReconnecting: () => {
+			sdkEvents.onReconnecting();
+			handlers.onReconnecting && handlers.onReconnecting();
+		},
+		// 离线消息同步开始
+		onOfflineMessageSyncStart: () => {
+			sdkEvents.onOfflineMessageSyncStart();
+			handlers.onOfflineMessageSyncStart && handlers.onOfflineMessageSyncStart();
+		},
+		// 离线消息同步完成
+		onOfflineMessageSyncFinish: () => {
+			sdkEvents.onOfflineMessageSyncFinish();
+			handlers.onOfflineMessageSyncFinish && handlers.onOfflineMessageSyncFinish();
+		},
 		// 文本消息
 		onTextMessage: (msg: any) => {
 			try {
@@ -421,6 +451,8 @@ export function logoutEasemob() {
 	if (conn && typeof conn.close === "function") {
 		conn.close();
 	}
+	// 重置初始化状态，确保下次 onShow 能重新连接
+	hasGlobalIMInited = false;
 }
 
 // 清空环信相关缓存（退出登录时调用）
