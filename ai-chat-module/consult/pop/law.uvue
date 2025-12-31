@@ -1,0 +1,403 @@
+<!--
+@description: 法条详情弹窗组件
+-->
+<script lang="ts" setup>
+import { ref, watch, computed } from "vue";
+import type { LawDetailResponse } from "@/api/references";
+import { GetLawCardDetail } from "@/api/references";
+
+const props = defineProps<{
+	visible: boolean;
+	lawId?: string;
+	lawItemId?: string;
+	preloadData?: LawDetailResponse | null;
+}>();
+
+const emit = defineEmits<{
+	(e: "update:visible", value: boolean): void;
+}>();
+
+// 内部状态
+const isVisible = ref(props.visible);
+const loading = ref(false);
+const detail = ref<LawDetailResponse | null>(null);
+const error = ref("");
+const contentExpanded = ref(false);
+
+// 双向绑定 visible
+watch(
+	() => props.visible,
+	(val) => {
+		console.log("[LawPopup] visible changed:", val);
+		isVisible.value = val;
+		if (val) {
+			loadData();
+		}
+	},
+	{ immediate: true }
+);
+
+watch(isVisible, (val) => {
+	emit("update:visible", val);
+	if (!val) {
+		// 关闭时重置状态
+		contentExpanded.value = false;
+	}
+});
+
+// 加载数据
+const loadData = async () => {
+	// 重置状态
+	error.value = "";
+	contentExpanded.value = false;
+
+	// 优先使用预加载数据
+	if (props.preloadData) {
+		detail.value = props.preloadData;
+		return;
+	}
+
+	// 没有 lawId 则无法加载
+	if (!props.lawId) {
+		error.value = "缺少法条ID";
+		return;
+	}
+
+	// 调用 API 获取数据
+	loading.value = true;
+	try {
+		const res = await GetLawCardDetail([
+			{
+				lawId: props.lawId,
+				lawItemId: props.lawItemId || ""
+			}
+		]);
+		if (res.code === 200 && res.data && res.data.length > 0) {
+			detail.value = res.data[0];
+		} else {
+			error.value = "暂无数据";
+		}
+	} catch (e) {
+		console.error("[LawPopup] 获取法条详情失败:", e);
+		error.value = "加载失败，请重试";
+	} finally {
+		loading.value = false;
+	}
+};
+
+// 获取时效性标签样式
+const timelinessStyle = computed(() => {
+	const timeliness = detail.value?.timeliness || "";
+	if (timeliness.includes("现行有效") || timeliness.includes("有效")) {
+		return { bg: "#deedfd", text: "#1e4ed8" };
+	}
+	// 已被修改、失效等
+	return { bg: "#fff8f0", text: "#fa7315" };
+});
+
+// 格式化法条内容
+const formattedContent = computed(() => {
+	const raw = detail.value?.lawSourceContent || "";
+	return raw.replace(/\\n/g, "\n").replace(/\\r/g, "").trim() || "暂无法条内容";
+});
+
+// 提取条款序号（如"第二十九条"）
+const articleNumber = computed(() => {
+	const lawOrder = detail.value?.lawOrder || "";
+	const match = lawOrder.match(/第[一二三四五六七八九十百千零\d]+条/);
+	return match ? match[0] : "";
+});
+
+// 解析发文机关
+const issuingOrganName = computed(() => {
+	const raw = detail.value?.issuingOrgan;
+	if (!raw) return "";
+	try {
+		const obj = JSON.parse(raw);
+		return obj.level1Name || "";
+	} catch {
+		return "";
+	}
+});
+
+// 关闭弹窗
+const handleClose = () => {
+	isVisible.value = false;
+};
+
+// 切换内容展开
+const toggleContent = () => {
+	contentExpanded.value = !contentExpanded.value;
+};
+</script>
+
+<template>
+	<cl-popup
+		v-model="isVisible"
+		title="法条详情"
+		direction="bottom"
+		size="80vh"
+		:pt="{
+			className: '!rounded-t-3xl'
+		}"
+	>
+		<view class="law-detail">
+			<!-- 头部 -->
+			<!-- <view class="popup-header">
+				<view class="popup-header-left" @tap="handleClose">
+					<cl-icon name="arrow-left-s-line" size="24px" color="#374151" />
+				</view>
+				<text class="popup-title">法条详情</text>
+				<view class="popup-header-right"></view>
+			</view> -->
+
+			<!-- 滚动内容 -->
+			<scroll-view scroll-y class="popup-scroll" @touchmove.stop>
+				<!-- 加载状态 -->
+				<view v-if="loading" class="loading-wrapper">
+					<view class="loading-spinner"></view>
+					<text class="loading-text">正在加载...</text>
+				</view>
+
+				<!-- 错误状态 -->
+				<view v-else-if="error" class="error-wrapper">
+					<cl-icon name="error-warning-line" size="48px" color="#9ca3af" />
+					<text class="error-text">{{ error }}</text>
+				</view>
+
+				<!-- 法条内容 -->
+				<view v-else-if="detail" class="content-wrapper">
+					<!-- 法规名称 + 时效性 -->
+					<view class="law-header">
+						<text class="law-name">{{ detail.lawName }}</text>
+						<view
+							v-if="detail.timeliness"
+							class="timeliness-badge"
+							:style="{ backgroundColor: timelinessStyle.bg }"
+						>
+							<text class="timeliness-text" :style="{ color: timelinessStyle.text }">
+								{{ detail.timeliness }}
+							</text>
+						</view>
+					</view>
+
+					<!-- 条款序号 -->
+					<text v-if="articleNumber" class="article-number">{{ articleNumber }}</text>
+
+					<!-- 元信息 -->
+					<view class="meta-section">
+						<view class="meta-item" v-if="detail.releaseYearMonthDate">
+							<text class="meta-label">发布日期</text>
+							<text class="meta-value">{{ detail.releaseYearMonthDate }}</text>
+						</view>
+						<view class="meta-item" v-if="detail.implementYearMonthDate">
+							<text class="meta-label">实施日期</text>
+							<text class="meta-value">{{ detail.implementYearMonthDate }}</text>
+						</view>
+						<view class="meta-item" v-if="issuingOrganName">
+							<text class="meta-label">发文机关</text>
+							<text class="meta-value">{{ issuingOrganName }}</text>
+						</view>
+						<view class="meta-item" v-if="detail.issuingNo">
+							<text class="meta-label">发文字号</text>
+							<text class="meta-value">{{ detail.issuingNo }}</text>
+						</view>
+					</view>
+
+					<!-- 法条内容 -->
+					<view class="law-content-section">
+						<view
+							class="law-content-box"
+							:class="{ expanded: contentExpanded }"
+							@tap="toggleContent"
+						>
+							<text class="law-content-text">{{ formattedContent }}</text>
+						</view>
+						<view
+							v-if="formattedContent.length > 100"
+							class="expand-btn"
+							@tap="toggleContent"
+						>
+							<text class="expand-btn-text">
+								{{ contentExpanded ? "收起" : "展开全文" }}
+							</text>
+							<cl-icon
+								:name="contentExpanded ? 'arrow-up-s-line' : 'arrow-down-s-line'"
+								size="16px"
+								color="#3b82f6"
+							/>
+						</view>
+					</view>
+				</view>
+
+				<!-- 底部占位 -->
+				<view class="bottom-placeholder"></view>
+			</scroll-view>
+		</view>
+	</cl-popup>
+</template>
+
+<style lang="scss" scoped>
+.law-detail {
+	@apply w-full h-full flex flex-col bg-white;
+}
+
+// 头部
+.popup-header {
+	@apply flex flex-row items-center justify-between px-4 py-3;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.popup-header-left,
+.popup-header-right {
+	width: 40px;
+}
+
+.popup-title {
+	font-size: 17px;
+	font-weight: 600;
+	color: #1f2937;
+}
+
+// 滚动区域
+.popup-scroll {
+	@apply flex-1 w-full;
+}
+
+// 加载状态
+.loading-wrapper {
+	@apply flex flex-col items-center justify-center py-20;
+}
+
+.loading-spinner {
+	width: 32px;
+	height: 32px;
+	border: 3px solid #e5e7eb;
+	border-top-color: #3b82f6;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+	margin-bottom: 12px;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.loading-text {
+	font-size: 14px;
+	color: #9ca3af;
+}
+
+// 错误状态
+.error-wrapper {
+	@apply flex flex-col items-center justify-center py-20;
+}
+
+.error-text {
+	font-size: 14px;
+	color: #9ca3af;
+	margin-top: 12px;
+}
+
+// 内容区域
+.content-wrapper {
+	@apply px-4 py-4;
+}
+
+// 法规名称
+.law-header {
+	@apply flex flex-row items-start gap-2 mb-4;
+}
+
+.law-name {
+	font-size: 18px;
+	font-weight: 600;
+	color: #1f2937;
+	line-height: 1.4;
+	flex: 1;
+}
+
+.timeliness-badge {
+	@apply px-2 py-1 rounded;
+	flex-shrink: 0;
+}
+
+.timeliness-text {
+	font-size: 12px;
+	font-weight: 500;
+}
+
+// 条款序号
+.article-number {
+	@apply block mb-3;
+	font-size: 16px;
+	font-weight: 600;
+	color: #3b82f6;
+}
+
+// 法条内容
+.law-content-section {
+	@apply mb-4;
+}
+
+.law-content-box {
+	@apply p-4 rounded-xl;
+	background-color: #f9fafb;
+	max-height: 150px;
+	overflow: hidden;
+	transition: max-height 0.3s ease;
+
+	&.expanded {
+		max-height: none;
+	}
+}
+
+.law-content-text {
+	font-size: 15px;
+	color: #374151;
+	line-height: 1.8;
+	white-space: pre-wrap;
+}
+
+.expand-btn {
+	@apply flex flex-row items-center justify-center mt-2 py-2;
+}
+
+.expand-btn-text {
+	font-size: 14px;
+	color: #3b82f6;
+	margin-right: 4px;
+}
+
+// 元信息
+.meta-section {
+	@apply pt-4;
+	border-top: 1px solid #f3f4f6;
+}
+
+.meta-item {
+	@apply flex flex-row items-center justify-between py-3;
+	border-bottom: 1px solid #f3f4f6;
+
+	&:last-child {
+		border-bottom: none;
+	}
+}
+
+.meta-label {
+	font-size: 14px;
+	color: #9ca3af;
+}
+
+.meta-value {
+	font-size: 14px;
+	color: #374151;
+}
+
+// 底部占位
+.bottom-placeholder {
+	height: calc(20px + env(safe-area-inset-bottom));
+}
+</style>

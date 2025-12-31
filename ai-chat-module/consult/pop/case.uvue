@@ -1,0 +1,463 @@
+<!--
+@description: 案例详情弹窗组件
+-->
+<script lang="ts" setup>
+import { ref, watch, computed } from "vue";
+import type { CaseDetailResponse } from "@/api/references";
+import { GetCaseCardDetail } from "@/api/references";
+import { dayUts } from "@/cool";
+
+const props = defineProps<{
+	visible: boolean;
+	caseNo?: string;
+	preloadData?: CaseDetailResponse | null;
+}>();
+
+const emit = defineEmits<{
+	(e: "update:visible", value: boolean): void;
+}>();
+
+// 内部状态
+const isVisible = ref(props.visible);
+const loading = ref(false);
+const detail = ref<CaseDetailResponse | null>(null);
+const error = ref("");
+const activeTab = ref("summary");
+const contentExpanded = ref(false);
+
+// Tab 配置
+const tabConfig = [
+	{ key: "summary", label: "案例概要" },
+	{ key: "courtThink", label: "本院认为" },
+	{ key: "rule", label: "裁判规则" },
+	{ key: "verdict", label: "判决" }
+];
+
+// 双向绑定 visible
+watch(
+	() => props.visible,
+	(val) => {
+		console.log("[CasePopup] visible changed:", val);
+		isVisible.value = val;
+		if (val) {
+			loadData();
+		}
+	},
+	{ immediate: true }
+);
+
+watch(isVisible, (val) => {
+	emit("update:visible", val);
+	if (!val) {
+		// 关闭时重置状态
+		activeTab.value = "summary";
+		contentExpanded.value = false;
+	}
+});
+
+// 加载数据
+const loadData = async () => {
+	// 重置状态
+	error.value = "";
+	activeTab.value = "summary";
+	contentExpanded.value = false;
+
+	// 优先使用预加载数据
+	if (props.preloadData) {
+		detail.value = props.preloadData;
+		return;
+	}
+
+	// 没有 caseNo 则无法加载
+	if (!props.caseNo) {
+		error.value = "缺少案号";
+		return;
+	}
+
+	// 调用 API 获取数据
+	loading.value = true;
+	try {
+		const res = await GetCaseCardDetail([props.caseNo]);
+		if (res.code === 200 && res.data && res.data.length > 0) {
+			detail.value = res.data[0];
+		} else {
+			error.value = "暂无数据";
+		}
+	} catch (e) {
+		console.error("[CasePopup] 获取案例详情失败:", e);
+		error.value = "加载失败，请重试";
+	} finally {
+		loading.value = false;
+	}
+};
+
+// 获取当前 tab 对应的内容
+const currentTabContent = computed(() => {
+	if (!detail.value?.caseDomain) return "暂无内容";
+	const domain = detail.value.caseDomain;
+	switch (activeTab.value) {
+		case "summary":
+			return domain.caseSummary || "暂无案例概要";
+		case "courtThink":
+			return domain.courtThink || "暂无本院认为内容";
+		case "rule":
+			return domain.courtFindOut || "暂无裁判规则";
+		case "verdict":
+			return domain.verdict || "暂无判决内容";
+		default:
+			return "";
+	}
+});
+
+// 格式化日期
+const formatDate = (dateStr?: string) => {
+	if (!dateStr) return "";
+	return dayUts(dateStr).format("YYYY-MM-DD");
+};
+
+// 关闭弹窗
+const handleClose = () => {
+	isVisible.value = false;
+};
+
+// 切换 tab
+const handleTabChange = (key: string) => {
+	activeTab.value = key;
+	contentExpanded.value = false;
+};
+
+// 切换内容展开
+const toggleContent = () => {
+	contentExpanded.value = !contentExpanded.value;
+};
+</script>
+
+<template>
+	<cl-popup
+		v-model="isVisible"
+		title="案例详情"
+		direction="bottom"
+		size="80vh"
+		:pt="{
+			className: '!rounded-t-3xl'
+		}"
+	>
+		<view class="case-detail">
+			<!-- 头部 -->
+			<!-- <view class="popup-header">
+				<view class="popup-header-left" @tap="handleClose">
+					<cl-icon name="arrow-left-s-line" size="24px" color="#374151" />
+				</view>
+				<text class="popup-title">案例详情</text>
+				<view class="popup-header-right"></view>
+			</view> -->
+
+			<!-- 滚动内容 -->
+			<scroll-view scroll-y class="popup-scroll" @touchmove.stop>
+				<!-- 加载状态 -->
+				<view v-if="loading" class="loading-wrapper">
+					<view class="loading-spinner"></view>
+					<text class="loading-text">正在加载...</text>
+				</view>
+
+				<!-- 错误状态 -->
+				<view v-else-if="error" class="error-wrapper">
+					<cl-icon name="error-warning-line" size="48px" color="#9ca3af" />
+					<text class="error-text">{{ error }}</text>
+				</view>
+
+				<!-- 案例内容 -->
+				<view v-else-if="detail" class="content-wrapper">
+					<!-- 案例标题 -->
+					<text class="case-title">{{ detail.caseDomain?.caseTitle || "未知案例" }}</text>
+
+					<!-- 案号 + 法院 + 日期 -->
+					<view class="case-meta">
+						<text class="case-no">{{ detail.caseDomain?.caseNo }}</text>
+						<view class="meta-row">
+							<text class="court-name">
+								{{ detail.caseDomain?.trialCourt?.name || "未知法院" }}
+							</text>
+							<text class="meta-divider">|</text>
+							<text class="trial-date">
+								{{ formatDate(detail.caseDomain?.trialDate) }}
+							</text>
+						</view>
+					</view>
+
+					<!-- 案例类型 -->
+					<view class="extra-info" v-if="detail.caseDomain?.caseType">
+						<view class="info-item">
+							<text class="info-label">案件类型</text>
+							<text class="info-value">{{ detail.caseDomain.caseType }}</text>
+						</view>
+					</view>
+					<view class="extra-info" v-if="detail.caseDomain?.trialLevel">
+						<view class="info-item">
+							<text class="info-label">审理程序</text>
+							<text class="info-value">{{ detail.caseDomain.trialLevel }}</text>
+						</view>
+					</view>
+
+					<!-- Tab 切换 -->
+					<view class="tabs-wrapper">
+						<scroll-view scroll-x class="tabs-scroll">
+							<view class="tabs-container">
+								<view
+									v-for="tab in tabConfig"
+									:key="tab.key"
+									class="tab-item"
+									:class="{ active: activeTab === tab.key }"
+									@tap="handleTabChange(tab.key)"
+								>
+									<text
+										class="tab-text"
+										:class="{ active: activeTab === tab.key }"
+									>
+										{{ tab.label }}
+									</text>
+								</view>
+							</view>
+						</scroll-view>
+					</view>
+
+					<!-- Tab 内容 -->
+					<view class="tab-content-section">
+						<view
+							class="tab-content-box"
+							:class="{ expanded: contentExpanded }"
+							@tap="toggleContent"
+						>
+							<text class="tab-content-text">{{ currentTabContent }}</text>
+						</view>
+						<view
+							v-if="currentTabContent.length > 150"
+							class="expand-btn"
+							@tap="toggleContent"
+						>
+							<text class="expand-btn-text">
+								{{ contentExpanded ? "收起" : "展开全文" }}
+							</text>
+							<cl-icon
+								:name="contentExpanded ? 'arrow-up-s-line' : 'arrow-down-s-line'"
+								size="16px"
+								color="#3b82f6"
+							/>
+						</view>
+					</view>
+				</view>
+
+				<!-- 底部占位 -->
+				<view class="bottom-placeholder"></view>
+			</scroll-view>
+		</view>
+	</cl-popup>
+</template>
+
+<style lang="scss" scoped>
+.case-detail {
+	@apply w-full h-full flex flex-col bg-white;
+}
+
+// 头部
+.popup-header {
+	@apply flex flex-row items-center justify-between px-4 py-3;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.popup-header-left,
+.popup-header-right {
+	width: 40px;
+}
+
+.popup-title {
+	font-size: 17px;
+	font-weight: 600;
+	color: #1f2937;
+}
+
+// 滚动区域
+.popup-scroll {
+	@apply flex-1 w-full;
+}
+
+// 加载状态
+.loading-wrapper {
+	@apply flex flex-col items-center justify-center py-20;
+}
+
+.loading-spinner {
+	width: 32px;
+	height: 32px;
+	border: 3px solid #e5e7eb;
+	border-top-color: #3b82f6;
+	border-radius: 50%;
+	animation: spin 0.8s linear infinite;
+	margin-bottom: 12px;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.loading-text {
+	font-size: 14px;
+	color: #9ca3af;
+}
+
+// 错误状态
+.error-wrapper {
+	@apply flex flex-col items-center justify-center py-20;
+}
+
+.error-text {
+	font-size: 14px;
+	color: #9ca3af;
+	margin-top: 12px;
+}
+
+// 内容区域
+.content-wrapper {
+	@apply px-4 py-4;
+}
+
+// 案例标题
+.case-title {
+	font-size: 18px;
+	font-weight: 600;
+	color: #1f2937;
+	line-height: 1.5;
+	margin-bottom: 12px;
+}
+
+// 案号和元信息
+.case-meta {
+	@apply mb-4 pb-4;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.case-no {
+	font-size: 15px;
+	color: #3b82f6;
+	font-weight: 500;
+	margin-bottom: 8px;
+	display: block;
+}
+
+.meta-row {
+	@apply flex flex-row items-center;
+}
+
+.court-name {
+	font-size: 13px;
+	color: #6b7280;
+}
+
+.meta-divider {
+	font-size: 13px;
+	color: #d1d5db;
+	margin: 0 8px;
+}
+
+.trial-date {
+	font-size: 13px;
+	color: #9ca3af;
+}
+
+// Tab 切换
+.tabs-wrapper {
+	@apply mb-4;
+}
+
+.tabs-scroll {
+	width: 100%;
+}
+
+.tabs-container {
+	@apply flex flex-row;
+	gap: 8px;
+}
+
+.tab-item {
+	@apply px-4 py-2 rounded-full;
+	background-color: #f3f4f6;
+	flex-shrink: 0;
+	transition: all 0.2s;
+
+	&.active {
+		background-color: #3b82f6;
+	}
+}
+
+.tab-text {
+	font-size: 14px;
+	color: #6b7280;
+	white-space: nowrap;
+
+	&.active {
+		color: #fff;
+		font-weight: 500;
+	}
+}
+
+// Tab 内容
+.tab-content-section {
+	@apply mb-4;
+}
+
+.tab-content-box {
+	@apply p-4 rounded-xl;
+	background-color: #f9fafb;
+	max-height: 200px;
+	overflow: hidden;
+	transition: max-height 0.3s ease;
+
+	&.expanded {
+		max-height: none;
+	}
+}
+
+.tab-content-text {
+	font-size: 15px;
+	color: #374151;
+	line-height: 1.8;
+	white-space: pre-wrap;
+}
+
+.expand-btn {
+	@apply flex flex-row items-center justify-center mt-2 py-2;
+}
+
+.expand-btn-text {
+	font-size: 14px;
+	color: #3b82f6;
+	margin-right: 4px;
+}
+
+// 额外信息
+.extra-info {
+	@apply py-3;
+	border-top: 1px solid #f3f4f6;
+}
+
+.info-item {
+	@apply flex flex-row items-center justify-between py-2;
+}
+
+.info-label {
+	font-size: 14px;
+	color: #9ca3af;
+}
+
+.info-value {
+	font-size: 14px;
+	color: #374151;
+}
+
+// 底部占位
+.bottom-placeholder {
+	height: calc(20px + env(safe-area-inset-bottom));
+}
+</style>
