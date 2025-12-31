@@ -77,12 +77,14 @@ const toggleExpand = () => {
 		<view class="card-header">
 			<!-- 序号 -->
 			<view class="card-index">
-				<text class="index-text">{{ index + 1 }}</text>
+				<cl-text class="index-text" color="#3b82f6">{{ index + 1 }}</cl-text>
 			</view>
 
 			<!-- 法规名称 -->
 			<view class="card-title-wrapper">
-				<text class="card-title">{{ item.lawName || "未知法规" }}</text>
+				<cl-text class="card-title" color="#1f2937">{{
+					item.lawName || "未知法规"
+				}}</cl-text>
 			</view>
 		</view>
 
@@ -95,20 +97,19 @@ const toggleExpand = () => {
 					backgroundColor: getTimelinessStyle(item.timeliness).bg
 				}"
 			>
-				<text
-					class="timeliness-text"
-					:style="{ color: getTimelinessStyle(item.timeliness).text }"
-				>
+				<cl-text class="timeliness-text" :color="getTimelinessStyle(item.timeliness).text">
 					{{ item.timeliness || "未知" }}
-				</text>
+				</cl-text>
 			</view>
 
 			<!-- 发行日期 -->
-			<text v-if="item.implementYearMonthDate" class="meta-text">{{
+			<cl-text v-if="item.implementYearMonthDate" class="meta-text" color="#6b7280">{{
 				formatDate(item.implementYearMonthDate)
-			}}</text>
+			}}</cl-text>
 
-			<text v-if="item.lawName" class="meta-text meta-type">{{ item.lawName }}</text>
+			<cl-text v-if="item.lawName" class="meta-text meta-type" color="#6b7280">{{
+				item.lawName
+			}}</cl-text>
 
 			<!-- 法规类型 -->
 			<!-- <text v-if="item.xls" class="meta-text meta-type">{{ item.xls }}</text> -->
@@ -122,9 +123,13 @@ const toggleExpand = () => {
 
 		<!-- 内容区域 -->
 		<view class="card-content" @click="toggleExpand">
-			<text class="content-text">{{ isExpanded ? fullContent : contentPreview }}</text>
+			<cl-text class="content-text" color="#374151" pre-wrap>{{
+				isExpanded ? fullContent : contentPreview
+			}}</cl-text>
 			<view v-if="item.content && item.content.length > 100" class="expand-hint">
-				<text class="expand-text">{{ isExpanded ? "收起" : "展开全文" }}</text>
+				<cl-text class="expand-text" color="#3b82f6">{{
+					isExpanded ? "收起" : "展开全文"
+				}}</cl-text>
 				<cl-icon
 					:name="isExpanded ? 'arrow-up-s-line' : 'arrow-down-s-line'"
 					size="14px"
@@ -137,24 +142,28 @@ const toggleExpand = () => {
 		<view class="card-footer">
 			<!-- 日期信息 -->
 			<view class="date-row">
-				<text class="date-label">发布日期</text>
-				<text class="date-value">{{ formatDate(item.releaseYearMonthDate) }}</text>
+				<cl-text class="date-label" color="#9ca3af">发布日期</cl-text>
+				<cl-text class="date-value" color="#6b7280">{{
+					formatDate(item.releaseYearMonthDate)
+				}}</cl-text>
 			</view>
 			<view class="date-row">
-				<text class="date-label">实施日期</text>
-				<text class="date-value">{{ formatDate(item.implementYearMonthDate) }}</text>
+				<cl-text class="date-label" color="#9ca3af">实施日期</cl-text>
+				<cl-text class="date-value" color="#6b7280">{{
+					formatDate(item.implementYearMonthDate)
+				}}</cl-text>
 			</view>
 			<view class="date-row">
-				<text class="date-label">发文字号</text>
-				<text class="date-value">{{ item.filenum ?? "-" }}</text>
+				<cl-text class="date-label" color="#9ca3af">发文字号</cl-text>
+				<cl-text class="date-value" color="#6b7280">{{ item.filenum ?? "-" }}</cl-text>
 			</view>
 			<!-- 相似度 -->
 			<view class="similarity-wrapper">
 				<view class="similarity-header">
-					<text class="similarity-label">相关度</text>
-					<text class="similarity-value" :style="{ color: similarityColor }">
+					<cl-text class="similarity-label" color="#9ca3af">相关度</cl-text>
+					<cl-text class="similarity-value" :color="similarityColor">
 						{{ similarityPercent }}%
-					</text>
+					</cl-text>
 				</view>
 				<view class="similarity-bar">
 					<view
@@ -268,7 +277,7 @@ const toggleExpand = () => {
 }
 
 .date-row {
-	@apply flex flex-row items-center;
+	@apply flex flex-row items-center flex-wrap gap-2;
 }
 
 .date-label {

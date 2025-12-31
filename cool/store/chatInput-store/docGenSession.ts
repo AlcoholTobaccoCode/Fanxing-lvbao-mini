@@ -368,7 +368,7 @@ export class DocGenSessionStore {
 						aiMsg.content = evt.text;
 						fullContent = evt.text;
 
-						// 检测是否包含完整文书
+						// TODO - 检测是否包含完整文书
 						const detection = detectDocumentInText(evt.text);
 						aiMsg.hasDocument = detection.hasDocument;
 						if (detection.documentContent) {

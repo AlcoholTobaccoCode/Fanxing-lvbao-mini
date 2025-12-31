@@ -103,11 +103,13 @@ const toggleVerdict = () => {
 		<view class="card-header">
 			<!-- 序号 -->
 			<view class="card-index">
-				<text class="index-text">{{ index + 1 }}</text>
+				<cl-text class="index-text" color="#3b82f6">{{ index + 1 }}</cl-text>
 			</view>
 
 			<view class="card-title-wrapper">
-				<text class="card-title">{{ item.caseDomain?.caseTitle || "未知案件" }}</text>
+				<cl-text class="card-title" color="#1f2937">{{
+					item.caseDomain?.caseTitle || "未知案件"
+				}}</cl-text>
 			</view>
 		</view>
 
@@ -117,43 +119,49 @@ const toggleVerdict = () => {
 				class="doc-type-tag"
 				:style="{ backgroundColor: getDocTypeStyle(item.caseDomain?.documentType).bg }"
 			>
-				<text
+				<cl-text
 					class="doc-type-text"
-					:style="{ color: getDocTypeStyle(item.caseDomain?.documentType).text }"
+					:color="getDocTypeStyle(item.caseDomain?.documentType).text"
 				>
 					{{ item.caseDomain?.documentType || "文书" }}
-				</text>
+				</cl-text>
 			</view>
-			<text class="meta-text">{{ item.caseDomain?.caseNo || "-" }}</text>
-			<text class="meta-text">{{ item.caseDomain?.trialDate || "-" }}</text>
+			<cl-text class="meta-text" color="#6b7280">{{
+				item.caseDomain?.caseNo || "-"
+			}}</cl-text>
+			<cl-text class="meta-text" color="#6b7280">{{
+				item.caseDomain?.trialDate || "-"
+			}}</cl-text>
 		</view>
 
 		<!-- 详细信息区域 -->
 		<view class="card-info">
 			<!-- 审判法院 -->
 			<view class="info-row">
-				<text class="info-label">审判法院：</text>
-				<text class="info-value">{{ courtName }}</text>
+				<cl-text class="info-label" color="#6b7280">审判法院：</cl-text>
+				<cl-text class="info-value" color="#1f2937">{{ courtName }}</cl-text>
 			</view>
 
 			<!-- 案件类型 -->
 			<view class="info-row">
-				<text class="info-label">案件类型：</text>
-				<text class="info-value">{{ caseTypeDisplay }}</text>
+				<cl-text class="info-label" color="#6b7280">案件类型：</cl-text>
+				<cl-text class="info-value" color="#1f2937">{{ caseTypeDisplay }}</cl-text>
 			</view>
 
 			<!-- 法院认为 -->
 			<view v-if="item.caseDomain?.courtThink" class="info-section">
-				<text class="section-label">法院认为：</text>
+				<cl-text class="section-label" color="#6b7280">法院认为：</cl-text>
 				<view class="section-content" @click="toggleCourtThink">
-					<text class="section-text">{{
+					<cl-text class="section-text" color="#374151" pre-wrap>{{
 						courtThinkExpanded ? fullCourtThink : courtThinkPreview
-					}}</text>
+					}}</cl-text>
 					<view
 						v-if="(item.caseDomain?.courtThink?.length || 0) > 80"
 						class="expand-hint"
 					>
-						<text class="expand-text">{{ courtThinkExpanded ? "收起" : "展开" }}</text>
+						<cl-text class="expand-text" color="#3b82f6">{{
+							courtThinkExpanded ? "收起" : "展开"
+						}}</cl-text>
 						<cl-icon
 							:name="courtThinkExpanded ? 'arrow-up-s-line' : 'arrow-down-s-line'"
 							size="14px"
@@ -165,13 +173,15 @@ const toggleVerdict = () => {
 
 			<!-- 判决结果 -->
 			<view v-if="item.caseDomain?.verdict" class="info-section">
-				<text class="section-label">判决结果：</text>
+				<cl-text class="section-label" color="#6b7280">判决结果：</cl-text>
 				<view class="section-content" @click="toggleVerdict">
-					<text class="section-text">{{
+					<cl-text class="section-text" color="#374151" pre-wrap>{{
 						verdictExpanded ? fullVerdict : verdictPreview
-					}}</text>
+					}}</cl-text>
 					<view v-if="(item.caseDomain?.verdict?.length || 0) > 80" class="expand-hint">
-						<text class="expand-text">{{ verdictExpanded ? "收起" : "展开" }}</text>
+						<cl-text class="expand-text" color="#3b82f6">{{
+							verdictExpanded ? "收起" : "展开"
+						}}</cl-text>
 						<cl-icon
 							:name="verdictExpanded ? 'arrow-up-s-line' : 'arrow-down-s-line'"
 							size="14px"
@@ -184,30 +194,32 @@ const toggleVerdict = () => {
 
 		<!-- 底部信息 -->
 		<view class="card-footer">
-			<view class="footer-info">
-				<view class="footer-row">
-					<text class="footer-label">审判日期：</text>
-					<text class="footer-value">{{ item.caseDomain?.trialDate || "-" }}</text>
-				</view>
-				<view class="footer-row">
-					<text class="footer-label">审理程序：</text>
-					<text class="footer-value">{{ item.caseDomain?.trialLevel || "-" }}</text>
-				</view>
+			<view class="footer-row">
+				<cl-text class="footer-label" color="#9ca3af">审判日期：</cl-text>
+				<cl-text class="footer-value" color="#6b7280">{{
+					item.caseDomain?.trialDate || "-"
+				}}</cl-text>
 			</view>
-			<view class="footer-info">
-				<view class="footer-row">
-					<text class="footer-label">案号：</text>
-					<text class="footer-value">{{ item.caseDomain?.caseNo || "-" }}</text>
-				</view>
+			<view class="footer-row">
+				<cl-text class="footer-label" color="#9ca3af">审理程序：</cl-text>
+				<cl-text class="footer-value" color="#6b7280">{{
+					item.caseDomain?.trialLevel || "-"
+				}}</cl-text>
+			</view>
+			<view class="footer-row">
+				<cl-text class="footer-label" color="#9ca3af">案号：</cl-text>
+				<cl-text class="footer-value" color="#6b7280">{{
+					item.caseDomain?.caseNo || "-"
+				}}</cl-text>
 			</view>
 
 			<!-- 相似度 -->
 			<view class="similarity-wrapper">
 				<view class="similarity-header">
-					<text class="similarity-label">相似度：</text>
-					<text class="similarity-value" :style="{ color: similarityColor }">
+					<cl-text class="similarity-label" color="#9ca3af">相似度：</cl-text>
+					<cl-text class="similarity-value" :color="similarityColor">
 						{{ similarityPercent }}%
-					</text>
+					</cl-text>
 				</view>
 				<view class="similarity-bar">
 					<view
@@ -333,12 +345,8 @@ const toggleVerdict = () => {
 	border-top: 1px solid #f3f4f6;
 }
 
-.footer-info {
-	@apply flex flex-row justify-between mb-1;
-}
-
 .footer-row {
-	@apply flex flex-row items-center;
+	@apply flex flex-row items-center flex-wrap gap-2;
 }
 
 .footer-label {
