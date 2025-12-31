@@ -122,6 +122,10 @@ onUnload(() => {
 	chatFlowStore.clear();
 });
 
+const handleStop = () => {
+	docGenSessionStore.stopStreaming();
+};
+
 const handleSend = async (data: SendData) => {
 	log.group("defense detail send");
 	log.debug("payload ==> ", data);
@@ -262,11 +266,13 @@ const handleExport = (item: any) => {
 						v-model:model-value="inputValue"
 						v-model:input-mode="chatInputStore.inputMode.value"
 						:tools="chatInputStore.tools.value"
+						:loading="isGenerating"
 						:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
 						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
 						:show-default-network="chatInputStore.showDefaultNetwork.value"
 						:show-intent-chips="false"
 						@send="handleSend"
+						@stop="handleStop"
 						@tool-change="handleToolsChange"
 						@input-mode-change="handleInputModeChange"
 					/>

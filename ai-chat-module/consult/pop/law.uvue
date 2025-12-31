@@ -79,7 +79,7 @@ const loadData = async () => {
 		}
 	} catch (e) {
 		console.error("[LawPopup] 获取法条详情失败:", e);
-		error.value = "加载失败，请重试";
+		error.value = "未检索到数据";
 	} finally {
 		loading.value = false;
 	}

@@ -90,6 +90,13 @@ export class LawSessionStore {
 	lzxDisplayCount = ref(5); // 当前展示数量
 	lzxLoadingMore = ref(false); // 加载更多状态
 
+	// 当前正在进行的请求任务，用于支持中断
+	private currentRequestTask: any = null;
+	// 中断标志，用于阻止已在队列中的数据继续处理
+	private isAborted = false;
+	// 当前请求ID，用于区分不同请求，防止旧请求回调影响新请求
+	private currentRequestId = 0;
+
 	/**
 	 * 设置模型类型 (仅在未锁定时可用)
 	 */
@@ -197,6 +204,9 @@ export class LawSessionStore {
 		this.messages.value.push({ role: "system", content: "" });
 		const aiMsg = this.messages.value[this.messages.value.length - 1];
 
+		this.isAborted = false;
+		// 生成新的请求ID，使旧请求的回调失效
+		const requestId = ++this.currentRequestId;
 		this.loading.value = true;
 
 		try {
@@ -207,14 +217,24 @@ export class LawSessionStore {
 				await this.sendFabaoQuery(aiMsg, hooks);
 			}
 
+			// 如果请求ID不匹配，说明已被新请求取代，跳过后续处理
+			if (requestId !== this.currentRequestId) {
+				return;
+			}
+
 			this.streamStatus.value = null;
 			await this.saveCurrentSessionSnapshot();
 		} catch (err) {
 			console.error("[LawSession] 查询失败", err);
-			aiMsg.content = "查询失败，请稍后重试";
-			this.streamStatus.value = null;
+			if (requestId === this.currentRequestId) {
+				aiMsg.content = "查询失败，请稍后重试";
+				this.streamStatus.value = null;
+			}
 		} finally {
-			this.loading.value = false;
+			// 只有当前请求才能修改 loading 状态
+			if (requestId === this.currentRequestId) {
+				this.loading.value = false;
+			}
 		}
 	}
 
@@ -279,6 +299,8 @@ export class LawSessionStore {
 	 * 法宝查询 (SSE 流式)
 	 */
 	private async sendFabaoQuery(aiMsg: LawMessage, hooks?: LawStreamHooks) {
+		// 捕获当前请求ID，用于检查是否被新请求取代
+		const requestId = this.currentRequestId;
 		this.streamStatus.value = "正在分析问题...";
 
 		// 初始化阶段状态
@@ -336,6 +358,9 @@ export class LawSessionStore {
 			const decoder = createSseDecoder();
 
 			const processSseLine = (rawLine: string) => {
+				// 检查是否已中断或请求ID不匹配（说明是旧请求）
+				if (this.isAborted || requestId !== this.currentRequestId) return;
+
 				const line = rawLine.trim();
 				if (!line) return;
 
@@ -430,6 +455,9 @@ export class LawSessionStore {
 			};
 
 			const handleChunk = (data: ArrayBuffer) => {
+				// 检查是否已中断或请求ID不匹配（说明是旧请求）
+				if (this.isAborted || requestId !== this.currentRequestId) return;
+
 				try {
 					const chunkStr = decoder.decode(data);
 					if (!chunkStr) return;
@@ -483,12 +511,39 @@ export class LawSessionStore {
 				}
 			} as any);
 
+			// 保存请求任务引用，支持中断
+			this.currentRequestTask = requestTask;
+
 			if (requestTask && typeof requestTask.onChunkReceived === "function") {
 				requestTask.onChunkReceived((res: any) => {
 					handleChunk(res.data as ArrayBuffer);
 				});
 			}
 		});
+
+		// 清空请求任务引用
+		this.currentRequestTask = null;
+	}
+
+	/**
+	 * 停止当前流式响应
+	 */
+	stopStreaming() {
+		// 设置中断标志，阻止后续数据处理
+		this.isAborted = true;
+
+		if (this.currentRequestTask) {
+			try {
+				if (typeof this.currentRequestTask.abort === "function") {
+					this.currentRequestTask.abort();
+				}
+			} catch (err) {
+				console.error("[LawSession] 中断请求失败", err);
+			}
+			this.currentRequestTask = null;
+		}
+		this.loading.value = false;
+		this.streamStatus.value = null;
 	}
 
 	/**
@@ -504,6 +559,7 @@ export class LawSessionStore {
 	}
 
 	clear() {
+		this.stopStreaming();
 		this.messages.value = [];
 		this.sessionId.value = null;
 		this.modelLocked.value = false;

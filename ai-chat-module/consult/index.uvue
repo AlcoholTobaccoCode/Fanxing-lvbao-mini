@@ -156,6 +156,10 @@ onUnload(() => {
 	chatFlowStore.clear();
 });
 
+const handleStop = () => {
+	consultSessionStore.stopStreaming();
+};
+
 const handleSend = async (data: SendData) => {
 	log.group("consult detail send");
 	log.debug("payload ==> ", data);
@@ -356,10 +360,12 @@ const handleRefTap = (
 							v-model:model-value="inputValue"
 							v-model:input-mode="chatInputStore.inputMode.value"
 							:tools="chatInputStore.tools.value"
+							:loading="isGenerating"
 							:show-default-deep-think="chatInputStore.showDefaultDeepThink.value"
 							:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
 							:show-default-network="chatInputStore.showDefaultNetwork.value"
 							@send="handleSend"
+							@stop="handleStop"
 							@tool-change="handleToolsChange"
 							@input-mode-change="handleInputModeChange"
 						/>

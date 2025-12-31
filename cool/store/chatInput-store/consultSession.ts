@@ -77,6 +77,12 @@ export class ConsultSessionStore {
 	streamStatus = ref<string | null>(null);
 	// 深度思考过程文本（如果开启深度思考）。暂时只存不展示，后续用于"思考过程"折叠面板。
 	deepThinkContent = ref<string>("");
+	// 当前正在进行的请求任务，用于支持中断
+	private currentRequestTask: any = null;
+	// 中断标志，用于阻止已在队列中的数据继续处理
+	private isAborted = false;
+	// 当前请求ID，用于区分不同请求，防止旧请求回调影响新请求
+	private currentRequestId = 0;
 
 	initFromLaunch(launch: ChatLaunchPayload) {
 		this.messages.value = [];
@@ -166,6 +172,9 @@ export class ConsultSessionStore {
 		// 开启新一轮咨询前，重置流式状态与思考内容
 		this.streamStatus.value = null;
 		this.deepThinkContent.value = "";
+		this.isAborted = false;
+		// 生成新的请求ID，使旧请求的回调失效
+		const requestId = ++this.currentRequestId;
 
 		// 先追加一条用户消息
 		this.messages.value.push({
@@ -201,6 +210,9 @@ export class ConsultSessionStore {
 			const { user } = useStore();
 
 			const processSseLine = (rawLine: string) => {
+				// 检查是否已中断或请求ID不匹配（说明是旧请求）
+				if (this.isAborted || requestId !== this.currentRequestId) return;
+
 				const line = rawLine.trim();
 				if (!line) {
 					return;
@@ -316,6 +328,9 @@ export class ConsultSessionStore {
 				const decoder = createSseDecoder();
 
 				const handleChunk = (data: ArrayBuffer) => {
+					// 检查是否已中断或请求ID不匹配（说明是旧请求）
+					if (this.isAborted || requestId !== this.currentRequestId) return;
+
 					try {
 						const chunkStr = decoder.decode(data);
 						if (!chunkStr) return;
@@ -369,12 +384,23 @@ export class ConsultSessionStore {
 					}
 				} as any);
 
+				// 保存请求任务引用，支持中断
+				this.currentRequestTask = requestTask;
+
 				if (requestTask && typeof requestTask.onChunkReceived === "function") {
 					requestTask.onChunkReceived((res: any) => {
 						handleChunk(res.data as ArrayBuffer);
 					});
 				}
 			});
+
+			// 清空请求任务引用
+			this.currentRequestTask = null;
+
+			// 如果请求ID不匹配，说明已被新请求取代，跳过后续处理
+			if (requestId !== this.currentRequestId) {
+				return;
+			}
 
 			// 如果存在深度思考，记录结束时间
 			if (aiMsg.deepThink && aiMsg.deepThinkStartTime && !aiMsg.deepThinkEndTime) {
@@ -388,7 +414,10 @@ export class ConsultSessionStore {
 			// 再根据 AI 文本中的推荐标记触发推荐律师逻辑
 			await this.fetchRecommendLawyers(aiMsg);
 		} finally {
-			this.loading.value = false;
+			// 只有当前请求才能修改 loading 状态
+			if (requestId === this.currentRequestId) {
+				this.loading.value = false;
+			}
 		}
 	}
 
@@ -548,7 +577,29 @@ export class ConsultSessionStore {
 		}
 	}
 
+	/**
+	 * 停止当前流式响应
+	 */
+	stopStreaming() {
+		// 设置中断标志，阻止后续数据处理
+		this.isAborted = true;
+
+		if (this.currentRequestTask) {
+			try {
+				if (typeof this.currentRequestTask.abort === "function") {
+					this.currentRequestTask.abort();
+				}
+			} catch (err) {
+				console.error("[ConsultSession] 中断请求失败", err);
+			}
+			this.currentRequestTask = null;
+		}
+		this.loading.value = false;
+		this.streamStatus.value = null;
+	}
+
 	clear() {
+		this.stopStreaming();
 		this.messages.value = [];
 		this.sessionId.value = null;
 	}

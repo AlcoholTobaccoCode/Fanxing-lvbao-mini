@@ -80,6 +80,7 @@ const modelValueModal = defineModel("modelValue", {
 
 const emit = defineEmits<{
 	(e: "send", value: SendData): void;
+	(e: "stop"): void;
 	(e: "open-call"): void;
 	(e: "input-mode-change", value: string): void;
 	// 顶部工具选中变化
@@ -449,21 +450,23 @@ watch(
 					</view>
 				</view>
 
-				<!-- 右侧：加号 + 发送按钮 -->
+				<!-- 右侧：加号 + 发送/停止按钮 -->
 				<view class="chat-main__actions">
+					<!-- 正在生成时显示停止按钮 -->
+					<view v-if="loading" class="chat-main__icon-btn" @tap.stop="emit('stop')">
+						<cl-icon name="stop-circle-line" :size="48" color="error"></cl-icon>
+					</view>
+					<!-- 无输入时显示加号 -->
 					<view
+						v-else-if="!modelValueModal"
 						class="chat-main__icon-btn"
-						v-if="!modelValueModal"
 						@tap.stop="handleOpenToolbar"
 					>
 						<cl-icon name="add-circle-line" :size="48"></cl-icon>
 					</view>
-					<view class="chat-main__icon-btn" v-else @tap.stop="handleConfirm">
-						<cl-icon
-							:name="`arrow-up-circle-${modelValueModal ? 'fill' : 'line'}`"
-							:size="48"
-							:color="modelValueModal ? 'primary' : 'default'"
-						></cl-icon>
+					<!-- 有输入时显示发送按钮 -->
+					<view v-else class="chat-main__icon-btn" @tap.stop="handleConfirm">
+						<cl-icon name="arrow-up-circle-fill" :size="48" color="primary"></cl-icon>
 					</view>
 				</view>
 			</view>
