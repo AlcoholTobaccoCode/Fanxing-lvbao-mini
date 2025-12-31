@@ -483,7 +483,7 @@ const handleJumpToLatest = () => {
 						<view id="chat-bottom-a"></view>
 					</scroll-view>
 				</view>
-				<view class="jump-latest-btn" v-if="showJumpToLatest" @tap="handleJumpToLatest">
+				<!-- <view class="jump-latest-btn" v-if="showJumpToLatest" @tap="handleJumpToLatest">
 					<cl-button
 						icon="arrow-down-s-line"
 						:pt="{
@@ -492,7 +492,7 @@ const handleJumpToLatest = () => {
 					>
 						跳转最新消息
 					</cl-button>
-				</view>
+				</view> -->
 				<view class="pb-4 pt-2">
 					<chat-input
 						ref="inputModalRef"

@@ -74,12 +74,12 @@ const handleTemplateClick = (template: string) => {
 				<view
 					v-for="(item, i) in COMPLAINT_CATEGORIES"
 					:key="i"
-					class="type-card bg-surface-50 border-surface-200"
+					class="type-card"
 					hover-class="hover-darker"
 					@click="handleCategoryClick(item)"
 				>
 					<view class="type-icon-wrap">
-						<cl-icon :name="item.icon" size="22px" color="error" />
+						<cl-icon :name="item.icon" size="22px" color="#8b5cf6" />
 					</view>
 					<view class="type-info">
 						<cl-text size="14px" :pt="{ className: 'type-title text-surface-700' }">{{
@@ -100,12 +100,12 @@ const handleTemplateClick = (template: string) => {
 				<view
 					v-for="(item, i) in COMPLAINT_TEMPLATES"
 					:key="i"
-					class="template-tag bg-error-50 border-error-200"
+					class="template-tag"
 					hover-class="hover-darker"
 					@click="handleTemplateClick(item)"
 				>
-					<cl-icon name="file-copy-line" size="14px" color="error" />
-					<cl-text size="14px" :pt="{ className: '!text-error-600' }">{{
+					<cl-icon name="file-copy-line" size="14px" color="#8b5cf6" />
+					<cl-text size="14px" :pt="{ className: 'text-surface-700' }">{{
 						item
 					}}</cl-text>
 				</view>
@@ -167,7 +167,11 @@ const handleTemplateClick = (template: string) => {
 
 .template-tag {
 	@apply flex flex-row items-center gap-1 px-3 py-2 rounded-full;
-	border-width: 1px;
+	background-color: #faf5ff;
+
+	&:active {
+		background-color: #ede9fe;
+	}
 }
 
 // 新类型样式
@@ -178,7 +182,13 @@ const handleTemplateClick = (template: string) => {
 }
 .type-card {
 	@apply flex flex-col items-center p-3 rounded-xl;
-	border-width: 1px;
+	background-color: #faf5ff;
+	border: 1px solid transparent;
+	transition: all 0.2s ease;
+
+	&:active {
+		background-color: #ede9fe;
+	}
 }
 
 .type-icon-wrap {

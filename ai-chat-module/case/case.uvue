@@ -94,7 +94,7 @@ const handleHotCaseClick = (caseName: string) => {
 					@click="handleHotCaseClick(item)"
 				>
 					<view class="case-index bg-warning-500">{{ i + 1 }}</view>
-					<cl-text size="14px" :pt="{ className: 'case-title text-surface-700' }">{{
+					<cl-text size="14px" :pt="{ className: 'case-title text-warning-600' }">{{
 						item
 					}}</cl-text>
 					<cl-icon name="arrow-right-s-line" size="16px" color="info" />

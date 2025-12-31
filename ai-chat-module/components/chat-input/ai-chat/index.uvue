@@ -428,7 +428,7 @@ watch(
 							:showWordLimit="false"
 							:showConfirmBar="false"
 							:disabled="disabled"
-							:placeholder="placeholder"
+							:placeholder="`-----${placeholder}`"
 							@confirm="handleConfirm"
 							@linechange="handleLineChange"
 						></cl-textarea>

@@ -24,10 +24,10 @@ export const LEGAL_QUICK_QUESTIONS = CONSULT_QUICK_QUESTIONS;
 export const LAW_CATEGORIES = [
 	{ label: "民法典", icon: "fxzh-falvfagui" },
 	{ label: "刑法", icon: "fxzh-falvfagui" },
-	{ label: "劳动法", icon: "fxzh-falvfagui" },
-	{ label: "公司法", icon: "fxzh-falvfagui" },
-	{ label: "合同法", icon: "fxzh-falvfagui" },
-	{ label: "婚姻法", icon: "fxzh-falvfagui" }
+	{ label: "劳动法", icon: "fxzh-falvfagui" }
+	// { label: "公司法", icon: "fxzh-falvfagui" },
+	// { label: "合同法", icon: "fxzh-falvfagui" },
+	// { label: "婚姻法", icon: "fxzh-falvfagui" }
 ];
 
 export const LAW_HOT_ITEMS: string[] = [
@@ -118,18 +118,18 @@ export const CONTRACT_GEN_CATEGORIES = [
 		label: "买卖交易",
 		icon: "shopping-bag-line",
 		templates: ["买卖合同", "采购协议", "分销合同"]
-	},
-	{
-		label: "借贷融资",
-		icon: "money-cny-circle-line",
-		templates: ["借款合同", "担保协议", "抵押合同"]
-	},
-	{ label: "合作经营", icon: "store-2-line", templates: ["合作协议", "股权转让", "投资协议"] },
-	{
-		label: "服务委托",
-		icon: "customer-service-line",
-		templates: ["服务协议", "委托代理", "咨询合同"]
 	}
+	// {
+	// 	label: "借贷融资",
+	// 	icon: "money-cny-circle-line",
+	// 	templates: ["借款合同", "担保协议", "抵押合同"]
+	// },
+	// { label: "合作经营", icon: "store-2-line", templates: ["合作协议", "股权转让", "投资协议"] },
+	// {
+	// 	label: "服务委托",
+	// 	icon: "customer-service-line",
+	// 	templates: ["服务协议", "委托代理", "咨询合同"]
+	// }
 ];
 
 export const CONTRACT_GEN_HOT_TEMPLATES: string[] = [
