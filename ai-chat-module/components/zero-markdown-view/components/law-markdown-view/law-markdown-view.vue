@@ -14,6 +14,7 @@
 <script>
 import mpHtml from "../mp-html/mp-html";
 import { preprocessLawMarkdown, parseLawLinkTap } from "../../utils/lawMarkdownParser";
+import { config } from "@/uni_modules/cool-ui/config";
 
 export default {
 	name: "law-markdown-view",
@@ -47,9 +48,14 @@ export default {
 		};
 	},
 	computed: {
+		// 获取字体缩放比例
+		fontScale() {
+			return config.fontSize ?? 1;
+		},
 		processedContent() {
 			if (!this.content) return "";
-			let result = preprocessLawMarkdown(this.content);
+			// 传入 scale 用于内联样式
+			let result = preprocessLawMarkdown(this.content, this.fontScale);
 			// 处理流式代码块
 			const codeBlocks = result.match(/```[\s\S]*?```|```[\s\S]*?$/g) || [];
 			const lastBlock = codeBlocks[codeBlocks.length - 1];
@@ -61,17 +67,20 @@ export default {
 		tagStyle() {
 			const c = this.themeColor;
 			const bg = this.codeBgColor;
+			const scale = this.fontScale;
+			// 根据 scale 计算字体大小
+			const fs = (base) => `font-size: ${Math.round(base * scale)}px;`;
 			return {
-				p: "font-size: 16px;",
-				h1: `margin:18px 0 10px 0; font-size: 24px; color: ${c};`,
-				h2: `margin:14px 0 10px 0; font-size: 20px; color: ${c};`,
-				h3: `margin:12px 0 8px 0; font-size: 18px; color: ${c};`,
-				h4: `margin:12px 0 8px 0; font-size: 16px; color: ${c};`,
-				blockquote: `margin:15px 0; font-size:15px; color: #777; border-left: 4px solid #ddd; padding: 0 10px;`,
-				ul: "margin: 10px 0; color: #555;",
-				li: "margin: 5px 0; color: #555;",
+				p: fs(16),
+				h1: `margin:18px 0 10px 0; ${fs(24)} color: ${c};`,
+				h2: `margin:14px 0 10px 0; ${fs(20)} color: ${c};`,
+				h3: `margin:12px 0 8px 0; ${fs(18)} color: ${c};`,
+				h4: `margin:12px 0 8px 0; ${fs(16)} color: ${c};`,
+				blockquote: `margin:15px 0; ${fs(15)} color: #777; border-left: 4px solid #ddd; padding: 0 10px;`,
+				ul: `margin: 10px 0; ${fs(16)} color: #555;`,
+				li: `margin: 5px 0; ${fs(16)} color: #555;`,
 				strong: `font-weight: bold; color: ${c};`,
-				pre: `border-radius: 5px; background: ${bg}; font-size:12px;`
+				pre: `border-radius: 5px; background: ${bg}; ${fs(12)}`
 			};
 		}
 	},

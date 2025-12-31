@@ -43,30 +43,42 @@ export interface LawRefTapEvent {
 }
 
 /**
- * 根据时效性获取对应的内联样式
+ * 获取引用标签的基础内联样式
+ * @param scale 字体缩放比例
  */
-const lawCaseBaseStyle =
-	"display:inline;padding:2px 8px;border-radius:4px;font-size:14px;text-decoration:none;";
-function getTimelinessStyle(timeliness: string): string {
+function getLawCaseBaseStyle(scale: number = 1): string {
+	const fontSize = Math.round(14 * scale);
+	return `display:inline;padding:2px 8px;border-radius:4px;font-size:${fontSize}px;text-decoration:none;`;
+}
+
+/**
+ * 根据时效性获取对应的内联样式
+ * @param timeliness 时效性文本
+ * @param scale 字体缩放比例
+ */
+function getTimelinessStyle(timeliness: string, scale: number = 1): string {
+	const baseStyle = getLawCaseBaseStyle(scale);
 	if (
 		timeliness.includes("已被修改") ||
 		timeliness.includes("已修改") ||
 		timeliness.includes("失效")
 	) {
 		// 已被修改/失效 - 橙黄色
-		return `${lawCaseBaseStyle}color:#fa7315;background-color:#fff8f0;`;
+		return `${baseStyle}color:#fa7315;background-color:#fff8f0;`;
 	} else if (timeliness.includes("现行有效") || timeliness.includes("有效")) {
 		// 现行有效 - 蓝色
-		return `${lawCaseBaseStyle}color:#1e4ed8;background-color:#deedfd;`;
+		return `${baseStyle}color:#1e4ed8;background-color:#deedfd;`;
 	}
 	// 默认蓝色
-	return `${lawCaseBaseStyle}color:#007aff;background-color:rgba(0,122,255,0.08);`;
+	return `${baseStyle}color:#007aff;background-color:rgba(0,122,255,0.08);`;
 }
 
 /**
  * 预处理 Markdown，将 [[文本]](json) 转换为带 data 属性的链接
+ * @param markdown Markdown 内容
+ * @param scale 字体缩放比例（默认 1）
  */
-export function preprocessLawMarkdown(markdown: string): string {
+export function preprocessLawMarkdown(markdown: string, scale: number = 1): string {
 	if (!markdown) return "";
 
 	// 匹配 [[文本内容]](JSON数据)
@@ -76,20 +88,21 @@ export function preprocessLawMarkdown(markdown: string): string {
 		try {
 			const data = JSON.parse(jsonStr) as ReferenceData;
 			const escapedJson = escapeHtml(jsonStr);
+			const baseStyle = getLawCaseBaseStyle(scale);
 
 			if (data.type === "case") {
-				// 案例引用 - 蓝色虚线下划线
-				const caseStyle = `${lawCaseBaseStyle}color:#1e4ed8;background-color:#deedfd;`;
+				// 案例引用 - 蓝色样式
+				const caseStyle = `${baseStyle}color:#1e4ed8;background-color:#deedfd;`;
 				return `<a href="#law-ref-case" class="law-case-ref" style="${caseStyle}" data-ref="${escapedJson}">${text}</a>`;
 			} else if (data.type === "lawItem") {
 				// 法条引用：显示时效状态，根据时效添加不同样式
 				const timeliness = (data as LawItemReference).timeliness || "";
 				const timelinessHtml = timeliness ? `(${timeliness})` : "";
-				const inlineStyle = getTimelinessStyle(timeliness);
+				const inlineStyle = getTimelinessStyle(timeliness, scale);
 				return `<a href="#law-ref-item" class="law-item-ref" style="${inlineStyle}" data-ref="${escapedJson}">${text}${timelinessHtml}</a>`;
 			} else if (data.type === "search") {
 				// 联网搜索引用 - 绿色样式
-				const searchStyle = `${lawCaseBaseStyle}color:#059669;background-color:#ecfdf5;`;
+				const searchStyle = `${baseStyle}color:#059669;background-color:#ecfdf5;`;
 				return `<a href="#law-ref-search" class="law-search-ref" style="${searchStyle}" data-ref="${escapedJson}">${text}</a>`;
 			}
 
