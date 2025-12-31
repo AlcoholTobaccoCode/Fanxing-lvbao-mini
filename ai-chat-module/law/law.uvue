@@ -39,7 +39,9 @@ const handleHotLawClick = (law: string) => {
 					@click="handleCategoryClick(item)"
 				>
 					<cl-icon :name="item.icon" size="20px" color="primary" />
-					<text class="category-label text-surface-700">{{ item.label }}</text>
+					<cl-text size="14px" :pt="{ className: 'category-label text-surface-700' }">{{
+						item.label
+					}}</cl-text>
 				</view>
 			</view>
 		</view>
@@ -56,7 +58,9 @@ const handleHotLawClick = (law: string) => {
 					@click="handleHotLawClick(item)"
 				>
 					<cl-icon name="fire-line" size="16px" color="warning" />
-					<text class="hot-text text-surface-700">{{ item }}</text>
+					<cl-text size="14px" :pt="{ className: 'hot-text text-surface-700' }">{{
+						item
+					}}</cl-text>
 				</view>
 			</view>
 		</view>
@@ -76,7 +80,7 @@ const handleHotLawClick = (law: string) => {
 }
 
 .category-label {
-	@apply text-sm mt-1;
+	@apply mt-1;
 }
 
 .hot-item {
@@ -84,6 +88,6 @@ const handleHotLawClick = (law: string) => {
 }
 
 .hot-text {
-	@apply text-sm flex-1;
+	@apply flex-1;
 }
 </style>

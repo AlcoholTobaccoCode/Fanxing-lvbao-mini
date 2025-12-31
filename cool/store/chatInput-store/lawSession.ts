@@ -12,6 +12,9 @@ import {
 } from "@/api/retrieve";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
+
+//#region 类型定义
+
 /**
  * 法规检索模型类型
  * - lzx: 律之星 (专业版) - 非流式，专业死板
@@ -69,6 +72,8 @@ export interface LawStreamHooks {
 	onTextChunk?: (chunk: string) => void;
 }
 
+//#endregion
+
 export class LawSessionStore {
 	messages = ref<LawMessage[]>([]);
 	sessionId = ref<string | null>(null);
@@ -80,8 +85,8 @@ export class LawSessionStore {
 	modelLocked = ref(false); // 对话开始后锁定
 
 	// 律之星前端分页相关 (一次查询100条，前端分页展示)
-	lzxPageSize = ref(10); // 每页展示数量
-	lzxDisplayCount = ref(10); // 当前展示数量
+	lzxPageSize = ref(5); // 每页展示数量
+	lzxDisplayCount = ref(5); // 当前展示数量
 	lzxLoadingMore = ref(false); // 加载更多状态
 
 	/**

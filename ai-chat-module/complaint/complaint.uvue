@@ -82,8 +82,12 @@ const handleTemplateClick = (template: string) => {
 						<cl-icon :name="item.icon" size="22px" color="error" />
 					</view>
 					<view class="type-info">
-						<text class="type-title text-surface-700">{{ item.label }}</text>
-						<text class="type-desc text-surface-400">{{ item.desc }}</text>
+						<cl-text size="14px" :pt="{ className: 'type-title text-surface-700' }">{{
+							item.label
+						}}</cl-text>
+						<cl-text size="12px" :pt="{ className: 'type-desc text-surface-400' }">{{
+							item.desc
+						}}</cl-text>
 					</view>
 				</view>
 			</view>
@@ -101,7 +105,9 @@ const handleTemplateClick = (template: string) => {
 					@click="handleTemplateClick(item)"
 				>
 					<cl-icon name="file-copy-line" size="14px" color="error" />
-					<text class="template-text text-error-600">{{ item }}</text>
+					<cl-text size="14px" :pt="{ className: '!text-error-600' }">{{
+						item
+					}}</cl-text>
 				</view>
 			</view>
 		</view>
@@ -131,12 +137,9 @@ const handleTemplateClick = (template: string) => {
 }
 
 .step-title {
-	@apply text-sm font-medium;
+	@apply font-medium;
 }
 
-.step-desc {
-	@apply text-xs;
-}
 .category-list {
 	@apply flex flex-col gap-3;
 }
@@ -155,11 +158,7 @@ const handleTemplateClick = (template: string) => {
 }
 
 .category-title {
-	@apply text-sm font-medium;
-}
-
-.category-desc {
-	@apply text-xs;
+	@apply font-medium;
 }
 
 .template-wrap {
@@ -169,10 +168,6 @@ const handleTemplateClick = (template: string) => {
 .template-tag {
 	@apply flex flex-row items-center gap-1 px-3 py-2 rounded-full;
 	border-width: 1px;
-}
-
-.template-text {
-	@apply text-sm;
 }
 
 // 新类型样式
@@ -195,10 +190,10 @@ const handleTemplateClick = (template: string) => {
 }
 
 .type-title {
-	@apply text-sm font-medium block;
+	@apply font-medium block;
 }
 
 .type-desc {
-	@apply text-xs block mt-1 whitespace-nowrap;
+	@apply block mt-1;
 }
 </style>

@@ -101,7 +101,14 @@ const toggleVerdict = () => {
 	<view class="farui-card">
 		<!-- 卡片标题 -->
 		<view class="card-header">
-			<text class="card-title">{{ item.caseDomain?.caseTitle || "未知案件" }}</text>
+			<!-- 序号 -->
+			<view class="card-index">
+				<text class="index-text">{{ index + 1 }}</text>
+			</view>
+
+			<view class="card-title-wrapper">
+				<text class="card-title">{{ item.caseDomain?.caseTitle || "未知案件" }}</text>
+			</view>
 		</view>
 
 		<!-- 元信息行：文书类型 + 案号 + 日期 -->
@@ -224,7 +231,26 @@ const toggleVerdict = () => {
 }
 
 .card-header {
-	@apply p-4 pb-2;
+	@apply flex flex-row items-start p-4 pb-2;
+}
+
+.card-index {
+	@apply flex items-center justify-center mr-3;
+	width: 24px;
+	height: 24px;
+	border-radius: 6px;
+	background-color: #eff6ff;
+	flex-shrink: 0;
+}
+
+.index-text {
+	@apply text-xs font-semibold;
+	color: #3b82f6;
+}
+
+.card-title-wrapper {
+	@apply flex-1;
+	min-width: 0;
 }
 
 .card-title {

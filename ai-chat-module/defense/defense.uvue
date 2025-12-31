@@ -42,8 +42,12 @@ const handleScenarioClick = (scenario: string) => {
 						<cl-icon :name="item.icon" size="22px" color="primary" />
 					</view>
 					<view class="type-info">
-						<text class="type-title text-surface-700">{{ item.label }}</text>
-						<text class="type-desc text-surface-400">{{ item.desc }}</text>
+						<cl-text size="14px" :pt="{ className: 'type-title text-surface-700' }">{{
+							item.label
+						}}</cl-text>
+						<cl-text size="12px" :pt="{ className: 'type-desc text-surface-400' }">{{
+							item.desc
+						}}</cl-text>
 					</view>
 				</view>
 			</view>
@@ -75,7 +79,9 @@ const handleScenarioClick = (scenario: string) => {
 					@click="handleScenarioClick(item)"
 				>
 					<cl-icon name="question-line" size="16px" color="info" />
-					<text class="scenario-text text-surface-700">{{ item }}</text>
+					<cl-text size="14px" :pt="{ className: 'scenario-text text-surface-700' }">{{
+						item
+					}}</cl-text>
 				</view>
 			</view>
 		</view>
@@ -103,11 +109,11 @@ const handleScenarioClick = (scenario: string) => {
 }
 
 .type-title {
-	@apply text-sm font-medium block;
+	@apply font-medium block;
 }
 
 .type-desc {
-	@apply text-xs block mt-1;
+	@apply block mt-1;
 }
 
 .tips-container {
@@ -131,11 +137,7 @@ const handleScenarioClick = (scenario: string) => {
 }
 
 .tip-title {
-	@apply text-sm font-medium block;
-}
-
-.tip-desc {
-	@apply text-xs;
+	@apply font-medium block;
 }
 
 .scenario-item {
@@ -144,6 +146,6 @@ const handleScenarioClick = (scenario: string) => {
 }
 
 .scenario-text {
-	@apply text-sm flex-1;
+	@apply flex-1;
 }
 </style>

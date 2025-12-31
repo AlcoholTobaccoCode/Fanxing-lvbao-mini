@@ -28,7 +28,7 @@ const {
 // 获取时效性标签颜色
 const getTimelinessColor = (timeliness: string) => {
 	if (timeliness === "现行有效") {
-		return { bg: "#dcfce7", text: "#16a34a" };
+		return { bg: "#dbeafe", text: "#2563eb" };
 	}
 	return { bg: "#fef3c7", text: "#d97706" };
 };

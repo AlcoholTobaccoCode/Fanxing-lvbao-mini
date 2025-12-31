@@ -6,6 +6,9 @@ import type { ClTabsItem } from "@/uni_modules/cool-ui";
 import { moduleSwitchStore } from "@/cool/store";
 import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
 import { computed, ref, nextTick, watch } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+
+const ui = useUi();
 
 const emit = defineEmits<{
 	(e: "change", value: ChatModuleKey): void;
@@ -36,7 +39,11 @@ const scrollLeft = ref(0);
 
 // 点击切换模块
 const onItemClick = (item: ClTabsItem) => {
-	if (item.disabled) return;
+	if (item.disabled) {
+		ui.showToast({ message: "开发中，敬请期待" });
+		console.warn("开发中，敬请期待");
+		return;
+	}
 	currentValue.value = item.value as string;
 	// 滚动到选中项居中
 	scrollToCenter(item.value as string);
@@ -152,7 +159,7 @@ watch(
 
 	&--disabled {
 		opacity: 0.3;
-		pointer-events: none;
+		// pointer-events: none;
 	}
 }
 

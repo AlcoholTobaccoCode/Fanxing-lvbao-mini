@@ -5,6 +5,7 @@
 import { computed } from "vue";
 // import ZeroMarkdownView from "../zero-markdown-view/components/zero-markdown-view/zero-markdown-view.vue";
 import LawMarkdownView from "../zero-markdown-view/components/law-markdown-view/law-markdown-view.vue";
+import { config } from "@/uni_modules/cool-ui/config";
 
 interface Props {
 	content?: string;
@@ -23,6 +24,19 @@ const emit = defineEmits<{
 	(e: "toggle-deep-think"): void;
 	(e: "ref-tap", data: { type: string; text: string; json: Record<string, any> | null }): void;
 }>();
+
+// 获取字体缩放比例
+const fontScale = computed(() => config.fontSize ?? 1);
+
+// 深度思考标题样式
+const deepThinkTitleStyle = computed(() => ({
+	fontSize: `${Math.round(14 * fontScale.value)}px`
+}));
+
+// 深度思考内容样式
+const deepThinkTextStyle = computed(() => ({
+	fontSize: `${Math.round(14 * fontScale.value)}px`
+}));
 
 // 计算思考用时文案
 const deepThinkTimeText = computed(() => {
@@ -54,13 +68,13 @@ const handleRefTap = (e: { type: string; text: string; json: Record<string, any>
 				<view class="deepthink-icon">
 					<cl-text>💭</cl-text>
 				</view>
-				<text class="deepthink-title">{{ deepThinkTimeText }}</text>
+				<text class="deepthink-title" :style="deepThinkTitleStyle">{{ deepThinkTimeText }}</text>
 				<text class="deepthink-toggle">
 					<cl-icon :name="`arrow-${deepThinkExpanded ? 'up-s-line' : 'down-s-line'}`" />
 				</text>
 			</view>
 			<view v-if="deepThinkExpanded" class="deepthink-body">
-				<text class="deepthink-text">{{ deepThink }}</text>
+				<text class="deepthink-text" :style="deepThinkTextStyle">{{ deepThink }}</text>
 			</view>
 		</view>
 
@@ -100,7 +114,7 @@ const handleRefTap = (e: { type: string; text: string; json: Record<string, any>
 }
 
 .deepthink-title {
-	@apply text-sm mr-1;
+	@apply mr-1;
 	color: #3b82f6;
 }
 
@@ -115,7 +129,7 @@ const handleRefTap = (e: { type: string; text: string; json: Record<string, any>
 }
 
 .deepthink-text {
-	@apply text-sm leading-relaxed;
+	@apply leading-relaxed;
 	color: #6b7280;
 }
 </style>

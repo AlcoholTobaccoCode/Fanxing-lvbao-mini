@@ -42,7 +42,7 @@ const similarityColor = computed(() => {
 const getTimelinessStyle = (timeliness: string) => {
 	switch (timeliness) {
 		case "现行有效":
-			return { bg: "#dcfce7", text: "#16a34a" };
+			return { bg: "#dbeafe", text: "#2563eb" };
 		case "已修改":
 			return { bg: "#fef3c7", text: "#d97706" };
 		case "已废止":

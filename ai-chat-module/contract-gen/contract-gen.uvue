@@ -49,10 +49,14 @@ const handleTemplateClick = (template: string) => {
 						size="24px"
 						:color="selectedCategory === i ? '#7c3aed' : '#8b5cf6'"
 					/>
-					<text
-						class="category-label"
-						:class="selectedCategory === i ? 'text-violet-700' : 'text-surface-700'"
-						>{{ item.label }}</text
+					<cl-text
+						size="14px"
+						:pt="{
+							className:
+								'category-label ' +
+								(selectedCategory === i ? 'text-violet-700' : 'text-surface-700')
+						}"
+						>{{ item.label }}</cl-text
 					>
 				</view>
 			</view>
@@ -72,7 +76,9 @@ const handleTemplateClick = (template: string) => {
 					@click="handleTemplateClick(tpl)"
 				>
 					<cl-icon name="article-line" size="16px" color="#8b5cf6" />
-					<text class="template-name text-surface-700">{{ tpl }}</text>
+					<cl-text size="14px" :pt="{ className: 'template-name text-surface-700' }">{{
+						tpl
+					}}</cl-text>
 					<cl-icon name="arrow-right-s-line" size="16px" color="#a78bfa" />
 				</view>
 			</view>
@@ -90,7 +96,9 @@ const handleTemplateClick = (template: string) => {
 					@click="handleTemplateClick(item)"
 				>
 					<view class="hot-rank">{{ i + 1 }}</view>
-					<text class="hot-name text-surface-700">{{ item }}</text>
+					<cl-text size="14px" :pt="{ className: 'hot-name text-surface-700' }">{{
+						item
+					}}</cl-text>
 				</view>
 			</view>
 		</view>
@@ -133,7 +141,7 @@ const handleTemplateClick = (template: string) => {
 }
 
 .category-label {
-	@apply text-sm mt-2;
+	@apply mt-2;
 }
 
 .template-expand {
@@ -156,18 +164,17 @@ const handleTemplateClick = (template: string) => {
 }
 
 .template-name {
-	@apply flex-1 text-sm;
+	@apply flex-1;
 }
 
 .hot-template-wrap {
-	display: grid;
-	grid-template-columns: repeat(2, 1fr);
-	gap: 10px;
+	@apply flex flex-wrap gap-2;
 }
 
 .hot-template-card {
-	@apply flex flex-row items-center gap-2 p-3 rounded-xl;
+	@apply flex flex-row items-center gap-2 px-3 py-2 rounded-full;
 	background-color: #faf5ff;
+	white-space: nowrap;
 
 	&:active {
 		background-color: #ede9fe;
@@ -178,10 +185,11 @@ const handleTemplateClick = (template: string) => {
 	@apply w-5 h-5 rounded-full flex items-center justify-center text-xs font-medium;
 	background-color: #e9d5ff;
 	color: #7c3aed;
+	flex-shrink: 0;
 }
 
 .hot-name {
-	@apply text-sm;
+	white-space: nowrap;
 }
 
 .custom-entry {
@@ -204,10 +212,10 @@ const handleTemplateClick = (template: string) => {
 }
 
 .custom-title {
-	@apply text-sm font-medium;
+	@apply font-medium;
 }
 
 .custom-desc {
-	@apply text-xs mt-0.5;
+	@apply mt-0.5;
 }
 </style>

@@ -34,10 +34,10 @@ const selectRef = ref<ClSelectComponentPublicInstance | null>(null);
 
 // 语言列表
 const list = [
-	{
-		label: "0.9",
-		value: 0.9
-	},
+	// {
+	// 	label: "0.9",
+	// 	value: 0.9
+	// },
 	{
 		label: "1.0",
 		value: 1

@@ -45,13 +45,15 @@ const handleHotCaseClick = (caseName: string) => {
 					hover-class="hover-darker"
 					@click="handleCaseTypeClick(item)"
 				>
-					<text class="tag-text text-warning-600">{{ item }}</text>
+					<cl-text size="14px" :pt="{ className: '!text-warning-600' }">{{
+						item
+					}}</cl-text>
 				</view>
 			</view>
 		</view>
 
 		<!-- 法院级别筛选 -->
-		<view class="mt-4" v-if="false">
+		<!-- <view class="mt-4" v-if="false">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">法院级别</cl-text>
 			<view class="court-level-wrap">
 				<view
@@ -65,18 +67,20 @@ const handleHotCaseClick = (caseName: string) => {
 					hover-class="hover-darker"
 					@click="handleCourtLevelSelect(item)"
 				>
-					<text
-						class="court-text"
-						:class="{
-							'text-primary-600': selectedCourtLevel === item.value,
-							'text-surface-500': selectedCourtLevel !== item.value
+					<cl-text
+						size="14px"
+						:pt="{
+							className:
+								selectedCourtLevel === item.value
+									? 'text-primary-600'
+									: 'text-surface-500'
 						}"
 					>
 						{{ item.label }}
-					</text>
+					</cl-text>
 				</view>
 			</view>
-		</view>
+		</view> -->
 
 		<!-- 热门案例 -->
 		<view class="mt-4">
@@ -90,7 +94,9 @@ const handleHotCaseClick = (caseName: string) => {
 					@click="handleHotCaseClick(item)"
 				>
 					<view class="case-index bg-warning-500">{{ i + 1 }}</view>
-					<text class="case-title text-surface-700">{{ item }}</text>
+					<cl-text size="14px" :pt="{ className: 'case-title text-surface-700' }">{{
+						item
+					}}</cl-text>
 					<cl-icon name="arrow-right-s-line" size="16px" color="info" />
 				</view>
 			</view>
@@ -102,16 +108,13 @@ const handleHotCaseClick = (caseName: string) => {
 .case-type-wrap {
 	display: inline-grid;
 	gap: 4px;
-	grid-template-columns: repeat(auto-fill, 80px);
+	grid-template-columns: repeat(auto-fill, 48%);
 }
 
 .case-type-tag {
 	@apply px-4 py-2 rounded-full;
 	border-width: 1px;
-}
-
-.tag-text {
-	@apply text-sm;
+	white-space: nowrap;
 }
 
 .court-level-wrap {
@@ -125,19 +128,16 @@ const handleHotCaseClick = (caseName: string) => {
 	border-color: transparent;
 }
 
-.court-text {
-	@apply text-sm;
-}
-
 .hot-case-card {
 	@apply flex flex-row items-center gap-3 p-3 rounded-lg;
 }
 
 .case-index {
 	@apply w-6 h-6 rounded-full flex items-center justify-center text-xs text-white;
+	// flex-shrink: 0;
 }
 
 .case-title {
-	@apply flex-1 text-sm;
+	@apply flex-1;
 }
 </style>
