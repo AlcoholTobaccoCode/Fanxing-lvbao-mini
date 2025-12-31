@@ -316,6 +316,27 @@ const handleToggleAudio = (m: any) => {
 
 //#endregion
 
+const onTextMessageHandler = (msg: OnTextMsgResult) => {
+	console.group("[ChatDetail] onTextMessage");
+	console.info("[ChatDetail] im:onTextMessage 收到文本消息 ===> ", msg);
+	console.groupEnd();
+	if (targetId.value === msg.from) {
+		historyMessages.value.push({
+			...msg
+		});
+		// 如果当前没有离开底部很远，则自动滚动到底部；否则只更新按钮状态
+		if (!showJumpToLatest.value) {
+			scrollToBottom();
+		}
+	}
+};
+
+const onSendMsgHandler = (msg: any) => {
+	log.group("handleSonSendMsgend");
+	log.info("[ChatDetail] im:onSendMsg 发送消息成功 ===> ", msg);
+	log.groupEnd();
+};
+
 // 进入页面时，从路由参数中读取会话信息并自动加载历史记录
 const handlePageLoad = async (options) => {
 	const conversationId = (options?.conversationId || "").toString();
@@ -355,31 +376,14 @@ onMounted(() => {
 		}
 	});
 
-	imBus.on("im:onTextMessage", (msg: OnTextMsgResult) => {
-		console.group("[ChatDetail] onTextMessage");
-		console.info("[ChatDetail] im:onTextMessage 收到文本消息 ===> ", msg);
-		console.groupEnd();
-		if (targetId.value === msg.from) {
-			historyMessages.value.push({
-				...msg
-			});
-			// 如果当前没有离开底部很远，则自动滚动到底部；否则只更新按钮状态
-			if (!showJumpToLatest.value) {
-				scrollToBottom();
-			}
-		}
-	});
-
-	imBus.on("im:onSendMsg", (msg) => {
-		log.group("handleSonSendMsgend");
-		log.info("[ChatDetail] im:onSendMsg 发送消息成功 ===> ", msg);
-		log.groupEnd();
-	});
+	imBus.on("im:onTextMessage", onTextMessageHandler);
+	imBus.on("im:onSendMsg", onSendMsgHandler);
 });
 
 onBeforeUnmount(() => {
-	imBus.off("im:onTextMessage");
-	imBus.off("im:onSendMsg");
+	// 传入具体的 handler，只移除当前组件注册的监听器
+	imBus.off("im:onTextMessage", onTextMessageHandler);
+	imBus.off("im:onSendMsg", onSendMsgHandler);
 	if (audioCtx) {
 		audioCtx.stop();
 		audioCtx.destroy();
@@ -437,7 +441,7 @@ const handleJumpToLatest = () => {
 								]"
 							>
 								<view
-									class="px-3 py-2 rounded-lg text-sm w-fit"
+									class="chat-message"
 									:style="{
 										maxWidth: '90%',
 										backgroundColor: m.from === targetId ? '#fff' : '#95ec69',
@@ -535,6 +539,11 @@ const handleJumpToLatest = () => {
 		width: 66.66%;
 		opacity: 0.3;
 	}
+}
+
+.chat-message {
+	@apply px-3 py-2 rounded-lg text-sm w-fit relative;
+	z-index: 1;
 }
 
 .jump-latest-btn {

@@ -170,18 +170,13 @@ const updateScrollListData = async () => {
 
 onMounted(() => {
 	refresh({});
-	imBus.on("im:onTextMessage", (msg) => {
-		updateScrollListData();
-	});
-
-	imBus.on("im:onReadStatusUpdated", (res) => {
-		updateScrollListData();
-	});
+	imBus.on("im:onTextMessage", updateScrollListData);
+	imBus.on("im:onReadStatusUpdated", updateScrollListData);
 });
 
 onBeforeUnmount(() => {
-	imBus.off("im:onTextMessage");
-	imBus.off("im:onReadStatusUpdated");
+	imBus.off("im:onTextMessage", updateScrollListData);
+	imBus.off("im:onReadStatusUpdated", updateScrollListData);
 });
 </script>
 
