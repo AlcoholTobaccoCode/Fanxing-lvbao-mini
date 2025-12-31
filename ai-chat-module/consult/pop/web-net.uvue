@@ -1,0 +1,345 @@
+<!--
+@description: 联网搜索引用详情弹窗组件
+-->
+<script lang="ts" setup>
+import { ref, watch, computed } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { dayUts } from "@/cool";
+
+/** 搜索引用项数据结构 */
+export interface SearchItem {
+	hostName?: string;
+	hostLogo?: string;
+	indexId?: number;
+	time?: string;
+	title?: string;
+	body?: string;
+	url?: string;
+}
+
+const props = defineProps<{
+	visible: boolean;
+	data?: SearchItem | null;
+}>();
+
+const emit = defineEmits<{
+	(e: "update:visible", value: boolean): void;
+}>();
+
+const ui = useUi();
+
+// 内部状态
+const isVisible = ref(props.visible);
+const contentExpanded = ref(false);
+
+// 双向绑定 visible
+watch(
+	() => props.visible,
+	(val) => {
+		isVisible.value = val;
+		if (val) {
+			contentExpanded.value = false;
+		}
+	},
+	{ immediate: true }
+);
+
+watch(isVisible, (val) => {
+	emit("update:visible", val);
+});
+
+// 格式化时间戳
+const formattedTime = computed(() => {
+	if (!props.data?.time) return "";
+	const timestamp = parseInt(props.data.time);
+	if (isNaN(timestamp)) return props.data.time;
+	return dayUts(timestamp * 1000).format("YYYY-MM-DD");
+});
+
+// 来源名称
+const sourceName = computed(() => {
+	const name = props.data?.hostName;
+	if (!name || name === "无") return "网络来源";
+	return name;
+});
+
+// 格式化 body 内容（去掉 Markdown 标记，简化展示）
+const formattedBody = computed(() => {
+	if (!props.data?.body) return "暂无内容";
+	// 简单去除 Markdown 标记
+	return props.data.body
+		.replace(/#{1,6}\s*/g, "") // 标题
+		.replace(/\*\*/g, "") // 加粗
+		.replace(/\*/g, "") // 斜体
+		.replace(/\n+/g, "\n") // 多余换行
+		.trim();
+});
+
+// 复制链接
+const handleCopyUrl = () => {
+	if (!props.data?.url) {
+		ui.showToast({ message: "暂无链接" });
+		return;
+	}
+	uni.setClipboardData({
+		data: props.data.url,
+		showToast: false,
+		success: () => {
+			ui.showToast({ message: "链接已复制，请在浏览器中打开查看完整内容" });
+		},
+		fail: () => {
+			ui.showToast({ message: "复制失败" });
+		}
+	});
+};
+
+// 切换内容展开
+const toggleContent = () => {
+	contentExpanded.value = !contentExpanded.value;
+};
+</script>
+
+<template>
+	<cl-popup
+		v-model="isVisible"
+		title="引用详情"
+		direction="bottom"
+		size="75vh"
+		:pt="{
+			className: '!rounded-t-3xl'
+		}"
+	>
+		<view class="web-net-detail">
+			<!-- 滚动内容 -->
+			<scroll-view scroll-y class="popup-scroll" @touchmove.stop>
+				<view v-if="data" class="content-wrapper">
+					<!-- 标题 -->
+					<text class="article-title">{{ data.title || "未知标题" }}</text>
+
+					<!-- 来源信息 -->
+					<view class="source-info">
+						<image
+							v-if="data.hostLogo"
+							:src="data.hostLogo"
+							class="source-logo"
+							mode="aspectFill"
+						/>
+						<view v-else class="source-logo-placeholder">
+							<cl-icon name="global-line" size="16px" color="#9ca3af" />
+						</view>
+						<text class="source-name">{{ sourceName }}</text>
+						<text v-if="formattedTime" class="source-time">{{ formattedTime }}</text>
+					</view>
+
+					<!-- 原文链接 -->
+					<view class="url-section">
+						<text class="section-label">原文链接</text>
+						<view class="url-box" @tap="handleCopyUrl">
+							<text class="url-text">{{ data.url || "暂无链接" }}</text>
+							<view class="copy-btn">
+								<cl-icon name="file-copy-line" size="18px" color="#3b82f6" />
+								<text class="copy-btn-text">复制</text>
+							</view>
+						</view>
+						<text class="url-tip"
+							>小程序内无法直接打开外部链接，请复制后在浏览器中查看</text
+						>
+					</view>
+
+					<!-- 内容摘要 -->
+					<view class="body-section">
+						<text class="section-label">内容摘要</text>
+						<view
+							class="body-content"
+							:class="{ expanded: contentExpanded }"
+							@tap="toggleContent"
+						>
+							<text class="body-text">{{ formattedBody }}</text>
+						</view>
+						<view
+							v-if="formattedBody.length > 150"
+							class="expand-btn"
+							@tap="toggleContent"
+						>
+							<text class="expand-btn-text">
+								{{ contentExpanded ? "收起" : "展开全文" }}
+							</text>
+							<cl-icon
+								:name="contentExpanded ? 'arrow-up-s-line' : 'arrow-down-s-line'"
+								size="16px"
+								color="#3b82f6"
+							/>
+						</view>
+					</view>
+				</view>
+
+				<!-- 无数据 -->
+				<view v-else class="empty-wrapper">
+					<cl-icon name="file-unknow-line" size="48px" color="#d1d5db" />
+					<text class="empty-text">暂无引用数据</text>
+				</view>
+
+				<!-- 底部占位 -->
+				<!-- <view class="bottom-placeholder"></view> -->
+			</scroll-view>
+		</view>
+	</cl-popup>
+</template>
+
+<style lang="scss" scoped>
+.web-net-detail {
+	@apply w-full h-full flex flex-col bg-white;
+}
+
+.popup-scroll {
+	@apply flex-1 w-full;
+}
+
+.content-wrapper {
+	@apply px-4 py-4;
+}
+
+// 标题
+.article-title {
+	font-size: 18px;
+	font-weight: 600;
+	color: #1f2937;
+	line-height: 1.5;
+	margin-bottom: 12px;
+}
+
+// 来源信息
+.source-info {
+	@apply flex flex-row items-center mb-4 pb-4;
+	border-bottom: 1px solid #f3f4f6;
+}
+
+.source-logo {
+	width: 24px;
+	height: 24px;
+	border-radius: 4px;
+	margin-right: 8px;
+	background-color: #f3f4f6;
+}
+
+.source-logo-placeholder {
+	width: 24px;
+	height: 24px;
+	border-radius: 4px;
+	margin-right: 8px;
+	background-color: #f3f4f6;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.source-name {
+	font-size: 14px;
+	color: #6b7280;
+	flex: 1;
+}
+
+.source-time {
+	font-size: 12px;
+	color: #9ca3af;
+}
+
+// 内容摘要
+.body-section {
+	@apply mb-4;
+}
+
+.section-label {
+	font-size: 14px;
+	font-weight: 500;
+	color: #374151;
+	margin-bottom: 8px;
+	display: block;
+}
+
+.body-content {
+	@apply p-3 rounded-xl;
+	background-color: #f9fafb;
+	max-height: 180px;
+	overflow: hidden;
+	transition: max-height 0.3s ease;
+
+	&.expanded {
+		max-height: none;
+	}
+}
+
+.body-text {
+	font-size: 14px;
+	color: #4b5563;
+	line-height: 1.8;
+	white-space: pre-wrap;
+}
+
+.expand-btn {
+	@apply flex flex-row items-center justify-center mt-2 py-2;
+}
+
+.expand-btn-text {
+	font-size: 14px;
+	color: #3b82f6;
+	margin-right: 4px;
+}
+
+// 原文链接
+.url-section {
+	@apply py-4;
+	border-top: 1px solid #f3f4f6;
+}
+
+.url-box {
+	@apply flex flex-row items-center p-3 rounded-xl mt-2;
+	background-color: #f0f9ff;
+	border: 1px solid #bfdbfe;
+}
+
+.url-text {
+	font-size: 13px;
+	color: #3b82f6;
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.copy-btn {
+	@apply flex flex-row items-center ml-3 px-3 py-1.5 rounded-lg;
+	background-color: #fff;
+	border: 1px solid #3b82f6;
+	flex-shrink: 0;
+}
+
+.copy-btn-text {
+	font-size: 13px;
+	color: #3b82f6;
+	margin-left: 4px;
+}
+
+.url-tip {
+	font-size: 12px;
+	color: #9ca3af;
+	margin-top: 8px;
+	display: block;
+}
+
+// 空状态
+.empty-wrapper {
+	@apply flex flex-col items-center justify-center py-16;
+}
+
+.empty-text {
+	font-size: 14px;
+	color: #9ca3af;
+	margin-top: 12px;
+}
+
+// 底部占位
+.bottom-placeholder {
+	height: calc(20px + env(safe-area-inset-bottom));
+}
+</style>

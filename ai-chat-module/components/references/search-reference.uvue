@@ -9,10 +9,24 @@ export interface SearchItem {
 	title: string;
 	link: string;
 	date?: string;
+	// 原始数据（用于弹窗展示）
+	raw?: {
+		hostName?: string;
+		hostLogo?: string;
+		indexId?: number;
+		time?: string;
+		title?: string;
+		body?: string;
+		url?: string;
+	};
 }
 
 const props = defineProps<{
 	searchList: SearchItem[];
+}>();
+
+const emit = defineEmits<{
+	(e: "item-tap", data: SearchItem["raw"]): void;
 }>();
 
 // 模块展开状态
@@ -23,31 +37,9 @@ const toggleExpand = () => {
 	isExpanded.value = !isExpanded.value;
 };
 
-// 复制链接到剪贴板
-const copyLink = (item: SearchItem) => {
-	if (!item.link) {
-		return uni.showToast({
-			title: "链接不可用",
-			icon: "none"
-		});
-	}
-
-	uni.setClipboardData({
-		data: item.link,
-		showToast: false,
-		success: () => {
-			uni.showToast({
-				title: "链接已复制",
-				icon: "success"
-			});
-		},
-		fail: () => {
-			uni.showToast({
-				title: "复制失败",
-				icon: "none"
-			});
-		}
-	});
+// 点击搜索项 - 打开详情弹窗
+const handleItemTap = (item: SearchItem) => {
+	emit("item-tap", item.raw);
 };
 
 // 格式化日期
@@ -84,7 +76,7 @@ const formatDate = (timestamp: number) => {
 					v-for="(item, index) in searchList"
 					:key="index"
 					class="search-item"
-					@click="copyLink(item)"
+					@click="handleItemTap(item)"
 				>
 					<text class="search-index">{{ index + 1 }}</text>
 					<view class="search-content">

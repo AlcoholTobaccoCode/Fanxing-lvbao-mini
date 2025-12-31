@@ -32,6 +32,17 @@ const props = defineProps<{
 	references: ReferencesData;
 }>();
 
+const emit = defineEmits<{
+	(e: "search-item-tap", data: SearchListItem | undefined): void;
+}>();
+
+// 处理搜索项点击
+const handleSearchItemTap = (data: SearchListItem | undefined) => {
+	if (data) {
+		emit("search-item-tap", data);
+	}
+};
+
 // 是否有法规数据
 const hasLawData = computed(() => {
 	return (
@@ -58,13 +69,14 @@ const hasAnyData = computed(() => {
 	return hasLawData.value || hasCaseData.value || hasSearchData.value;
 });
 
-// 格式化搜索列表
+// 格式化搜索列表（保留原始数据用于弹窗展示）
 const formattedSearchList = computed(() => {
 	if (!props.references?.searchList) return [];
 	return props.references.searchList.map((item) => ({
 		title: item.title || "",
 		link: item.url || "",
-		date: item.time || ""
+		date: item.time || "",
+		raw: item
 	}));
 });
 </script>
@@ -86,7 +98,11 @@ const formattedSearchList = computed(() => {
 		/>
 
 		<!-- 数据来源 -->
-		<SearchReference v-if="hasSearchData" :search-list="formattedSearchList" />
+		<SearchReference
+			v-if="hasSearchData"
+			:search-list="formattedSearchList"
+			@item-tap="handleSearchItemTap"
+		/>
 	</view>
 </template>
 

@@ -20,6 +20,7 @@ import LawyerList from "../components/lawyer-recommend/lawyer-list.uvue";
 import ReferencesPanel from "../components/references/index.uvue";
 import LawPopup from "./pop/law.uvue";
 import CasePopup from "./pop/case.uvue";
+import WebNet from "./pop/web-net.uvue";
 
 const log = new Logger("ConsultChatPage");
 const ui = useUi();
@@ -209,6 +210,7 @@ const handleSend = async (data: SendData) => {
 //#region 法条/案例/引用 交互事件
 const lawPopupVisible = ref(false);
 const casePopupVisible = ref(false);
+const webNetVisible = ref(false);
 const currentLawRef = ref<{
 	lawId: string;
 	lawItemId?: string;
@@ -218,6 +220,21 @@ const currentCaseRef = ref<{
 	caseNo: string;
 	preloadData?: CaseDetailResponse;
 } | null>(null);
+const currentWebNetData = ref<{
+	hostName?: string;
+	hostLogo?: string;
+	indexId?: number;
+	time?: string;
+	title?: string;
+	body?: string;
+	url?: string;
+} | null>(null);
+
+// 处理联网搜索引用点击
+const handleSearchItemTap = (data: any) => {
+	currentWebNetData.value = data;
+	webNetVisible.value = true;
+};
 
 const handleRefTap = (
 	e: { type: string; text: string; json: Record<string, any> | null },
@@ -254,6 +271,15 @@ const handleRefTap = (
 			preloadData
 		};
 		casePopupVisible.value = true;
+	} else if (e.type === "search") {
+		// 联网搜索引用 - 根据 indexId 从 searchList 获取完整数据
+		const indexId = parseInt(e.json?.indexId || "0");
+		let searchData = null;
+		if (indexId > 0 && item?.references?.searchList?.length) {
+			searchData = item.references.searchList[indexId - 1] || null;
+		}
+		currentWebNetData.value = searchData;
+		webNetVisible.value = true;
 	}
 };
 //#endregion
@@ -319,6 +345,7 @@ const handleRefTap = (
 								<references-panel
 									v-if="item.references"
 									:references="item.references"
+									@search-item-tap="handleSearchItemTap"
 								/>
 							</ai-message>
 						</template>
@@ -356,6 +383,13 @@ const handleRefTap = (
 			:case-no="currentCaseRef ? currentCaseRef.caseNo : ''"
 			:preload-data="currentCaseRef ? currentCaseRef.preloadData : null"
 			@update:visible="casePopupVisible = $event"
+		/>
+
+		<!-- 联网搜索引用详情弹窗 -->
+		<web-net
+			:visible="webNetVisible"
+			:data="currentWebNetData"
+			@update:visible="webNetVisible = $event"
 		/>
 	</view>
 </template>

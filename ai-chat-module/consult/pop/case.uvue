@@ -248,7 +248,7 @@ const toggleContent = () => {
 				</view>
 
 				<!-- 底部占位 -->
-				<view class="bottom-placeholder"></view>
+				<!-- <view class="bottom-placeholder"></view> -->
 			</scroll-view>
 		</view>
 	</cl-popup>

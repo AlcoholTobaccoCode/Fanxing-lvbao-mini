@@ -17,13 +17,25 @@ export interface LawItemReference {
 	timeliness: string;
 }
 
+/** 联网搜索引用数据 */
+export interface SearchReference {
+	type: "search";
+	hostName?: string;
+	hostLogo?: string;
+	indexId?: number;
+	time?: string;
+	title?: string;
+	body?: string;
+	url?: string;
+}
+
 /** 引用类型 */
-export type ReferenceData = CaseReference | LawItemReference;
+export type ReferenceData = CaseReference | LawItemReference | SearchReference;
 
 /** 点击事件数据 */
 export interface LawRefTapEvent {
 	/** 引用类型 */
-	type: "case" | "lawItem" | "unknown";
+	type: "case" | "lawItem" | "search" | "unknown";
 	/** 显示文本 */
 	text: string;
 	/** 完整 JSON 数据（原始解析结果） */
@@ -75,6 +87,10 @@ export function preprocessLawMarkdown(markdown: string): string {
 				const timelinessHtml = timeliness ? `(${timeliness})` : "";
 				const inlineStyle = getTimelinessStyle(timeliness);
 				return `<a href="#law-ref-item" class="law-item-ref" style="${inlineStyle}" data-ref="${escapedJson}">${text}${timelinessHtml}</a>`;
+			} else if (data.type === "search") {
+				// 联网搜索引用 - 绿色样式
+				const searchStyle = `${lawCaseBaseStyle}color:#059669;background-color:#ecfdf5;`;
+				return `<a href="#law-ref-search" class="law-search-ref" style="${searchStyle}" data-ref="${escapedJson}">${text}</a>`;
 			}
 
 			return match;
@@ -94,7 +110,6 @@ export function parseLawLinkTap(attrs: {
 	innerText?: string;
 }): LawRefTapEvent | null {
 	const href = attrs.href || "";
-
 	// 非法律引用链接
 	if (!href.startsWith("#law-ref")) return null;
 
@@ -105,6 +120,7 @@ export function parseLawLinkTap(attrs: {
 
 	if (href === "#law-ref-case") type = "case";
 	else if (href === "#law-ref-item") type = "lawItem";
+	else if (href === "#law-ref-search") type = "search";
 
 	if (dataRef) {
 		try {
