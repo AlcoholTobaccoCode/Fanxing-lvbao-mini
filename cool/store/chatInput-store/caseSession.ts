@@ -13,6 +13,8 @@ import {
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
 
+//#region 类型定义
+
 /**
  * 案例检索模型类型
  * - farui: 法睿 (专业版) - 非流式，返回案例列表
@@ -76,6 +78,8 @@ export interface CaseStreamHooks {
 	onTextChunk?: (chunk: string) => void;
 }
 
+//#endregion
+
 export class CaseSessionStore {
 	messages = ref<CaseMessage[]>([]);
 	sessionId = ref<string | null>(null);
@@ -90,7 +94,8 @@ export class CaseSessionStore {
 	faruiKeywords = ref<string[]>([]); // 关键词
 	faruiCurrentPage = ref(1); // 当前页
 	faruiTotalCount = ref(0); // 总数量
-	faruiPageSize = ref(10); // 每页数量
+	faruiPageSize = ref(5); // 每页数量
+	faruiDisplayCount = ref(5); // 每页数量
 	loadingMore = ref(false); // 加载更多状态
 	lastQuery = ref(""); // 上次查询内容
 
@@ -229,14 +234,18 @@ export class CaseSessionStore {
 		this.streamStatus.value = "正在检索案例...";
 		this.lastQuery.value = text;
 
-		const res = await QueryFaruiCase({ content: text, pageNumber: 1, pageSize: 10 });
+		const res = await QueryFaruiCase({
+			content: text,
+			pageNumber: 1,
+			pageSize: this.faruiPageSize.value
+		});
 		const responseData = (res as any)?.data ?? res;
 		const caseResult = responseData?.caseResult || [];
 
 		// 保存分页信息
 		this.faruiCurrentPage.value = responseData?.currentPage || 1;
 		this.faruiTotalCount.value = responseData?.totalCount || caseResult.length;
-		this.faruiPageSize.value = responseData?.pageSize || 10;
+		this.faruiPageSize.value = responseData?.pageSize || this.faruiDisplayCount.value;
 
 		// 保存关键词
 		this.faruiKeywords.value = responseData?.queryKeywords || [];
