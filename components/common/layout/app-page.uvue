@@ -1,9 +1,10 @@
 <script lang="ts" setup>
-import { computed, ref, useSlots } from "vue";
+import { computed, nextTick, ref, useSlots, watch } from "vue";
 import { router, unReadCount as imUnReadCount, useStore } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { loginModalVisible } from "@/cool/store/login-modal";
 import { chatInputStore } from "@/cool/store";
+import { config } from "@/config";
 
 import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
@@ -41,6 +42,18 @@ const emit = defineEmits<{
 
 const { user } = useStore();
 const ui = useUi();
+
+//#region page-container
+const isShowPageContainer = ref(true);
+watch(
+	() => props.backTop,
+	(val) => {
+		if (val) {
+			isShowPageContainer.value = false;
+		}
+	}
+);
+//#endregion
 
 // 语音播放开关（仅用于传给 header 的初始值和本地展示）
 const voicePlay = ref(props.initialVoicePlay ?? false);
@@ -100,6 +113,43 @@ const handleHeaderClickLeft = () => {
 };
 
 //#endregion
+
+const beforePageContainerLeave = () => {
+	isShowPageContainer.value = false;
+	// 如果设置返回上一页
+	if (props.backTop) {
+		nextTick(() => {
+			isShowPageContainer.value = true;
+		});
+		router.back();
+	} else {
+		if (isHistoryOpen.value) {
+			isHistoryOpen.value = false;
+			nextTick(() => {
+				isShowPageContainer.value = true;
+			});
+		} else {
+			uni.showModal({
+				title: `确定要退出${config.name}吗？`,
+				success: (e) => {
+					if (e.confirm) {
+						uni.exitMiniProgram({
+							success: function () {
+								console.log("退出小程序成功");
+							},
+							fail: function (err) {
+								console.log("退出小程序失败", err);
+							}
+						});
+					} else {
+						//点取消，生成新的弹框
+						isShowPageContainer.value = true;
+					}
+				}
+			});
+		}
+	}
+};
 </script>
 
 <template>
@@ -187,6 +237,14 @@ const handleHeaderClickLeft = () => {
 		>
 			<LoginContent compact />
 		</cl-popup>
+
+		<view v-if="isShowPageContainer">
+			<page-container
+				:show="isShowPageContainer"
+				:overlay="false"
+				@beforeleave="beforePageContainerLeave"
+			></page-container>
+		</view>
 	</view>
 </template>
 
