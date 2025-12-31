@@ -5,6 +5,7 @@ import { RecommendLawyers, type RecommendLawyerItem } from "@/api/consult";
 import { createModelSessionId } from "@/utils/assetsConfig";
 import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID } from "@/utils/util";
+import { createSseDecoder } from "@/cool/utils/sse-decoder";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
 import {
@@ -312,28 +313,12 @@ export class ConsultSessionStore {
 
 			await new Promise<void>((resolve, reject) => {
 				let buffer = "";
+				const decoder = createSseDecoder();
 
 				const handleChunk = (data: ArrayBuffer) => {
 					try {
-						let chunkStr = "";
-						if (typeof TextDecoder !== "undefined") {
-							chunkStr = new TextDecoder("utf-8").decode(data);
-						} else {
-							const uint8 = new Uint8Array(data);
-							let str = "";
-							for (let i = 0; i < uint8.length; i++) {
-								str += String.fromCharCode(uint8[i]);
-							}
-							try {
-								chunkStr = decodeURIComponent(escape(str));
-							} catch {
-								chunkStr = str;
-							}
-						}
-
-						if (!chunkStr) {
-							return;
-						}
+						const chunkStr = decoder.decode(data);
+						if (!chunkStr) return;
 
 						buffer += chunkStr;
 						const lines = buffer.split(/\r?\n/);
@@ -361,12 +346,16 @@ export class ConsultSessionStore {
 						try {
 							if (res.data) {
 								handleChunk(res.data as ArrayBuffer);
-								if (buffer) {
-									const lastLines = buffer.split(/\r?\n/);
-									buffer = "";
-									for (const raw of lastLines) {
-										processSseLine(raw);
-									}
+							}
+							const remaining = decoder.flush();
+							if (remaining) {
+								buffer += remaining;
+							}
+							if (buffer) {
+								const lastLines = buffer.split(/\r?\n/);
+								buffer = "";
+								for (const raw of lastLines) {
+									processSseLine(raw);
 								}
 							}
 							resolve();

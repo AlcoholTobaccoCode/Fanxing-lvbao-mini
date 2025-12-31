@@ -4,6 +4,7 @@ import { useStore } from "@/cool";
 import { createModelSessionId } from "@/utils/assetsConfig";
 import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID } from "@/utils/util";
+import { createSseDecoder } from "@/cool/utils/sse-decoder";
 import {
 	QueryFaruiCase,
 	type FaruiCaseResultItem,
@@ -366,6 +367,7 @@ export class CaseSessionStore {
 
 		await new Promise<void>((resolve, reject) => {
 			let buffer = "";
+			const decoder = createSseDecoder();
 
 			const processSseLine = (rawLine: string) => {
 				const line = rawLine.trim();
@@ -464,22 +466,7 @@ export class CaseSessionStore {
 
 			const handleChunk = (data: ArrayBuffer) => {
 				try {
-					let chunkStr = "";
-					if (typeof TextDecoder !== "undefined") {
-						chunkStr = new TextDecoder("utf-8").decode(data);
-					} else {
-						const uint8 = new Uint8Array(data);
-						let str = "";
-						for (let i = 0; i < uint8.length; i++) {
-							str += String.fromCharCode(uint8[i]);
-						}
-						try {
-							chunkStr = decodeURIComponent(escape(str));
-						} catch {
-							chunkStr = str;
-						}
-					}
-
+					const chunkStr = decoder.decode(data);
 					if (!chunkStr) return;
 
 					buffer += chunkStr;
@@ -508,13 +495,16 @@ export class CaseSessionStore {
 					try {
 						if (res.data) {
 							handleChunk(res.data as ArrayBuffer);
-							// 处理剩余 buffer
-							if (buffer) {
-								const lastLines = buffer.split(/\r?\n/);
-								buffer = "";
-								for (const raw of lastLines) {
-									processSseLine(raw);
-								}
+						}
+						const remaining = decoder.flush();
+						if (remaining) {
+							buffer += remaining;
+						}
+						if (buffer) {
+							const lastLines = buffer.split(/\r?\n/);
+							buffer = "";
+							for (const raw of lastLines) {
+								processSseLine(raw);
 							}
 						}
 						resolve();

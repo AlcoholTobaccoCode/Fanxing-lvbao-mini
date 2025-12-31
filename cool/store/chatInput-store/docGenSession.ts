@@ -3,6 +3,7 @@ import { config } from "@/config";
 import { useStore } from "@/cool";
 import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID, generateRandomString } from "@/utils/util";
+import { createSseDecoder } from "@/cool/utils/sse-decoder";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
 
@@ -308,6 +309,7 @@ export class DocGenSessionStore {
 		await new Promise<void>((resolve, reject) => {
 			let buffer = "";
 			let fullContent = "";
+			const decoder = createSseDecoder();
 
 			const processSseLine = (rawLine: string) => {
 				const line = rawLine.trim();
@@ -392,22 +394,7 @@ export class DocGenSessionStore {
 
 			const handleChunk = (data: ArrayBuffer) => {
 				try {
-					let chunkStr = "";
-					if (typeof TextDecoder !== "undefined") {
-						chunkStr = new TextDecoder("utf-8").decode(data);
-					} else {
-						const uint8 = new Uint8Array(data);
-						let str = "";
-						for (let i = 0; i < uint8.length; i++) {
-							str += String.fromCharCode(uint8[i]);
-						}
-						try {
-							chunkStr = decodeURIComponent(escape(str));
-						} catch {
-							chunkStr = str;
-						}
-					}
-
+					const chunkStr = decoder.decode(data);
 					if (!chunkStr) return;
 
 					buffer += chunkStr;
@@ -440,13 +427,16 @@ export class DocGenSessionStore {
 					try {
 						if (res.data) {
 							handleChunk(res.data as ArrayBuffer);
-							// 处理剩余 buffer
-							if (buffer) {
-								const lastLines = buffer.split(/\r?\n/);
-								buffer = "";
-								for (const raw of lastLines) {
-									processSseLine(raw);
-								}
+						}
+						const remaining = decoder.flush();
+						if (remaining) {
+							buffer += remaining;
+						}
+						if (buffer) {
+							const lastLines = buffer.split(/\r?\n/);
+							buffer = "";
+							for (const raw of lastLines) {
+								processSseLine(raw);
 							}
 						}
 						resolve();
