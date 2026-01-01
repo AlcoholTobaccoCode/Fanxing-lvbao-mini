@@ -4,6 +4,7 @@ import { computed, inject, ref, type PropType } from "vue";
 import { isDark, parseClass, useRefs, type Response } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import type { Register } from "./types";
+import { type platformType } from "@/api/user";
 import SmsBtn from "@/components/common/sms-btn.uvue";
 import { RegisterUser } from "@/api/user";
 
@@ -51,6 +52,21 @@ const disabled = computed(() => {
 	);
 });
 
+// 获取当前平台
+function getPlatform(): platformType {
+	// #ifdef MP-WEIXIN
+	return "miniprogram";
+	// #endif
+	// #ifdef APP
+	return "app";
+	// #endif
+	// #ifdef H5
+	return "web";
+	// #endif
+	// @ts-ignore
+	return "web";
+}
+
 // 注册并登录（调用新的 RegisterUser 接口）
 async function toLogin() {
 	if (!isAgree()) {
@@ -82,7 +98,8 @@ async function toLogin() {
 		phone: props.form.phone,
 		code: props.form.code,
 		password: password.value,
-		username: finalUsername
+		username: finalUsername,
+		platform: getPlatform()
 	})
 		.then((res) => {
 			emit("success", res);

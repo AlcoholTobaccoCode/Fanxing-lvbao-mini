@@ -8,13 +8,15 @@ import { clearEasemobCache, ensureGlobalIMForUser } from "@/utils/easemob";
 import { imStore } from "./im";
 
 // 登录成功返回的认证信息
-// 对应后端 data: { access_token, token_type, userType, phone, username }
 export type Token = {
 	access_token: string; // 访问 token，例如 "Bearer xxx"
+	expires_time: number; // token 过期时间戳（秒）
+	refresh_token: string; // 刷新 token
 	token_type: string; // token 类型，通常为 "bearer"
-	userType: number; // 用户类型
+	user_type: number; // 用户类型
 	phone: string; // 手机号
-	username: string; // 用户名
+	user_name: string; // 用户名
+	user_id: number; // 用户 ID
 };
 
 export class User {
@@ -24,19 +26,35 @@ export class User {
 	info = ref<UserInfo | null>(null);
 
 	/**
-	 * 当前token，字符串或null
+	 * 当前 access_token，字符串或 null
 	 */
 	token: string | null = null;
+
+	/**
+	 * 刷新 token
+	 */
+	refreshToken: string | null = null;
+
+	/**
+	 * token 过期时间戳（秒）
+	 */
+	expiresTime: number = 0;
 
 	constructor() {
 		// 获取本地用户信息
 		const userInfo = storage.get("userInfo");
 
-		// 获取本地token
+		// 获取本地 token
 		const token = storage.get("token") as string | null;
-
-		// 如果token为空字符串则置为null
 		this.token = token == "" ? null : token;
+
+		// 获取本地 refresh_token
+		const refreshToken = storage.get("refreshToken") as string | null;
+		this.refreshToken = refreshToken == "" ? null : refreshToken;
+
+		// 获取过期时间
+		const expiresTime = storage.get("expiresTime") as number | null;
+		this.expiresTime = expiresTime ?? 0;
 
 		// 初始化用户信息
 		if (userInfo != null && isObject(userInfo)) {
@@ -157,13 +175,16 @@ export class User {
 	}
 
 	/**
-	 * 清除本地所有用户信息和token
+	 * 清除本地所有用户信息和 token
 	 */
 	clear() {
 		storage.remove("userInfo");
 		storage.remove("token");
 		storage.remove("refreshToken");
+		storage.remove("expiresTime");
 		this.token = null;
+		this.refreshToken = null;
+		this.expiresTime = 0;
 		this.remove();
 
 		// 清空环信 IM 相关缓存和连接
@@ -182,27 +203,53 @@ export class User {
 	}
 
 	/**
-	 * 设置token并存储到本地
+	 * 判断 token 是否即将过期（提前 5 分钟刷新）
+	 */
+	isTokenExpiringSoon(): boolean {
+		if (!this.expiresTime) return false;
+		const now = Math.floor(Date.now() / 1000);
+		// 提前 5 分钟（300 秒）刷新
+		return now >= this.expiresTime - 300;
+	}
+
+	/**
+	 * 判断 token 是否已过期
+	 */
+	isTokenExpired(): boolean {
+		if (!this.expiresTime) return false;
+		const now = Math.floor(Date.now() / 1000);
+		return now >= this.expiresTime;
+	}
+
+	/**
+	 * 设置 token 并存储到本地
 	 * @param data 登录返回的认证信息
 	 */
 	setToken(data: Token) {
-		// 直接保存 access_token 作为当前 token（不再使用刷新 token 机制）
+		// 保存 access_token
 		this.token = data.access_token;
-		// token 永不过期，由服务端在 401 时判定失效
 		storage.set("token", data.access_token, 0);
+
+		// 保存 refresh_token
+		this.refreshToken = data.refresh_token;
+		storage.set("refreshToken", data.refresh_token, 0);
+
+		// 保存过期时间
+		this.expiresTime = data.expires_time;
+		storage.set("expiresTime", data.expires_time, 0);
 
 		// 同步一份基础用户信息，便于前端展示昵称、手机号等
 		// 其余字段留给后续 /user/profile 等接口覆盖
 		this.set({
 			unionid: "",
-			id: 0,
-			nickName: data.username,
+			id: data.user_id || 0,
+			nickName: data.user_name,
 			avatarUrl: "",
 			phone: data.phone,
 			gender: 0,
 			status: 1,
 			description: "",
-			loginType: data.userType,
+			loginType: data.user_type,
 			province: "",
 			city: "",
 			district: "",
@@ -210,6 +257,20 @@ export class User {
 			createTime: "",
 			updateTime: ""
 		});
+	}
+
+	/**
+	 * 更新 token（用于刷新 token 后更新）
+	 */
+	updateToken(data: { access_token: string; expires_time: number; refresh_token: string }) {
+		this.token = data.access_token;
+		storage.set("token", data.access_token, 0);
+
+		this.refreshToken = data.refresh_token;
+		storage.set("refreshToken", data.refresh_token, 0);
+
+		this.expiresTime = data.expires_time;
+		storage.set("expiresTime", data.expires_time, 0);
 	}
 }
 

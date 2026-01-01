@@ -8,8 +8,6 @@ import { Logger } from "@/cool/utils/log";
 import { showLoginModal } from "@/cool/store/login-modal";
 import { PermissionScope, requestPermission, openSettings } from "@/utils/permission";
 
-import AppPage from "@/components/common/layout/app-page.uvue";
-
 const log = new Logger("VoiceCall");
 const ui = useUi();
 

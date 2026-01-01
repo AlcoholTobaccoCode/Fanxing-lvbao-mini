@@ -196,7 +196,7 @@ const toTestPage = () => {
 							/>
 						</scroll-view>
 					</view>
-					<view v-if="showTestPageBtn >= 10" class="p-4">
+					<view v-if="showTestPageBtn >= 10" class="p-4 flex gap-2 flex-row">
 						<cl-button @click="toTestPage">
 							「{{ isDev ? "开发" : "生产" }}」前往测试页面
 						</cl-button>

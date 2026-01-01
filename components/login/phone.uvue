@@ -4,7 +4,7 @@ import { computed, inject, ref, type PropType } from "vue";
 import { isDark, parseClass, useRefs, type Response } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import type { LoginByCode } from "./types";
-import { LoginByCode as LoginByCodeApi } from "@/api/user";
+import { type platformType, LoginByCode as LoginByCodeApi } from "@/api/user";
 
 import SmsBtn from "@/components/common/sms-btn.uvue";
 
@@ -34,14 +34,30 @@ const disabled = computed(() => {
 	return props.form.phone == "" || props.form.code == "";
 });
 
+// 获取当前平台
+function getPlatform(): platformType {
+	// #ifdef MP-WEIXIN
+	return "miniprogram";
+	// #endif
+	// #ifdef APP
+	return "app";
+	// #endif
+	// #ifdef H5
+	return "web";
+	// #endif
+	// @ts-ignore
+	return "web";
+}
+
 async function toLogin() {
 	if (!isAgree()) {
 		return;
 	}
 
-	const payload: LoginByCode = {
+	const payload = {
 		phone: props.form.phone,
-		code: props.form.code
+		code: props.form.code,
+		platform: getPlatform()
 	};
 
 	loading.value = true;

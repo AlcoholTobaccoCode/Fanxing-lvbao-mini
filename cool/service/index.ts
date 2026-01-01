@@ -4,6 +4,7 @@ import { isNull, isObject, parse } from "../utils";
 import { useStore } from "../store";
 import { ERROR_DEFAULT_MESSAGE } from "./error.map";
 import { showLoginModal } from "../store/login-modal";
+import { RefreshToken } from "@/api/user";
 
 // 请求参数类型定义
 export type RequestOptions = {
@@ -26,11 +27,36 @@ export type Response = {
 	error?: string; // 后端错误码字符串，如 User.SmsCode.Invalid
 };
 
-// 请求队列（用于等待token刷新后继续请求）
-let requests: ((token: string) => void)[] = [];
+// 请求队列（用于等待 token 刷新后继续请求）
+let pendingRequests: (() => void)[] = [];
 
-// 标记token是否正在刷新
+// 标记 token 是否正在刷新
 let isRefreshing = false;
+
+/**
+ * 刷新 token
+ * @returns Promise<boolean> 刷新是否成功
+ */
+async function doRefreshToken(): Promise<boolean> {
+	const { user } = useStore();
+
+	if (!user.refreshToken) {
+		return false;
+	}
+
+	try {
+		const res = await RefreshToken({ refresh_token: user.refreshToken });
+		user.updateToken({
+			access_token: res.access_token,
+			expires_time: res.expires_time,
+			refresh_token: res.refresh_token
+		});
+		return true;
+	} catch (err) {
+		console.error("[RefreshToken] 刷新 token 失败", err);
+		return false;
+	}
+}
 
 // 判断当前url是否忽略token校验
 const isIgnoreToken = (url: string) => {
@@ -69,22 +95,20 @@ export function request(options: RequestOptions): Promise<any | null> {
 		console.log(`[${method}] ${url}`);
 	}
 
-	// 拼接基础url
+	// 拼接基础 url
 	if (!url.startsWith("http")) {
 		url = config.baseUrl + url;
 	}
 
-	// 获取当前token
-	let Authorization: string | null = user.token;
-
-	// 如果是忽略token的接口，则不携带token
-	if (isIgnoreToken(url)) {
-		Authorization = null;
-	}
+	// 是否忽略 token 校验
+	const ignoreToken = isIgnoreToken(url);
 
 	return new Promise((resolve, reject) => {
 		// 发起请求的实际函数
-		const next = () => {
+		const doRequest = () => {
+			// 获取当前 token（可能是刷新后的新 token）
+			const Authorization = ignoreToken ? null : user.token;
+
 			uni.request({
 				url,
 				method,
@@ -96,68 +120,113 @@ export function request(options: RequestOptions): Promise<any | null> {
 				},
 				timeout,
 				success(res) {
-					// 401 无权限 - 弹出登录弹窗
+					// 401 无权限
 					if (res.statusCode == 401) {
-						// 只在用户已登出时弹窗，避免重复弹窗
-						if (!user.token) {
-							showLoginModal();
+						// 尝试刷新 token
+						if (user.refreshToken && !ignoreToken) {
+							// 如果正在刷新，则加入等待队列
+							if (isRefreshing) {
+								pendingRequests.push(() => {
+									doRequest();
+								});
+								return;
+							}
+
+							isRefreshing = true;
+
+							doRefreshToken()
+								.then((success) => {
+									isRefreshing = false;
+
+									if (success) {
+										// 刷新成功，重试当前请求
+										doRequest();
+										// 执行等待队列中的请求
+										pendingRequests.forEach((cb) => cb());
+										pendingRequests = [];
+									} else {
+										// 刷新失败，退出登录
+										user.logout();
+										showLoginModal();
+										reject({ message: t("请先登录"), code: 401 } as Response);
+										// 清空等待队列
+										pendingRequests = [];
+									}
+								})
+								.catch(() => {
+									isRefreshing = false;
+									user.logout();
+									showLoginModal();
+									reject({ message: t("请先登录"), code: 401 } as Response);
+									pendingRequests = [];
+								});
 						} else {
-							// token过期，先登出再弹窗
-							user.logout();
+							// 没有 refresh_token，直接退出登录
+							if (user.token) {
+								user.logout();
+							}
 							showLoginModal();
+							reject({ message: t("请先登录"), code: 401 } as Response);
 						}
-						reject({ message: t("请先登录"), code: 401 } as Response);
+						return;
 					}
 
 					// 5xx 服务异常
-					else if (res.statusCode >= 500 && res.statusCode < 600) {
+					if (res.statusCode >= 500 && res.statusCode < 600) {
 						reject({
 							message: t("服务异常")
 						} as Response);
+						return;
 					}
 
 					// 404 未找到
-					else if (res.statusCode == 404) {
+					if (res.statusCode == 404) {
 						if (isIgnore404(url)) {
 							resolve(null);
 						} else {
-							return reject({
+							reject({
 								message: `[404] ${url}`
 							} as Response);
 						}
+						return;
 					}
+
 					// 200 正常响应（业务 code 再细分）
-					else if (res.statusCode == 200) {
+					if (res.statusCode == 200) {
 						if (res.data == null) {
 							resolve(null);
-						} else if (!isObject(res.data as any)) {
-							resolve(res.data);
-						} else {
-							// 取消解析
-							if (isIgnoreParseData(url)) {
-								resolve(res.data);
-								return;
-							}
-							// 解析响应数据
-							const { code, message, data, error } = parse<Response>(
-								res.data ?? { code: 0 }
-							)!;
-
-							if (code === 200) {
-								resolve(data);
-								return;
-							}
-
-							const fallback =
-								(error && ERROR_DEFAULT_MESSAGE[error]) ||
-								(error && ERROR_DEFAULT_MESSAGE[error.trim?.() || error]) ||
-								t("服务异常");
-							const finalMessage = message && message !== "" ? message : fallback;
-							reject({ message: finalMessage, code, error } as Response);
+							return;
 						}
+						if (!isObject(res.data as any)) {
+							resolve(res.data);
+							return;
+						}
+						// 取消解析
+						if (isIgnoreParseData(url)) {
+							resolve(res.data);
+							return;
+						}
+						// 解析响应数据
+						const { code, message, data, error } = parse<Response>(
+							res.data ?? { code: 0 }
+						)!;
+
+						if (code === 200) {
+							resolve(data);
+							return;
+						}
+
+						const fallback =
+							(error && ERROR_DEFAULT_MESSAGE[error]) ||
+							(error && ERROR_DEFAULT_MESSAGE[error.trim?.() || error]) ||
+							t("服务异常");
+						const finalMessage = message && message !== "" ? message : fallback;
+						reject({ message: finalMessage, code, error } as Response);
+						return;
 					}
+
 					// 其他 4xx：有结构化 body 时尽量解析错误码
-					else if (res.statusCode >= 400 && res.statusCode < 500) {
+					if (res.statusCode >= 400 && res.statusCode < 500) {
 						if (res.data && isObject(res.data as any)) {
 							const { code, message, error } = parse<Response>(res.data) ?? {};
 							const fallback =
@@ -169,11 +238,11 @@ export function request(options: RequestOptions): Promise<any | null> {
 						} else {
 							reject({ message: t("服务异常") } as Response);
 						}
+						return;
 					}
+
 					// 其他情况统一兜底
-					else {
-						reject({ message: t("服务异常") } as Response);
-					}
+					reject({ message: t("服务异常") } as Response);
 				},
 
 				// 网络请求失败
@@ -183,9 +252,34 @@ export function request(options: RequestOptions): Promise<any | null> {
 			});
 		};
 
-		// TODO  - 等到 refreshToken 接入
-		// 不再在客户端做 token 过期与刷新判断，统一由服务端通过 401 控制
-		// token 存在时直接发起请求，401 时在上方逻辑中退出登录
-		next();
+		// 检查 token 是否即将过期，如果即将过期则先刷新
+		if (!ignoreToken && user.token && user.refreshToken && user.isTokenExpiringSoon()) {
+			if (isRefreshing) {
+				// 如果正在刷新，加入等待队列
+				pendingRequests.push(() => {
+					doRequest();
+				});
+			} else {
+				isRefreshing = true;
+				doRefreshToken()
+					.then((success) => {
+						isRefreshing = false;
+						doRequest();
+						// 执行等待队列中的请求
+						pendingRequests.forEach((cb) => cb());
+						pendingRequests = [];
+					})
+					.catch(() => {
+						isRefreshing = false;
+						// 刷新失败也继续请求，让 401 处理
+						doRequest();
+						pendingRequests.forEach((cb) => cb());
+						pendingRequests = [];
+					});
+			}
+		} else {
+			// 正常发起请求
+			doRequest();
+		}
 	});
 }

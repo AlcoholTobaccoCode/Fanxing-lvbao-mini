@@ -5,8 +5,14 @@ import { prod } from "./prod";
 // 判断当前是否为开发环境
 export const isDev = process.env.NODE_ENV == "development";
 
-// 忽略 token 校验的接口路径
-export const ignoreTokens: string[] = [];
+// 忽略 token 校验的接口路径（这些接口不携带 Authorization header）
+export const ignoreTokens: string[] = [
+	"/user/refresh", // 刷新 token
+	"/user/login", // 密码登录
+	"/user/smsLogin", // 验证码登录
+	"/user/register", // 注册
+	"/common/sendSms" // 发送短信验证码
+];
 
 // 404 白名单：这些路径返回 404 时不当成错误（支持 * 通配符）
 export const ignore404s: string[] = ["/lawyer/info"];
