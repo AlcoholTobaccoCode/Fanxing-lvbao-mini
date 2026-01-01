@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { isDark, router, usePager, unReadCount } from "@/cool";
 import { type EasemobConversationItem, getEasemobServerConversations } from "@/utils/easemob";
 import { imBus } from "@/utils/easemob/events";
@@ -7,6 +7,11 @@ import { useChatUsernames, formatUnread } from "./hook";
 import { sleepWait } from "@/utils";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
+
+const titleUnReadCount = computed(() => {
+	if (!unReadCount.value) return "";
+	return `(${unReadCount.value > 999 ? "..." : unReadCount.value})`;
+});
 
 /* 
 	TODO
@@ -172,17 +177,19 @@ onMounted(() => {
 	refresh({});
 	imBus.on("im:onTextMessage", updateScrollListData);
 	imBus.on("im:onReadStatusUpdated", updateScrollListData);
+	imBus.on("im:onSendMsg", updateScrollListData);
 });
 
 onBeforeUnmount(() => {
 	imBus.off("im:onTextMessage", updateScrollListData);
 	imBus.off("im:onReadStatusUpdated", updateScrollListData);
+	imBus.off("im:onSendMsg", updateScrollListData);
 });
 </script>
 
 <template>
 	<app-page
-		:title="`历史对话(${unReadCount > 999 ? '...' : unReadCount})`"
+		:title="`历史对话${titleUnReadCount}`"
 		back-top
 		:chat-list-btn="false"
 		:title-action="false"

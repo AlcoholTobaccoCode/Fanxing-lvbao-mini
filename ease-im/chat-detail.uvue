@@ -502,14 +502,7 @@ const handleJumpToLatest = () => {
 						跳转最新消息
 					</cl-button>
 				</view> -->
-				<view class="pb-4 pt-2">
-					<chat-input
-						ref="inputModalRef"
-						v-model:model-value="inputModel"
-						use-module="userChat"
-						@send="handleSend"
-					/>
-				</view>
+				<chat-input v-model:model-value="inputModel" @send="handleSend" />
 				<!-- 底部扩展交互区域：根据业务需要控制 extraPanelVisible 展示/隐藏 -->
 				<!-- <view
 					v-if="extraPanelVisible"

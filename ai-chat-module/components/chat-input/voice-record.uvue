@@ -137,19 +137,25 @@ const initWaveStore = () => {
 };
 // 请求权限
 const ensureRecordPermission = () =>
-	new Promise<void>((resolve) => {
+	new Promise<{ needGetPermission: boolean }>((resolve) => {
 		if (hasRecordPermission.value) {
-			resolve();
+			resolve({
+				needGetPermission: false
+			});
 			return;
 		}
 		RecordApp.RequestPermission(
 			() => {
 				hasRecordPermission.value = true;
-				resolve();
+				resolve({
+					needGetPermission: true
+				});
 			},
 			(msg: string, _isUserNotAllow: boolean) => {
 				hasRecordPermission.value = false;
-				resolve();
+				resolve({
+					needGetPermission: true
+				});
 			}
 		);
 	});
@@ -249,21 +255,26 @@ watch(
 
 const startFromPress = async (e?: TouchEvent) => {
 	status.value = "recording";
-	await ensureRecordPermission();
+	const { needGetPermission } = await ensureRecordPermission();
+	// 请求权限时先关闭
+	// isShowModal.value = false;
 	if (!hasRecordPermission.value) {
-		isShowModal.value = false;
 		return ui.showToast({
 			message: "请设置中打开录音权限"
 		});
 	}
 
-	// 记录起始触摸位置
-	if (e && e.touches && e.touches[0]) {
-		startTouchY.value = e.touches[0].clientY;
-		currentTouchY.value = e.touches[0].clientY;
-	}
+	nextTick(() => {
+		if (!needGetPermission) {
+			// 记录起始触摸位置
+			if (e && e.touches && e.touches[0]) {
+				startTouchY.value = e.touches[0].clientY;
+				currentTouchY.value = e.touches[0].clientY;
+			}
 
-	isShowModal.value = true;
+			isShowModal.value = true;
+		}
+	});
 };
 
 const endFromPress = () => {
@@ -300,6 +311,10 @@ const finishRecording = () => {
 	} else {
 		endFromPress();
 	}
+};
+
+const handleFooterClick = () => {
+	cancelFromPress();
 };
 
 defineExpose({
@@ -341,7 +356,11 @@ defineExpose({
 
 		<!-- 底部操作区 -->
 		<view class="voice-record-bottom">
-			<view class="voice-record-bottom-inner" :class="{ 'is-cancel': status === 'cancel' }">
+			<view
+				class="voice-record-bottom-inner"
+				:class="{ 'is-cancel': status === 'cancel' }"
+				@click="handleFooterClick"
+			>
 				<text class="voice-record-bottom-text">{{ bottomTipText }}</text>
 			</view>
 		</view>
