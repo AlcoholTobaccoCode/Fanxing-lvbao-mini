@@ -1,0 +1,469 @@
+<script lang="ts" setup>
+import { parseClass } from "@/cool";
+import { useRealPayTest } from "../composables/use-real-pay-test";
+
+const collapsed = defineModel<boolean>("collapsed", { default: false });
+
+const {
+	realPayState,
+	packageOptions,
+	selectedPackageId,
+	orderList,
+	showOrderList,
+	createRealOrder,
+	doRealPayment,
+	checkOrderStatus,
+	closeCurrentOrder,
+	regenerateAndPay,
+	fetchOrderList,
+	formatStatus,
+	formatFee,
+	formatTime,
+	resetRealPayState
+} = useRealPayTest();
+</script>
+
+<template>
+	<view class="section">
+		<view class="section-header" @tap="collapsed = !collapsed">
+			<view class="section-title">
+				<cl-icon name="money-cny-circle-line" :size="40" color="primary"></cl-icon>
+				<cl-text size="lg" bold>微信真实支付测试</cl-text>
+			</view>
+			<cl-icon
+				name="arrow-down-s-line"
+				:size="36"
+				:pt="{
+					className: parseClass([
+						'text-surface-400 duration-200',
+						{ '-rotate-180': collapsed }
+					])
+				}"
+			></cl-icon>
+		</view>
+
+		<cl-collapse v-model="collapsed">
+			<scroll-view scroll-y style="max-height: 500px">
+				<view class="collapse-content">
+					<!-- 进度指示器 -->
+					<view class="progress-steps">
+						<view
+							class="progress-step"
+							:class="{
+								active: realPayState.step >= 1,
+								done: realPayState.step > 1
+							}"
+						>
+							<view class="step-dot">1</view>
+							<cl-text size="xs">创建订单</cl-text>
+						</view>
+						<view class="progress-line" :class="{ active: realPayState.step >= 2 }"></view>
+						<view class="progress-step" :class="{ active: realPayState.step >= 2 }">
+							<view class="step-dot">2</view>
+							<cl-text size="xs">发起支付</cl-text>
+						</view>
+					</view>
+
+					<!-- Step 1: 选择套餐 & 创建订单 -->
+					<view class="step-card">
+						<view class="step-header">
+							<view class="step-badge" :class="{ done: realPayState.step >= 2 }">1</view>
+							<cl-text bold>选择套餐 & 创建订单</cl-text>
+						</view>
+						<view class="step-content">
+							<!-- 套餐选择 -->
+							<view class="package-list">
+								<view
+									v-for="pkg in packageOptions"
+									:key="pkg.id"
+									class="package-item"
+									:class="{ selected: selectedPackageId === pkg.id }"
+									@tap="selectedPackageId = pkg.id"
+								>
+									<view class="package-radio">
+										<view v-if="selectedPackageId === pkg.id" class="radio-inner"></view>
+									</view>
+									<view class="package-info">
+										<cl-text size="sm" bold>{{ pkg.name }}</cl-text>
+										<cl-text size="lg" color="error" bold>¥{{ pkg.price }}</cl-text>
+									</view>
+								</view>
+							</view>
+
+							<!-- 当前订单号 -->
+							<view v-if="realPayState.outTradeNo" class="info-box">
+								<cl-text size="xs" color="info">订单号:</cl-text>
+								<cl-text size="xs">{{ realPayState.outTradeNo }}</cl-text>
+							</view>
+
+							<cl-button
+								type="primary"
+								size="small"
+								:loading="realPayState.loading"
+								@tap="createRealOrder"
+							>
+								{{ realPayState.outTradeNo ? "重新创建订单" : "创建订单" }}
+							</cl-button>
+						</view>
+					</view>
+
+					<!-- Step 2: 发起支付 -->
+					<view class="step-card" :class="{ disabled: realPayState.step < 2 }">
+						<view class="step-header">
+							<view class="step-badge">2</view>
+							<cl-text bold>发起支付</cl-text>
+						</view>
+						<view class="step-content">
+							<view class="action-row">
+								<cl-button
+									type="primary"
+									:disabled="realPayState.step < 2"
+									:pt="{ className: 'flex-1' }"
+									@tap="doRealPayment"
+								>
+									立即支付
+								</cl-button>
+							</view>
+						</view>
+					</view>
+
+					<!-- 辅助操作 -->
+					<view class="step-card aux-card">
+						<view class="step-header">
+							<cl-icon name="tools-line" :size="32" color="info"></cl-icon>
+							<cl-text bold>辅助操作</cl-text>
+						</view>
+						<view class="step-content">
+							<view class="button-grid-3">
+								<cl-button type="info" size="small" @tap="checkOrderStatus">
+									查询订单
+								</cl-button>
+								<cl-button type="success" size="small" @tap="regenerateAndPay">
+									重新支付
+								</cl-button>
+								<cl-button type="info" size="small" @tap="fetchOrderList">
+									订单列表
+								</cl-button>
+								<cl-button size="small" @tap="resetRealPayState"> 重置状态 </cl-button>
+							</view>
+						</view>
+					</view>
+
+					<!-- 订单列表 -->
+					<view v-if="showOrderList" class="step-card">
+						<view class="step-header">
+							<cl-icon name="file-list-line" :size="32" color="primary"></cl-icon>
+							<cl-text bold>订单列表</cl-text>
+							<cl-text size="xs" color="info">({{ orderList.length }}条)</cl-text>
+							<view style="flex: 1"></view>
+							<cl-button size="small" type="info" @tap="showOrderList = false">
+								收起
+							</cl-button>
+						</view>
+						<view class="step-content">
+							<view v-if="orderList.length === 0" class="empty-tip">
+								<cl-text color="info" size="sm">暂无订单</cl-text>
+							</view>
+							<view v-else class="order-list">
+								<view
+									v-for="order in orderList"
+									:key="order.outTradeNo"
+									class="order-item"
+								>
+									<view class="order-row">
+										<cl-text size="xs" color="info">订单号</cl-text>
+										<cl-text size="xs" :pt="{ className: 'break-all' }">
+											{{ order.outTradeNo }}
+										</cl-text>
+									</view>
+									<view class="order-row">
+										<cl-text size="xs" color="info">金额</cl-text>
+										<cl-text size="sm" color="error" bold>
+											¥{{ formatFee(order.totalFee) }}
+										</cl-text>
+									</view>
+									<view class="order-row">
+										<cl-text size="xs" color="info">状态</cl-text>
+										<cl-text
+											size="xs"
+											:color="
+												order.status === 'SUCCESS'
+													? 'success'
+													: order.status === 'CLOSED'
+														? 'info'
+														: 'warn'
+											"
+										>
+											{{ formatStatus(order.status) }}
+										</cl-text>
+									</view>
+									<view class="order-row">
+										<cl-text size="xs" color="info">时间</cl-text>
+										<cl-text size="xs">
+											{{ formatTime(order.createdAt) }}
+										</cl-text>
+									</view>
+									<view
+										class="order-row"
+										v-if="['PREPAY', 'CREATED'].includes(order.status)"
+									>
+										<cl-button
+											type="warn"
+											size="small"
+											@tap="closeCurrentOrder(order)"
+										>
+											关闭订单
+										</cl-button>
+									</view>
+								</view>
+							</view>
+						</view>
+					</view>
+				</view>
+			</scroll-view>
+		</cl-collapse>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.section {
+	background: white;
+	border-radius: 24rpx;
+	margin-bottom: 24rpx;
+	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+	overflow: hidden;
+}
+
+.section-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 28rpx 24rpx;
+	background: white;
+}
+
+.section-title {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 16rpx;
+}
+
+.collapse-content {
+	padding: 0 24rpx 24rpx;
+}
+
+.step-card {
+	background: #f8f9fc;
+	border-radius: 16rpx;
+	padding: 20rpx;
+	margin-bottom: 16rpx;
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.step-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12rpx;
+	margin-bottom: 16rpx;
+}
+
+.step-badge {
+	width: 40rpx;
+	height: 40rpx;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	font-size: 24rpx;
+	font-weight: bold;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+}
+
+.step-content {
+	padding-left: 52rpx;
+}
+
+.action-row {
+	display: flex;
+	flex-direction: row;
+	gap: 16rpx;
+}
+
+.button-grid-3 {
+	display: grid;
+	grid-template-columns: repeat(3, 1fr);
+	gap: 12rpx;
+}
+
+// 进度指示器
+.progress-steps {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+	padding: 20rpx 0;
+	margin-bottom: 16rpx;
+}
+
+.progress-step {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8rpx;
+	opacity: 0.5;
+
+	&.active {
+		opacity: 1;
+	}
+
+	&.done .step-dot {
+		background: #10b981;
+	}
+}
+
+.step-dot {
+	width: 48rpx;
+	height: 48rpx;
+	border-radius: 50%;
+	background: #d1d5db;
+	color: white;
+	font-size: 24rpx;
+	font-weight: bold;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.progress-step.active .step-dot {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.progress-line {
+	width: 60rpx;
+	height: 4rpx;
+	background: #e5e7eb;
+	margin: 0 8rpx;
+	margin-bottom: 32rpx;
+
+	&.active {
+		background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+	}
+}
+
+// 步骤卡片禁用状态
+.step-card.disabled {
+	opacity: 0.6;
+	pointer-events: none;
+}
+
+.step-badge.done {
+	background: #10b981 !important;
+}
+
+// 信息展示框
+.info-box {
+	background: #f0f9ff;
+	border: 2rpx solid #bae6fd;
+	border-radius: 12rpx;
+	padding: 16rpx;
+	margin-bottom: 16rpx;
+	display: flex;
+	flex-direction: column;
+	gap: 8rpx;
+}
+
+// 套餐选择
+.package-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+	margin-bottom: 16rpx;
+}
+
+.package-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 16rpx;
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	padding: 16rpx 20rpx;
+	transition: all 0.2s;
+
+	&.selected {
+		border-color: #667eea;
+		background: #f5f3ff;
+	}
+}
+
+.package-radio {
+	width: 36rpx;
+	height: 36rpx;
+	border-radius: 50%;
+	border: 4rpx solid #d1d5db;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+
+	.package-item.selected & {
+		border-color: #667eea;
+	}
+}
+
+.radio-inner {
+	width: 18rpx;
+	height: 18rpx;
+	border-radius: 50%;
+	background: #667eea;
+}
+
+.package-info {
+	flex: 1;
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+}
+
+// 辅助卡片
+.aux-card {
+	background: #fafafa;
+	border: 2rpx dashed #e5e7eb;
+}
+
+// 订单列表
+.order-list {
+	display: flex;
+	flex-direction: column;
+	gap: 16rpx;
+}
+
+.order-item {
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	padding: 16rpx;
+}
+
+.order-row {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 6rpx 0;
+}
+
+.empty-tip {
+	padding: 40rpx;
+	text-align: center;
+}
+</style>

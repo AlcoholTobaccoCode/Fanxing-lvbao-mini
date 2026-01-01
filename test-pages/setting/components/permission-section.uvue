@@ -1,0 +1,111 @@
+<script lang="ts" setup>
+import { parseClass } from "@/cool";
+import { usePermissionTest } from "../composables/use-permission-test";
+
+const collapsed = defineModel<boolean>("collapsed", { default: false });
+
+const {
+	testCameraPermission,
+	testRecordPermission,
+	testLocationPermission,
+	testAlbumPermission,
+	testCustomPermission,
+	toTestPage
+} = usePermissionTest();
+</script>
+
+<template>
+	<view class="section">
+		<view class="section-header" @tap="collapsed = !collapsed">
+			<view class="section-title">
+				<cl-icon name="shield-check-line" :size="40" color="success"></cl-icon>
+				<cl-text size="lg" bold>权限申请测试</cl-text>
+			</view>
+			<cl-icon
+				name="arrow-down-s-line"
+				:size="36"
+				:pt="{
+					className: parseClass([
+						'text-surface-400 duration-200',
+						{ '-rotate-180': collapsed }
+					])
+				}"
+			></cl-icon>
+		</view>
+
+		<cl-collapse v-model="collapsed">
+			<view class="collapse-content">
+				<view class="button-grid">
+					<cl-button type="primary" @tap="testCameraPermission"> 相机权限 </cl-button>
+					<cl-button type="success" @tap="testRecordPermission"> 录音权限 </cl-button>
+					<cl-button type="warn" @tap="testLocationPermission"> 位置权限 </cl-button>
+					<cl-button type="info" @tap="testAlbumPermission"> 相册权限 </cl-button>
+					<cl-button type="info" @tap="testCustomPermission"> 自定义权限 </cl-button>
+					<cl-button type="info" @tap="toTestPage"> 前往 WebView </cl-button>
+				</view>
+
+				<!-- 使用说明 -->
+				<view class="tips-box">
+					<cl-text size="sm" bold color="info">使用说明</cl-text>
+					<view class="tips-list">
+						<cl-text size="xs" color="info">1. 点击按钮测试不同权限申请</cl-text>
+						<cl-text size="xs" color="info">2. 首次申请会弹出说明和授权框</cl-text>
+						<cl-text size="xs" color="info">3. 如果拒绝过，会引导去设置页面</cl-text>
+						<cl-text size="xs" color="info">4. 已授权的权限会直接返回成功</cl-text>
+					</view>
+				</view>
+			</view>
+		</cl-collapse>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.section {
+	background: white;
+	border-radius: 24rpx;
+	margin-bottom: 24rpx;
+	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+	overflow: hidden;
+}
+
+.section-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 28rpx 24rpx;
+	background: white;
+}
+
+.section-title {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 16rpx;
+}
+
+.collapse-content {
+	padding: 0 24rpx 24rpx;
+}
+
+.button-grid {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 16rpx;
+	margin-bottom: 20rpx;
+}
+
+.tips-box {
+	background: #f0f9ff;
+	border-radius: 12rpx;
+	padding: 16rpx;
+	border: 2rpx solid #bae6fd;
+}
+
+.tips-list {
+	display: flex;
+	flex-direction: column;
+	gap: 8rpx;
+	margin-top: 12rpx;
+}
+</style>

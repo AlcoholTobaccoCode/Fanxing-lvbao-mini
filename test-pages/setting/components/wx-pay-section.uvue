@@ -1,0 +1,336 @@
+<script lang="ts" setup>
+import { parseClass } from "@/cool";
+import { useWxPayTest } from "../composables/use-wx-pay-test";
+
+const collapsed = defineModel<boolean>("collapsed", { default: false });
+
+const {
+	wxLoginCode,
+	wxLoginLoading,
+	payParams,
+	jsonInput,
+	getWxLoginCode,
+	copyCode,
+	parseJsonParams,
+	requestPayment
+} = useWxPayTest();
+</script>
+
+<template>
+	<view class="section">
+		<view class="section-header" @tap="collapsed = !collapsed">
+			<view class="section-title">
+				<cl-icon name="money-cny-circle-line" :size="40" color="primary"></cl-icon>
+				<cl-text size="lg" bold>微信支付测试</cl-text>
+			</view>
+			<cl-icon
+				name="arrow-down-s-line"
+				:size="36"
+				:pt="{
+					className: parseClass([
+						'text-surface-400 duration-200',
+						{ '-rotate-180': collapsed }
+					])
+				}"
+			></cl-icon>
+		</view>
+
+		<cl-collapse v-model="collapsed">
+			<view class="collapse-content">
+				<!-- Step 1: 获取 Code -->
+				<view class="step-card">
+					<view class="step-header">
+						<view class="step-badge">1</view>
+						<cl-text bold>获取登录 Code</cl-text>
+					</view>
+					<view class="step-content">
+						<view class="code-display">
+							<view class="code-box">
+								<cl-text
+									size="sm"
+									:color="wxLoginCode ? 'default' : 'info'"
+									:pt="{ className: 'break-all' }"
+								>
+									{{ wxLoginCode || "点击按钮获取 code" }}
+								</cl-text>
+							</view>
+						</view>
+						<view class="action-row">
+							<cl-button
+								type="primary"
+								size="small"
+								:loading="wxLoginLoading"
+								@tap="getWxLoginCode"
+							>
+								{{ wxLoginCode ? "重新获取" : "获取 Code" }}
+							</cl-button>
+							<cl-button
+								type="success"
+								size="small"
+								:disabled="!wxLoginCode"
+								@tap="copyCode"
+							>
+								复制
+							</cl-button>
+						</view>
+					</view>
+				</view>
+
+				<!-- Step 2: 支付参数 -->
+				<view class="step-card">
+					<view class="step-header">
+						<view class="step-badge">2</view>
+						<cl-text bold>填写支付参数</cl-text>
+					</view>
+					<view class="step-content">
+						<!-- JSON 快捷解析 -->
+						<view class="json-parse-area">
+							<cl-text size="sm" color="info">快捷填充：粘贴 JSON 一键解析</cl-text>
+							<view class="json-input-wrapper">
+								<textarea
+									class="json-textarea"
+									v-model="jsonInput"
+									placeholder="粘贴包含 timeStamp, nonceStr, package, signType, paySign 的 JSON"
+									:maxlength="-1"
+								></textarea>
+								<cl-button
+									type="primary"
+									size="small"
+									:pt="{ className: 'parse-btn' }"
+									@tap="parseJsonParams"
+								>
+									解析
+								</cl-button>
+							</view>
+						</view>
+
+						<!-- 分隔线 -->
+						<view class="divider">
+							<view class="divider-line"></view>
+							<cl-text size="xs" color="info">或手动填写</cl-text>
+							<view class="divider-line"></view>
+						</view>
+
+						<!-- 参数输入 -->
+						<view class="param-list">
+							<view class="param-item">
+								<cl-text size="sm" :pt="{ className: 'param-label' }">timeStamp</cl-text>
+								<cl-input
+									v-model="payParams.timeStamp"
+									placeholder="时间戳"
+									:border="false"
+									:pt="{ className: 'param-input' }"
+								></cl-input>
+							</view>
+							<view class="param-item">
+								<cl-text size="sm" :pt="{ className: 'param-label' }">nonceStr</cl-text>
+								<cl-input
+									v-model="payParams.nonceStr"
+									placeholder="随机字符串"
+									:border="false"
+									:pt="{ className: 'param-input' }"
+								></cl-input>
+							</view>
+							<view class="param-item">
+								<cl-text size="sm" :pt="{ className: 'param-label' }">package</cl-text>
+								<cl-input
+									v-model="payParams.package"
+									placeholder="prepay_id=xxx"
+									:border="false"
+									:pt="{ className: 'param-input' }"
+								></cl-input>
+							</view>
+							<view class="param-item">
+								<cl-text size="sm" :pt="{ className: 'param-label' }">signType</cl-text>
+								<cl-input
+									v-model="payParams.signType"
+									placeholder="RSA"
+									:border="false"
+									:pt="{ className: 'param-input' }"
+								></cl-input>
+							</view>
+							<view class="param-item">
+								<cl-text size="sm" :pt="{ className: 'param-label' }">paySign</cl-text>
+								<cl-input
+									v-model="payParams.paySign"
+									placeholder="签名"
+									:border="false"
+									:pt="{ className: 'param-input' }"
+								></cl-input>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<!-- Step 3: 发起支付 -->
+				<view class="step-card">
+					<view class="step-header">
+						<view class="step-badge">3</view>
+						<cl-text bold>发起支付</cl-text>
+					</view>
+					<view class="step-content">
+						<cl-button type="primary" :pt="{ className: '!rounded-xl' }" @tap="requestPayment">
+							发起支付请求
+						</cl-button>
+					</view>
+				</view>
+			</view>
+		</cl-collapse>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.section {
+	background: white;
+	border-radius: 24rpx;
+	margin-bottom: 24rpx;
+	box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+	overflow: hidden;
+}
+
+.section-header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+	padding: 28rpx 24rpx;
+	background: white;
+}
+
+.section-title {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 16rpx;
+}
+
+.collapse-content {
+	padding: 0 24rpx 24rpx;
+}
+
+.step-card {
+	background: #f8f9fc;
+	border-radius: 16rpx;
+	padding: 20rpx;
+	margin-bottom: 16rpx;
+
+	&:last-child {
+		margin-bottom: 0;
+	}
+}
+
+.step-header {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 12rpx;
+	margin-bottom: 16rpx;
+}
+
+.step-badge {
+	width: 40rpx;
+	height: 40rpx;
+	border-radius: 50%;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	color: white;
+	font-size: 24rpx;
+	font-weight: bold;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	justify-content: center;
+}
+
+.step-content {
+	padding-left: 52rpx;
+}
+
+.code-display {
+	margin-bottom: 16rpx;
+}
+
+.code-box {
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	padding: 20rpx;
+	min-height: 80rpx;
+}
+
+.action-row {
+	display: flex;
+	flex-direction: row;
+	gap: 16rpx;
+}
+
+.json-parse-area {
+	margin-bottom: 20rpx;
+}
+
+.json-input-wrapper {
+	position: relative;
+	margin-top: 12rpx;
+}
+
+.json-textarea {
+	width: 100%;
+	height: 160rpx;
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	padding: 16rpx;
+	padding-right: 120rpx;
+	font-size: 24rpx;
+	color: #333;
+	box-sizing: border-box;
+}
+
+.parse-btn {
+	position: absolute;
+	right: 12rpx;
+	bottom: 12rpx;
+}
+
+.divider {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	gap: 20rpx;
+	margin: 24rpx 0;
+}
+
+.divider-line {
+	flex: 1;
+	height: 2rpx;
+	background: #e8e8e8;
+}
+
+.param-list {
+	display: flex;
+	flex-direction: column;
+	gap: 12rpx;
+}
+
+.param-item {
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	background: white;
+	border: 2rpx solid #e8e8e8;
+	border-radius: 12rpx;
+	overflow: hidden;
+}
+
+.param-label {
+	width: 180rpx;
+	padding: 0 20rpx;
+	color: #666;
+	flex-shrink: 0;
+}
+
+.param-input {
+	flex: 1;
+	height: 80rpx;
+	background: transparent;
+}
+</style>
