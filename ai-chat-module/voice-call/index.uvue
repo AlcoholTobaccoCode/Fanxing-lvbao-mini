@@ -48,9 +48,25 @@ const userToken = computed(() => {
 
 const webViewUrl = ref("");
 
+const urlParamsSchem = (data: Record<string, any>) => {
+	return Object.entries(data)
+		.map(([key, value]) => `${key}=${value}`)
+		.join("&");
+};
+
 const showWebview = () => {
 	isShowWebview.value = true;
-	webViewUrl.value = `${config.voiceCallUrl}?token=${userToken.value}&agentType=${agentType.value}&isDev=${isDev ? 1 : 0}`;
+	const timestamp = new Date().getTime();
+
+	const params = {
+		token: userToken.value,
+		agentType: agentType.value,
+		isDev: isDev ? 1 : 0,
+		platform: "mp",
+		timestamp
+	};
+
+	webViewUrl.value = `${config.voiceCallUrl}?${urlParamsSchem(params)}`;
 };
 
 // 测试录音权限
