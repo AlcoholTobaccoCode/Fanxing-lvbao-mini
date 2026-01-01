@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, ref, computed } from "vue";
+import { nextTick, ref, watch, computed } from "vue";
 import type { PropType } from "vue";
 import { isDark } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
@@ -8,23 +8,21 @@ import { recognizeOnceFromBuffer } from "@/utils/aliyun/asr";
 import type {
 	ToolItem,
 	Tools,
-	ActionItem,
-	Actions,
+	ActionItems,
 	SendData,
-	VoiceResult
+	VoiceResult,
+	InputLine
 } from "@/cool/types/chat-input";
 
-import SimpleCard from "@/components/card/simple-card.uvue";
 import VoiceRecord from "../voice-record.uvue";
 import ActionsPopup from "../actions-popup.uvue";
-import RealtimeVoiceInput from "../realtime-voice-input.uvue";
 
 const ui = useUi();
 
 const props = defineProps({
 	placeholder: {
 		type: String,
-		default: () => "在这里输入你的问题"
+		default: () => ""
 	},
 	loading: {
 		type: Boolean,
@@ -34,19 +32,10 @@ const props = defineProps({
 		type: Boolean,
 		default: () => false
 	},
-	/**
-	 * inputMode
-	 * @default "text"
-	 * @description: text -> 文本输入 | voice -> 语音输入
-	 */
-	inputMode: {
-		type: String,
-		default: () => "text"
-	},
 	// 使用的模块，用来分类保存语音 OSS 文件
 	useModule: {
 		type: String,
-		default: () => "ai-chat-voice"
+		default: () => "layer-chat-voice"
 	}, // 顶部工具栏：额外传入的工具项
 	tools: {
 		type: Array as PropType<Tools>,
@@ -54,28 +43,30 @@ const props = defineProps({
 	}
 });
 
-const modelValue = defineModel<string>({
-	default: ""
+/**
+ * inputModeModal
+ * @default "text"
+ * @description: text -> 文本输入 | voice -> 语音输入
+ */
+const inputModeModal = defineModel("inputMode", {
+	type: String,
+	default: () => "text"
+});
+
+const modelValueModal = defineModel("modelValue", {
+	type: String,
+	default: () => ""
 });
 
 const emit = defineEmits<{
 	(e: "send", value: SendData): void;
+	(e: "stop"): void;
 	(e: "open-call"): void;
 	(e: "input-mode-change", value: string): void;
 	// 顶部工具选中变化
 	(e: "tool-change", value: Tools): void;
 	(e: "tool-toggle", value: ToolItem): void;
 }>();
-
-// 输入模式
-const inputModeVal = ref(props.inputMode);
-
-// 输入框动态最大高度
-const inputMaxHeight = computed(() => {
-	const { windowHeight } = uni.getSystemInfoSync();
-	// 屏幕高度的 50%，上限 500px，下限 200px
-	return `${Math.max(Math.min(windowHeight * 0.5, 500), 200)}px`;
-});
 
 //#region 语音录制相关
 
@@ -107,7 +98,7 @@ const handleVoiceRecordFinish = async (result: VoiceResult) => {
 		dirPrefix: `${props.useModule}/voice`
 	});
 	result.onlineUrl = res.url;
-	// TODO 录音文件识别
+	// 录音文件识别
 	try {
 		uni.showLoading({ title: "识别中..." });
 		const text = await recognizeOnceFromBuffer(result.buffer, {
@@ -121,21 +112,29 @@ const handleVoiceRecordFinish = async (result: VoiceResult) => {
 		}
 	} catch (err: any) {
 		console.error("[chat-input] 语音识别失败", err);
-		ui.showToast({ message: err?.message || "语音识别失败" });
+		ui.showToast({ message: err?.message || "语音识别失败，请重试" });
+		return; // 识别失败时不再继续发送
 	} finally {
 		nextTick(() => {
 			uni.hideLoading();
 		});
 	}
+
+	// 如果识别结果为空，提示用户重试
+	if (!result.text) {
+		ui.showToast({ message: "未能识别语音内容，请重试" });
+		return;
+	}
+
 	const data: SendData = {
-		text: result.text || "",
+		text: result.text,
 		mode: "voice",
 		voice: {
 			...result
 		}
 	};
 	emit("send", data);
-	modelValue.value = "";
+	modelValueModal.value = "";
 };
 
 //#endregion
@@ -146,199 +145,189 @@ const showMoreAction = ref(false);
 
 // 切换输入模式
 const handleRecording = () => {
-	inputModeVal.value = inputModeVal.value === "text" ? "voice" : "text";
-	emit("input-mode-change", inputModeVal.value);
+	inputModeModal.value = inputModeModal.value === "text" ? "voice" : "text";
+	emit("input-mode-change", inputModeModal.value);
 	// 切换到语音模式时，预请求一次录音权限，减少长按时等待
-	if (inputModeVal.value === "voice") {
+	if (inputModeModal.value === "voice") {
 		voiceRecordRef.value?.ensureRecordPermission?.();
+	}
+};
+
+// 展开输入框
+const inputExtend = ref(false);
+const inputLineInfo = ref<InputLine>({
+	height: 22,
+	lineCount: 1,
+	lineHeight: 22
+});
+const handleInputExtend = () => {
+	inputExtend.value = !inputExtend.value;
+};
+
+// 输入框行数变化
+const handleLineChange = (line: { detail: InputLine }) => {
+	inputLineInfo.value = line.detail;
+	if (inputLineInfo.value.lineCount < 7) {
+		inputExtend.value = false;
 	}
 };
 
 // 发送
 const handleSend = () => {
 	if (props.disabled || props.loading) return;
-	const val = modelValue.value.trim();
+	const val = modelValueModal.value.trim();
 
 	const data = {
 		text: val,
 		mode: "text" as const
 	};
 
+	console.info("[IM] Chat handleSend data ===> ", data);
+
 	if (!val) return;
 	emit("send", data);
-};
-
-// 确认
-const handleConfirm = () => {
-	handleSend();
-};
-
-// 打开通话组件
-const handleOpenCall = () => {
-	emit("open-call");
-};
-
-// 实时录音状态变化
-const handleRealtimeRecordingChange = (isRecording: boolean) => {
-	// 可以根据录音状态调整 UI（如隐藏/显示其他按钮）
-	console.log("实时录音状态变化:", isRecording);
+	modelValueModal.value = "";
 };
 
 //#endregion
 </script>
 
 <template>
-	<simple-card class="chat-input-wrapper !py-0" :class="{ 'is-dark': isDark }">
+	<view class="chat-main">
+		<!-- 顶部工具区域 -->
+		<!-- <view class="chat-tools-area">
+				TODO
+			</view> -->
 		<!-- 主输入区域 -->
-		<view class="chat-main">
-			<view :class="['chat-main__inner', modelValue ? '!pl-0' : '']">
-				<!-- 默认输入交互区域 -->
-				<view class="chat-main__left">
-					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
-						<cl-icon
-							:name="inputModeVal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
-							:size="48"
-							color="currentColor"
-						></cl-icon>
-					</view>
+		<view class="chat-main__row">
+			<!-- 左侧：切换按钮 -->
+			<view
+				class="chat-main-left__actions"
+				:class="(modelValueModal.length ?? 0) > 110 ? 'justify-between' : 'justify-end'"
+			>
+				<view
+					v-if="inputLineInfo.lineCount >= 7 && inputModeModal === 'text'"
+					class="chat-main__icon-btn"
+					@tap.stop="handleInputExtend"
+				>
+					<cl-icon
+						:name="`fullscreen${inputExtend ? '-exit' : ''}-line`"
+						:size="44"
+						color="currentColor"
+					></cl-icon>
 				</view>
-				<view class="chat-main__center">
+				<view class="chat-main__icon-btn" @tap.stop="handleRecording">
+					<cl-icon
+						:name="inputModeModal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
+						:size="44"
+						color="currentColor"
+					></cl-icon>
+				</view>
+			</view>
+
+			<!-- 中间：输入框或语音按钮 -->
+			<view class="flex-1">
+				<scroll-view
+					scroll-y
+					v-if="inputModeModal === 'text'"
+					class="chat-main__input-wrap"
+					:style="{
+						maxHeight: inputExtend ? '350px' : '200px',
+						height: inputExtend ? '350px' : 'unset'
+					}"
+				>
 					<cl-textarea
-						v-if="inputModeVal === 'text'"
-						v-model="modelValue"
-						:style="{ maxHeight: inputMaxHeight }"
+						v-model="modelValueModal"
 						clearable
 						auto-height
 						:border="false"
-						:autofocus="true"
-						:maxlength="Infinity"
+						:maxlength="20000"
+						:cursorSpacing="20"
 						:showWordLimit="false"
+						:showConfirmBar="false"
 						:disabled="disabled"
 						:placeholder="placeholder"
-						@confirm="handleConfirm"
+						placeholder-class="input-placeholder"
+						adjustKeyboardTo="bottom"
+						@confirm="handleSend"
+						@linechange="handleLineChange"
 					></cl-textarea>
-
-					<view v-else class="chat-main__voice">
-						<view
-							class="chat-main__voice-hit !h-[40px]"
-							@touchstart.stop="handlePressStart"
-							@touchmove.stop="handlePressMove"
-							@touchend.stop="handlePressEnd"
-							@touchcancel.stop="handlePressEnd"
-						>
-							<cl-button type="primary" size="large" class="chat-main__voice-btn">
-								按住 说话
-							</cl-button>
-						</view>
-					</view>
-				</view>
-
-				<view class="chat-main__right">
-					<!-- 实时语音输入按钮 -->
-					<!-- <realtime-voice-input
-						v-model="modelValue"
-						@recording-change="handleRealtimeRecordingChange"
-					/> -->
-
-					<!-- 发送按钮 -->
-					<view class="chat-main__icon-btn">
-						<cl-icon
-							v-if="!modelValue"
-							name="arrow-up-circle-line"
-							:size="48"
-						></cl-icon>
-						<cl-icon
-							v-else
-							name="arrow-up-circle-fill"
-							:size="48"
-							color="primary"
-							@tap.stop="handleConfirm"
-						></cl-icon>
+				</scroll-view>
+				<view v-else class="chat-main__voice">
+					<view
+						class="chat-main__voice-hit"
+						@touchstart.stop="handlePressStart"
+						@touchmove.stop="handlePressMove"
+						@touchend.stop="handlePressEnd"
+						@touchcancel.stop="handlePressEnd"
+					>
+						<cl-button type="primary" size="large" class="chat-main__voice-btn">
+							按住 说话
+						</cl-button>
 					</view>
 				</view>
 			</view>
+
+			<!-- 右侧：加号 + 发送/停止按钮 -->
+			<view class="chat-main__actions">
+				<cl-icon v-if="!modelValueModal" name="arrow-up-circle-line" :size="48"></cl-icon>
+				<cl-icon
+					v-else
+					name="arrow-up-circle-fill"
+					:size="48"
+					color="primary"
+					@tap.stop="handleSend"
+				></cl-icon>
+			</view>
 		</view>
+	</view>
 
-		<!-- 更多交互弹窗 -->
-		<actions-popup
-			v-model:is-show="showMoreAction"
-			@select-call="handleOpenCall"
-		></actions-popup>
-
-		<!-- 语音录制浮层，仅在按住说话时显示 -->
-		<voice-record
-			v-model:is-show="isShowVoiceRecord"
-			ref="voiceRecordRef"
-			@finish="handleVoiceRecordFinish"
-		></voice-record>
-	</simple-card>
+	<!-- 语音录制浮层，仅在按住说话时显示 -->
+	<voice-record
+		v-model:is-show="isShowVoiceRecord"
+		ref="voiceRecordRef"
+		@finish="handleVoiceRecordFinish"
+	></voice-record>
 </template>
 
 <style scoped lang="scss">
-.chat-input-wrapper {
-	@apply rounded-none rounded-t-2xl bg-transparent;
-	border-width: 0;
+.chat-tools-area {
+	@apply flex flex-col gap-2;
 }
 
-.chat-intent-row {
-	@apply mb-2;
+.chat-main__row {
+	@apply flex flex-row items-end px-3 py-2 pb-4 shadow-sm;
+	gap: 6px;
+	background-color: #fafafa;
 }
 
-.chat-intent-row__inner {
-	@apply flex flex-row items-center gap-2 px-1;
-}
-
-.chat-intent-chip {
-	@apply flex flex-row items-center px-3 py-2 rounded-full bg-white border border-surface-100;
-}
-
-.chat-intent-chip__text {
-	@apply text-[13px] text-surface-900;
-}
-
-.chat-intent-chip--active {
-	@apply bg-primary-50 text-primary-700 border-primary-200;
-}
-
-.chat-main {
-	@apply mt-1;
-}
-
-.chat-main__inner {
-	@apply flex flex-row items-center bg-white px-3 py-2 shadow-md;
-}
-
-.chat-main__left {
-	@apply flex flex-row items-center opacity-100 transition-all;
-}
-
-.chat-main__center {
-	@apply flex-1 mx-2;
-
-	// 优化输入框滚动
-	:deep(.cl-textarea) {
-		overflow-y: auto;
-		-webkit-overflow-scrolling: touch; /* iOS 平滑滚动 */
-	}
+.chat-main__input-wrap {
+	@apply w-full transition-all;
 }
 
 .chat-main__voice {
 	@apply w-full;
 }
 
-.chat-main__voice-hit {
-	@apply w-full;
+.chat-main-left__actions {
+	@apply h-full flex flex-col;
 }
 
-.chat-main__voice-btn {
-	@apply w-full flex flex-row items-center justify-center rounded-full;
+.chat-main__actions {
+	@apply h-full flex flex-col items-end justify-end;
+	gap: 4px;
 }
 
-.chat-main__right {
-	@apply flex flex-row items-center gap-3;
-}
-
+// 交互区 icon 外层盒子
 .chat-main__icon-btn {
-	@apply flex items-center justify-center text-surface-700;
+	@apply flex flex-row items-center justify-center;
+	width: 39px;
+	height: 39px;
+	cursor: pointer;
+	transition: transform 0.2s;
+
+	&:active {
+		transform: scale(0.95);
+	}
 }
 </style>
