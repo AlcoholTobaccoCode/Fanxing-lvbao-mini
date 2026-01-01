@@ -107,32 +107,27 @@ onLoad(() => {
 </script>
 
 <template>
-	<app-page title="" :back-top="!isShowWebview" :title-action="false" :chat-list-btn="false">
-		<template #content>
-			<view class="w-full h-full">
-				<template v-if="!useRecordPermission">
-					<view
-						class="login-box"
-						:class="useRecordPermission ? 'opacity-0' : 'opacity-100'"
-					>
-						<cl-text color="warn">未获得录音权限，无法使用语音通话功能</cl-text>
-						<cl-button @click="checkAndShowWebview()">去授权</cl-button>
-					</view>
-				</template>
-				<template v-else>
-					<web-view v-if="isShowWebview" :src="webViewUrl" class="webview-container" />
-					<view
-						v-else
-						class="login-box"
-						:class="isFirstLoadPage ? 'opacity-0' : 'opacity-100'"
-					>
-						<cl-text color="primary">若需使用该功能，请先登录</cl-text>
-						<cl-button @click="checkAndShowWebview()">登录</cl-button>
-					</view>
-				</template>
-			</view>
-		</template>
-	</app-page>
+	<cl-page>
+		<view class="w-full h-full">
+			<template v-if="!useRecordPermission">
+				<view class="login-box" :class="useRecordPermission ? 'opacity-0' : 'opacity-100'">
+					<cl-text color="warn">未获得录音权限，无法使用语音通话功能</cl-text>
+					<cl-button @click="checkAndShowWebview()">去授权</cl-button>
+				</view>
+			</template>
+			<template v-else>
+				<web-view v-if="isShowWebview" :src="webViewUrl" class="webview-container" />
+				<view
+					v-else
+					class="login-box"
+					:class="isFirstLoadPage ? 'opacity-0' : 'opacity-100'"
+				>
+					<cl-text color="primary">若需使用该功能，请先登录</cl-text>
+					<cl-button @click="checkAndShowWebview()">登录</cl-button>
+				</view>
+			</template>
+		</view>
+	</cl-page>
 </template>
 
 <style scoped>
