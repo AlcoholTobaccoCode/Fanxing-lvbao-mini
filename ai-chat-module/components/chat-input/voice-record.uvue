@@ -202,10 +202,15 @@ const startRecordInner = async () => {
 	}
 };
 
+const clearWaveStore = () => {
+	waveStore.value = null;
+};
+
 // 停止
 const stopRecordInner = (discard: boolean, options?: { translate?: boolean }) => {
 	if (!recording.value) return;
 	recording.value = false;
+	clearWaveStore();
 	RecordApp.Stop(
 		(arrayBuffer: ArrayBuffer, duration: number, mime: string) => {
 			if (discard) return;
