@@ -162,13 +162,13 @@ watch(
 	border-width: 2px;
 	border-style: solid;
 	border-color: #e5e7eb;
-	border-top-color: #3b82f6;
+	border-top-color: #296d9d; // 主题色
 	animation: status-spin 1s linear infinite;
 }
 
 .status-text {
 	@apply text-sm ml-2;
-	color: #6b7280;
+	color: #296d9d; // 主题色
 }
 
 .status-dots {
@@ -179,7 +179,7 @@ watch(
 	width: 6px;
 	height: 6px;
 	border-radius: 999px;
-	background-color: #3b82f6;
+	background-color: #296d9d; // 主题色
 	margin-right: 4px;
 	animation: status-blink 1.4s infinite both;
 }

@@ -33,32 +33,14 @@ const docTypeText = computed(() => {
 	}
 });
 
-/** 主题类型 */
+/** 主题类型 - 统一使用主题色 */
 const themeClass = computed(() => {
-	switch (props.docType) {
-		case "complaint":
-			return "theme-red";
-		case "defense":
-			return "theme-blue";
-		case "contractGen":
-			return "theme-violet";
-		default:
-			return "theme-green";
-	}
+	return "theme-primary";
 });
 
-/** 图标颜色 */
+/** 图标颜色 - 统一使用主题色 */
 const iconColor = computed(() => {
-	switch (props.docType) {
-		case "complaint":
-			return "#ef4444";
-		case "defense":
-			return "#3b82f6";
-		case "contractGen":
-			return "#8b5cf6";
-		default:
-			return "#10b981";
-	}
+	return "#296d9d";
 });
 
 /** 提取文书标题 */
@@ -126,59 +108,17 @@ const handleCopy = () => {
 	@apply mt-4 p-4 rounded-xl;
 	border: 1px solid;
 
-	// 红色主题（起诉状）
-	&.theme-red {
-		background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-		border-color: #fecaca;
+	// 主题色（统一）
+	&.theme-primary {
+		background: linear-gradient(135deg, #f0f7fb 0%, #e1eef5 100%);
+		border-color: #b8d4e8;
 
 		.header-title {
-			color: #b91c1c;
+			color: #1d4c6e;
 		}
 
 		.export-btn {
-			background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-		}
-	}
-
-	// 蓝色主题（答辩状）
-	&.theme-blue {
-		background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-		border-color: #93c5fd;
-
-		.header-title {
-			color: #1d4ed8;
-		}
-
-		.export-btn {
-			background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-		}
-	}
-
-	// 紫色主题（合同生成）
-	&.theme-violet {
-		background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%);
-		border-color: #c4b5fd;
-
-		.header-title {
-			color: #7c3aed;
-		}
-
-		.export-btn {
-			background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-		}
-	}
-
-	// 绿色主题（默认）
-	&.theme-green {
-		background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-		border-color: #bbf7d0;
-
-		.header-title {
-			color: #15803d;
-		}
-
-		.export-btn {
-			background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+			background: linear-gradient(135deg, #296d9d 0%, #225981 100%);
 		}
 	}
 }

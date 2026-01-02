@@ -12,7 +12,7 @@ import {
 	docGenSessionStore,
 	type DocGenMessage,
 	type DocGenKey,
-	detectDocumentInText
+	type DocResponseType
 } from "./docGenSession";
 import { CHAT_MODULE_CONFIGS } from "./moduleConfigs";
 import type { ChatModuleKey } from "./types";
@@ -223,14 +223,9 @@ async function restoreDocGenSession(
 		const content = msg.content || "";
 		const role = msg.role ?? (msg.sender === "user" ? "user" : "system");
 
-		// TODO - 对于 AI 消息，检测是否包含完整文书
-		let hasDocument = false;
-		let documentContent: string | undefined;
-		if (role === "system" && content) {
-			const detection = detectDocumentInText(content);
-			hasDocument = detection.hasDocument;
-			documentContent = detection.documentContent;
-		}
+		// 使用保存的 responseType 和 hasDocument，或根据 responseType 推断
+		const responseType = msg.responseType as DocResponseType | undefined;
+		const hasDocument = msg.hasDocument ?? (responseType === "DOC");
 
 		return {
 			role: role as "user" | "system",
@@ -239,8 +234,8 @@ async function restoreDocGenSession(
 			voiceUrl: msg.voice,
 			voiceLength: msg.voiceLength,
 			stages: msg.stages,
-			hasDocument,
-			documentContent
+			responseType,
+			hasDocument
 		};
 	});
 

@@ -179,18 +179,18 @@ const handleSend = async (data: SendData) => {
 
 // 预览文档
 const handlePreview = (item: any) => {
-	log.debug("预览文档", item.documentContent);
+	log.debug("预览文档", item.content);
 	ui.showToast({ message: "预览功能开发中..." });
 };
 
-// 复制文档
+// 复制文档（当 hasDocument 为 true 时，content 即为完整文书内容）
 const handleCopy = (item: any) => {
-	if (!item.documentContent) {
+	if (!item.content) {
 		ui.showToast({ message: "暂无可复制的内容" });
 		return;
 	}
 	uni.setClipboardData({
-		data: item.documentContent,
+		data: item.content,
 		success: () => {
 			ui.showToast({ message: "已复制到剪贴板" });
 		},
@@ -202,7 +202,7 @@ const handleCopy = (item: any) => {
 
 // 导出文档
 const handleExport = (item: any) => {
-	log.debug("导出文档", item.documentContent);
+	log.debug("导出文档", item.content);
 	ui.showToast({ message: "文档导出功能开发中..." });
 };
 </script>
@@ -250,7 +250,7 @@ const handleExport = (item: any) => {
 							<template #append>
 								<doc-preview-box
 									v-if="item.hasDocument"
-									:document-content="item.documentContent"
+									:document-content="item.content"
 									doc-type="contractGen"
 									@preview="handlePreview(item)"
 									@copy="handleCopy(item)"

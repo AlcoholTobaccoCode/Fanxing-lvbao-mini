@@ -99,6 +99,7 @@ const handleClickLeft = () => {
 	<view class="relative app-header-safe-area">
 		<cl-topbar
 			:title="''"
+			fixed
 			:safe-area-top="true"
 			:show-back="false"
 			:backable="false"

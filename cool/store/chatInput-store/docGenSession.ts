@@ -63,6 +63,13 @@ export interface DocGenStageItem {
 }
 
 /**
+ * 响应类型
+ * - QUESTION: 继续追问细节
+ * - DOC: 明确生成文书
+ */
+export type DocResponseType = "QUESTION" | "DOC";
+
+/**
  * 文书生成消息
  */
 export interface DocGenMessage {
@@ -72,61 +79,14 @@ export interface DocGenMessage {
 	voiceUrl?: string;
 	voiceLength?: number;
 	stages?: DocGenStageItem[];
-	/** 是否检测到完整文书 */
+	/** 响应类型：QUESTION=追问细节，DOC=生成文书 */
+	responseType?: DocResponseType;
+	/** 是否检测到完整文书（根据 responseType === 'DOC' 判断） */
 	hasDocument?: boolean;
-	/** 提取的完整文书内容（用于导出） */
-	documentContent?: string;
 }
 
 export interface DocGenStreamHooks {
 	onTextChunk?: (chunk: string) => void;
-}
-
-/**
- * 检测文本中是否包含完整的文书内容
- * 根据特定标题格式判断（如 "# 劳 动 合 同"、"# 民事起诉状"、"# 民事答辩状"）
- */
-export function detectDocumentInText(text: string): {
-	hasDocument: boolean;
-	documentContent?: string;
-} {
-	// 文书标题匹配模式
-	const documentPatterns = [
-		// 合同类
-		/^#\s*[\u4e00-\u9fa5\s]+合\s*同/m,
-		/^#+\s*劳\s*动\s*合\s*同/m,
-		/^#+\s*租\s*赁\s*合\s*同/m,
-		/^#+\s*买\s*卖\s*合\s*同/m,
-		/^#+\s*服\s*务\s*合\s*同/m,
-		/^#+\s*借\s*款\s*合\s*同/m,
-		/^#+\s*委\s*托\s*合\s*同/m,
-		/^#+\s*合\s*作\s*合\s*同/m,
-		/^#+\s*股\s*权\s*转\s*让.*协\s*议/m,
-		// 起诉状类
-		/^#+\s*民\s*事\s*起\s*诉\s*状/m,
-		/^#+\s*刑\s*事\s*自\s*诉\s*状/m,
-		/^#+\s*行\s*政\s*起\s*诉\s*状/m,
-		// 答辩状类
-		/^#+\s*民\s*事\s*答\s*辩\s*状/m,
-		/^#+\s*刑\s*事\s*答\s*辩\s*状/m,
-		/^#+\s*行\s*政\s*答\s*辩\s*状/m,
-		// 通用法律文书
-		/^#+\s*[\u4e00-\u9fa5]+\s*协\s*议\s*书/m
-	];
-
-	for (const pattern of documentPatterns) {
-		if (pattern.test(text)) {
-			// 尝试提取文书内容（从标题开始到文末或下一个主要分隔符）
-			const match = text.match(pattern);
-			if (match) {
-				const startIndex = text.indexOf(match[0]);
-				const documentContent = text.slice(startIndex);
-				return { hasDocument: true, documentContent };
-			}
-		}
-	}
-
-	return { hasDocument: false };
 }
 
 export class DocGenSessionStore {
@@ -194,7 +154,9 @@ export class DocGenSessionStore {
 			role: m.role,
 			timestamp: dateTimeStr,
 			voice: m.voiceUrl,
-			voiceLength: m.voiceLength
+			voiceLength: m.voiceLength,
+			responseType: m.responseType,
+			hasDocument: m.hasDocument
 		}));
 
 		return {
@@ -389,19 +351,27 @@ export class DocGenSessionStore {
 						}
 					}
 
-					// 处理最终响应
+					// 处理流式响应（新结构：text + response_type）
+					// 累加内容而非覆盖
 					if (evt.text) {
-						aiMsg.content = evt.text;
-						fullContent = evt.text;
+						fullContent += evt.text;
+						aiMsg.content = fullContent;
+						hooks?.onTextChunk?.(evt.text);
+					}
 
-						// TODO - 检测是否包含完整文书
-						const detection = detectDocumentInText(evt.text);
-						aiMsg.hasDocument = detection.hasDocument;
-						if (detection.documentContent) {
-							aiMsg.documentContent = detection.documentContent;
+					// 记录 response_type（用于判断是否生成文书）
+					if (evt.response_type) {
+						aiMsg.responseType = evt.response_type as DocResponseType;
+
+						// 更新阶段状态（但不设置 hasDocument，等流式结束后再设置）
+						if (evt.response_type === "DOC") {
+							this.updateStage(aiMsg, "analyzing", "completed");
+							this.updateStage(aiMsg, "generating", "active", "正在生成文书...");
+							this.streamStatus.value = "正在生成文书...";
+						} else if (evt.response_type === "QUESTION") {
+							this.updateStage(aiMsg, "analyzing", "completed");
+							this.streamStatus.value = "AI 正在追问...";
 						}
-
-						this.updateStage(aiMsg, "completed", "completed", "生成完成");
 					}
 
 					// 保存后端返回的 sessionId（用于多轮对话）
@@ -412,6 +382,16 @@ export class DocGenSessionStore {
 					// 检查是否结束
 					if (evt.finishReason === "stop") {
 						this.streamStatus.value = null;
+
+						// 流式结束后，根据 response_type 设置最终状态
+						if (aiMsg.responseType === "DOC") {
+							aiMsg.hasDocument = true;
+							this.updateStage(aiMsg, "generating", "completed");
+							this.updateStage(aiMsg, "completed", "completed", "文书生成完成");
+						} else if (aiMsg.responseType === "QUESTION") {
+							aiMsg.hasDocument = false;
+							this.updateStage(aiMsg, "completed", "completed", "请补充信息");
+						}
 					}
 				} catch (err) {
 					console.error("[DocGenSession] 解析响应失败", err, jsonStr);
