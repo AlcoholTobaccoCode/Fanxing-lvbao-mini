@@ -383,6 +383,11 @@ export class DocGenSessionStore {
 					if (evt.finishReason === "stop") {
 						this.streamStatus.value = null;
 
+						// 最后一条消息包含完整内容，直接替换（解决流式过程中 markdown 格式错乱问题）
+						if (evt.text) {
+							aiMsg.content = evt.text;
+						}
+
 						// 流式结束后，根据 response_type 设置最终状态
 						if (aiMsg.responseType === "DOC") {
 							aiMsg.hasDocument = true;
