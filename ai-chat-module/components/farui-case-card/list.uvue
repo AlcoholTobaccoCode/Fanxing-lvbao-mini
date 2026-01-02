@@ -172,7 +172,7 @@ const getVerdictExpanded = (caseId: string) => {
 
 <style lang="scss" scoped>
 .farui-list {
-	@apply mt-3;
+	@apply mt-3 overflow-visible;
 }
 
 .keywords-section {
@@ -235,7 +235,8 @@ const getVerdictExpanded = (caseId: string) => {
 }
 
 .list-content {
-	@apply mt-3;
+	@apply mt-3 flex flex-col overflow-visible;
+	gap: 20px;
 }
 
 .loading-wrapper {

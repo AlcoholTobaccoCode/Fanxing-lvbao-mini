@@ -118,10 +118,10 @@ const beforePageContainerLeave = () => {
 	isShowPageContainer.value = false;
 	// 如果设置返回上一页
 	if (props.backTop) {
+		router.back();
 		nextTick(() => {
 			isShowPageContainer.value = true;
 		});
-		router.back();
 	} else {
 		if (isHistoryOpen.value) {
 			isHistoryOpen.value = false;
