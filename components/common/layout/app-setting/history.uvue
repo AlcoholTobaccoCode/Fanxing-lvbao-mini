@@ -53,12 +53,7 @@ defineExpose({
 		<!-- 顶部标签栏：AI 对话 / 律师对话 + 编辑 -->
 		<view class="app-setting-tabs">
 			<view class="app-setting-tabs__left">
-				<cl-tabs
-					v-model="tabValue"
-					:list="tabs"
-					show-slider
-					:pt="{ className: '!px-0' }"
-				></cl-tabs>
+				<cl-tabs v-model="tabValue" :list="tabs" :pt="{ className: '!px-0' }"></cl-tabs>
 			</view>
 			<view class="app-setting-tabs__right">
 				<template v-if="userId">

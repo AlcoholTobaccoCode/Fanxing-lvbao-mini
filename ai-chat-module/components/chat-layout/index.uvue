@@ -3,7 +3,7 @@
 @usage: 用于咨询、法规、案例等所有聊天详情页
 -->
 <script lang="ts" setup>
-import { ref, nextTick, watch, computed } from "vue";
+import { ref, nextTick, watch } from "vue";
 
 const props = defineProps<{
 	// 是否正在生成中
@@ -17,41 +17,43 @@ const props = defineProps<{
 }>();
 
 // 滚动控制
-const scrollIntoViewId = ref("chat-bottom-a");
+const scrollTop = ref(0);
 const autoScroll = ref(true);
 const lastScrollTop = ref(0);
+// 上滑检测阈值（像素），避免微小抖动触发
+const SCROLL_UP_THRESHOLD = 10;
 
 // 滚动到底部
-const scrollToBottom = () => {
-	if (!autoScroll.value) return;
+const scrollToBottom = (force = false) => {
+	if (!autoScroll.value && !force) return;
 	nextTick(() => {
-		scrollIntoViewId.value =
-			scrollIntoViewId.value === "chat-bottom-a" ? "chat-bottom-b" : "chat-bottom-a";
+		// 使用一个足够大的值确保滚动到底部
+		scrollTop.value = scrollTop.value === 99999 ? 99998 : 99999;
 	});
 };
 
 // 处理滚动事件
 const handleScroll = (e: any) => {
 	const top = e?.detail?.scrollTop ?? 0;
-	if (top < lastScrollTop.value) {
+	const diff = lastScrollTop.value - top;
+
+	// 只有明显上滑（超过阈值）才关闭自动滚动
+	if (diff > SCROLL_UP_THRESHOLD && props.loading) {
 		autoScroll.value = false;
-		scrollIntoViewId.value = "";
 	}
+
 	lastScrollTop.value = top;
 };
 
-// 滚动到底部时
+// 滚动到底部时，恢复自动滚动
 const handleScrollToLower = () => {
-	if (props.loading) {
-		autoScroll.value = true;
-		scrollToBottom();
-	}
+	autoScroll.value = true;
 };
 
-// 重置自动滚动
+// 重置自动滚动（开启新一轮对话时调用）
 const resetAutoScroll = () => {
 	autoScroll.value = true;
-	scrollToBottom();
+	scrollToBottom(true);
 };
 
 // 暴露方法给父组件
@@ -60,12 +62,17 @@ defineExpose({
 	resetAutoScroll
 });
 
-// 监听 loading 状态，自动滚动
+// 监听 loading 状态
 watch(
 	() => props.loading,
-	(val) => {
+	(val, oldVal) => {
 		if (val) {
-			scrollToBottom();
+			// 开始加载时，重置并滚动到底部
+			autoScroll.value = true;
+			scrollToBottom(true);
+		} else if (oldVal === true && val === false) {
+			// 当前轮回答结束，重置滚动标识
+			autoScroll.value = true;
 		}
 	}
 );
@@ -84,7 +91,7 @@ watch(
 				scroll-y
 				class="chat-layout__scroll"
 				:enable-flex="true"
-				:scroll-into-view="scrollIntoViewId"
+				:scroll-top="scrollTop"
 				:scroll-with-animation="true"
 				@scroll="handleScroll"
 				@scrolltolower="handleScrollToLower"
@@ -105,9 +112,8 @@ watch(
 					</view>
 				</view>
 
-				<!-- 底部锚点 -->
-				<view id="chat-bottom-a" class="chat-anchor"></view>
-				<view id="chat-bottom-b" class="chat-anchor"></view>
+				<!-- 底部占位 -->
+				<view class="chat-anchor"></view>
 			</scroll-view>
 		</view>
 
