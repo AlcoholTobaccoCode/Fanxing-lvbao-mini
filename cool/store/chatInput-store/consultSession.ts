@@ -18,6 +18,12 @@ import {
 // TODO - MOCK
 import { LawyerList } from "./mockData";
 
+// ============ 全局缓存类型定义 ============
+/** 法条详情缓存 Map，以 lawId 为 key */
+type LawDetailsMap = Map<string, LawDetailResponse>;
+/** 案例详情缓存 Map，以 caseNo（案号）为 key */
+type CaseDetailsMap = Map<string, CaseDetailResponse>;
+
 export interface ConsultMessageReferences {
 	searchList?: Array<{
 		hostName?: string;
@@ -84,6 +90,283 @@ export class ConsultSessionStore {
 	// 当前请求ID，用于区分不同请求，防止旧请求回调影响新请求
 	private currentRequestId = 0;
 
+	//#region 会话级全局缓存，数据按需加载
+
+	/** 法条详情缓存，以 lawId 为 key */
+	private lawDetailsMap: LawDetailsMap = new Map();
+	/** 案例详情缓存，以 caseNo 为 key */
+	private caseDetailsMap: CaseDetailsMap = new Map();
+
+	// 缓存操作方法
+
+	/**
+	 * 从缓存获取法条详情
+	 * @param lawId 法条 ID
+	 */
+	getLawDetailFromCache(lawId: string): LawDetailResponse | undefined {
+		return this.lawDetailsMap.get(lawId);
+	}
+
+	/**
+	 * 从缓存获取案例详情
+	 * @param caseNo 案号
+	 */
+	getCaseDetailFromCache(caseNo: string): CaseDetailResponse | undefined {
+		return this.caseDetailsMap.get(caseNo);
+	}
+
+	/**
+	 * 批量获取法条详情（优先缓存，缺失的请求后更新缓存）
+	 * 保证返回顺序与输入列表一致
+	 * @param lawList 法条列表
+	 * @returns 法条详情数组（按照输入顺序）
+	 */
+	async fetchLawDetailsWithCache(
+		lawList: Array<{ lawId?: string; lawItemId?: string }>
+	): Promise<LawDetailResponse[]> {
+		if (!lawList || lawList.length === 0) return [];
+
+		// 使用 Map 按 lawId 存储结果
+		const resultMap = new Map<string, LawDetailResponse>();
+		const needFetch: Array<{ lawId: string; lawItemId: string }> = [];
+
+		// 1. 从缓存获取已有数据，收集缺失项
+		for (const item of lawList) {
+			if (!item.lawId) continue;
+			const cached = this.lawDetailsMap.get(item.lawId);
+			if (cached) {
+				resultMap.set(item.lawId, cached);
+			} else {
+				needFetch.push({
+					lawId: item.lawId,
+					lawItemId: item.lawItemId || ""
+				});
+			}
+		}
+
+		// 2. 请求缺失数据
+		if (needFetch.length > 0) {
+			try {
+				const res = await GetLawCardDetail(needFetch);
+				const fetchedData = res?.data ?? res ?? [];
+				if (Array.isArray(fetchedData)) {
+					for (const detail of fetchedData) {
+						// 更新缓存和结果映射
+						this.lawDetailsMap.set(detail.lawId, detail);
+						resultMap.set(detail.lawId, detail);
+					}
+				}
+			} catch (err) {
+				console.error("[ConsultSession] 获取法条详情失败", err);
+			}
+		}
+
+		// 3. 按照输入顺序返回结果
+		const result: LawDetailResponse[] = [];
+		for (const item of lawList) {
+			if (item.lawId) {
+				const detail = resultMap.get(item.lawId);
+				if (detail) {
+					result.push(detail);
+				}
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * 批量获取案例详情（优先缓存，缺失的请求后更新缓存）
+	 * 保证返回顺序与输入列表一致
+	 * @param caseList 案号列表
+	 * @returns 案例详情数组（按照输入顺序）
+	 */
+	async fetchCaseDetailsWithCache(caseList: string[]): Promise<CaseDetailResponse[]> {
+		if (!caseList || caseList.length === 0) return [];
+
+		// 使用 Map 按 caseNo 存储结果
+		const resultMap = new Map<string, CaseDetailResponse>();
+		const needFetch: string[] = [];
+
+		// 1. 从缓存获取已有数据，收集缺失项
+		for (const caseNo of caseList) {
+			const cached = this.caseDetailsMap.get(caseNo);
+			if (cached) {
+				resultMap.set(caseNo, cached);
+			} else {
+				needFetch.push(caseNo);
+			}
+		}
+
+		// 2. 请求缺失数据
+		if (needFetch.length > 0) {
+			try {
+				const res = await GetCaseCardDetail(needFetch);
+				const fetchedData = res?.data ?? res ?? [];
+				if (Array.isArray(fetchedData)) {
+					for (const detail of fetchedData) {
+						const caseNo = detail.caseDomain?.caseNo;
+						if (caseNo) {
+							// 更新缓存和结果映射
+							this.caseDetailsMap.set(caseNo, detail);
+							resultMap.set(caseNo, detail);
+						}
+					}
+				}
+			} catch (err) {
+				console.error("[ConsultSession] 获取案例详情失败", err);
+			}
+		}
+
+		// 3. 按照输入顺序返回结果
+		const result: CaseDetailResponse[] = [];
+		for (const caseNo of caseList) {
+			const detail = resultMap.get(caseNo);
+			if (detail) {
+				result.push(detail);
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * 获取单个法条详情（用于弹窗，优先从缓存获取）
+	 * @param lawId 法条 ID
+	 * @param lawItemId 法条项目 ID（可选）
+	 */
+	async fetchSingleLawDetail(
+		lawId: string,
+		lawItemId?: string
+	): Promise<LawDetailResponse | null> {
+		// 优先从缓存获取
+		const cached = this.lawDetailsMap.get(lawId);
+		if (cached) return cached;
+
+		// 缓存未命中，请求接口
+		try {
+			const res = await GetLawCardDetail([{ lawId, lawItemId: lawItemId || "" }]);
+			const data = res?.data ?? res ?? [];
+			if (Array.isArray(data) && data.length > 0) {
+				const detail = data[0];
+				// 更新缓存
+				this.lawDetailsMap.set(detail.lawId, detail);
+				return detail;
+			}
+		} catch (err) {
+			console.error("[ConsultSession] 获取单个法条详情失败", err);
+		}
+		return null;
+	}
+
+	/**
+	 * 获取单个案例详情（用于弹窗，优先从缓存获取）
+	 * @param caseNo 案号
+	 */
+	async fetchSingleCaseDetail(caseNo: string): Promise<CaseDetailResponse | null> {
+		// 优先从缓存获取
+		const cached = this.caseDetailsMap.get(caseNo);
+		if (cached) return cached;
+
+		// 缓存未命中，请求接口
+		try {
+			const res = await GetCaseCardDetail([caseNo]);
+			const data = res?.data ?? res ?? [];
+			if (Array.isArray(data) && data.length > 0) {
+				const detail = data[0];
+				// 更新缓存
+				const cNo = detail.caseDomain?.caseNo;
+				if (cNo) {
+					this.caseDetailsMap.set(cNo, detail);
+				}
+				return detail;
+			}
+		} catch (err) {
+			console.error("[ConsultSession] 获取单个案例详情失败", err);
+		}
+		return null;
+	}
+
+	/**
+	 * 按需加载某条消息的引用详情（供引用面板展开时调用）
+	 * @param msgIndex 消息索引
+	 * @param type 加载类型：'law' | 'case' | 'all'
+	 */
+	async loadReferencesDetailOnDemand(
+		msgIndex: number,
+		type: "law" | "case" | "all" = "all"
+	): Promise<void> {
+		const msg = this.messages.value[msgIndex];
+		if (!msg || !msg.references) return;
+
+		const refs = msg.references;
+		const promises: Promise<void>[] = [];
+
+		const updateMessage = (updater: (refs: ConsultMessageReferences) => void) => {
+			const currentMsg = this.messages.value[msgIndex];
+			if (currentMsg?.references) {
+				updater(currentMsg.references);
+				this.messages.value = [...this.messages.value];
+			}
+		};
+
+		// 加载法规详情
+		if (
+			(type === "law" || type === "all") &&
+			refs.lawList?.length &&
+			!refs.lawDetails?.length &&
+			!refs.loadingLaw
+		) {
+			updateMessage((r) => (r.loadingLaw = true));
+
+			promises.push(
+				this.fetchLawDetailsWithCache(refs.lawList)
+					.then((lawDetails) => {
+						updateMessage((r) => {
+							r.lawDetails = lawDetails;
+							r.loadingLaw = false;
+						});
+					})
+					.catch(() => {
+						updateMessage((r) => {
+							r.lawDetails = [];
+							r.loadingLaw = false;
+						});
+					})
+			);
+		}
+
+		// 加载案例详情
+		if (
+			(type === "case" || type === "all") &&
+			refs.caseList?.length &&
+			!refs.caseDetails?.length &&
+			!refs.loadingCase
+		) {
+			updateMessage((r) => (r.loadingCase = true));
+
+			promises.push(
+				this.fetchCaseDetailsWithCache(refs.caseList)
+					.then((caseDetails) => {
+						updateMessage((r) => {
+							r.caseDetails = caseDetails;
+							r.loadingCase = false;
+						});
+					})
+					.catch(() => {
+						updateMessage((r) => {
+							r.caseDetails = [];
+							r.loadingCase = false;
+						});
+					})
+			);
+		}
+
+		await Promise.all(promises);
+	}
+
+	//#endregion
+
 	initFromLaunch(launch: ChatLaunchPayload) {
 		this.messages.value = [];
 		this.sessionId.value = null;
@@ -109,6 +392,22 @@ export class ConsultSessionStore {
 				thinkingTime = Math.round((m.deepThinkEndTime - m.deepThinkStartTime) / 1000);
 			}
 
+			// ========== 过滤 references：不保存 lawDetails/caseDetails，searchList 删除 body ==========
+			let filteredReferences: any = undefined;
+			if (m.references) {
+				filteredReferences = {
+					// 保留 lawList、caseList
+					lawList: m.references.lawList,
+					caseList: m.references.caseList,
+					// 联网搜索：删除 body 字段
+					searchList: m.references.searchList?.map((item) => {
+						const { body, ...rest } = item;
+						return rest;
+					})
+					// 注意：不保存 lawDetails、caseDetails、loadingLaw、loadingCase
+				};
+			}
+
 			return {
 				id: generateUUID(),
 				content: m.content,
@@ -116,7 +415,7 @@ export class ConsultSessionStore {
 				timestamp: dateTimeStr,
 				deepThink: m.deepThink,
 				thinkingTime,
-				references: m.references,
+				references: filteredReferences,
 				haveRecommendLawyer: m.haveRecommendLawyer,
 				recommendedLawyers: m.recommendedLawyers,
 				// 语音消息
@@ -407,11 +706,9 @@ export class ConsultSessionStore {
 				aiMsg.deepThinkEndTime = Date.now();
 			}
 
-			// 2. AI 回复完成后保存一次
+			// 2. AI 回复完成后保存一次（不再自动加载法规/案例详情，改为按需加载）
 			await this.saveCurrentSessionSnapshot();
-			// 获取法规/案例详情（并行请求）
-			await this.fetchReferencesDetail(aiMsg);
-			// 再根据 AI 文本中的推荐标记触发推荐律师逻辑
+			// 根据 AI 文本中的推荐标记触发推荐律师逻辑
 			await this.fetchRecommendLawyers(aiMsg);
 		} finally {
 			// 只有当前请求才能修改 loading 状态
@@ -556,8 +853,10 @@ export class ConsultSessionStore {
 		this.streamStatus.value = null;
 		this.deepThinkContent.value = "";
 
-		// 加载引用详情
-		this.loadMissingReferencesDetail();
+		// ========== 清空缓存，不主动加载详情（按需加载） ==========
+		this.lawDetailsMap.clear();
+		this.caseDetailsMap.clear();
+		// 不再调用 loadMissingReferencesDetail()，详情数据在展开时按需加载
 	}
 
 	/**
@@ -602,6 +901,10 @@ export class ConsultSessionStore {
 		this.stopStreaming();
 		this.messages.value = [];
 		this.sessionId.value = null;
+
+		// ========== 清空缓存 ==========
+		this.lawDetailsMap.clear();
+		this.caseDetailsMap.clear();
 	}
 }
 

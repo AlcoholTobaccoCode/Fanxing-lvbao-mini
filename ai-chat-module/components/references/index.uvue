@@ -30,10 +30,13 @@ export interface ReferencesData {
 
 const props = defineProps<{
 	references: ReferencesData;
+	msgIndex?: number; // 消息索引，用于按需加载
 }>();
 
 const emit = defineEmits<{
 	(e: "search-item-tap", data: SearchListItem | undefined): void;
+	(e: "law-expand"): void;
+	(e: "case-expand"): void;
 }>();
 
 // 处理搜索项点击
@@ -87,14 +90,20 @@ const formattedSearchList = computed(() => {
 		<LawReference
 			v-if="hasLawData"
 			:laws="references.lawDetails || []"
+			:law-list="references.lawList"
 			:loading="references.loadingLaw"
+			:msg-index="msgIndex"
+			@expand="emit('law-expand')"
 		/>
 
 		<!-- 参考案例 -->
 		<CaseReference
 			v-if="hasCaseData"
 			:cases="references.caseDetails || []"
+			:case-list="references.caseList"
 			:loading="references.loadingCase"
+			:msg-index="msgIndex"
+			@expand="emit('case-expand')"
 		/>
 
 		<!-- 数据来源 -->

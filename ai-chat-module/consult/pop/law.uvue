@@ -4,7 +4,7 @@
 <script lang="ts" setup>
 import { ref, watch, computed } from "vue";
 import type { LawDetailResponse } from "@/api/references";
-import { GetLawCardDetail } from "@/api/references";
+import { consultSessionStore } from "@/cool/store";
 
 const props = defineProps<{
 	visible: boolean;
@@ -63,17 +63,12 @@ const loadData = async () => {
 		return;
 	}
 
-	// 调用 API 获取数据
+	// 使用 store 方法获取数据（会自动缓存）
 	loading.value = true;
 	try {
-		const res = await GetLawCardDetail([
-			{
-				lawId: props.lawId,
-				lawItemId: props.lawItemId || ""
-			}
-		]);
-		if (res.code === 200 && res.data && res.data.length > 0) {
-			detail.value = res.data[0];
+		const data = await consultSessionStore.fetchSingleLawDetail(props.lawId, props.lawItemId);
+		if (data) {
+			detail.value = data;
 		} else {
 			error.value = "暂无数据";
 		}

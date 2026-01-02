@@ -6,16 +6,23 @@ import type { CaseDetailResponse } from "@/api/references";
 import { dayUts } from "@/cool";
 import { useExpandState } from "./composables/useExpandState";
 import ExpandableContent from "./expandable-content.uvue";
+import { consultSessionStore } from "@/cool/store";
 
 const props = defineProps<{
 	cases: CaseDetailResponse[];
+	caseList?: string[]; // 原始案号列表，用于按需加载
 	loading?: boolean;
+	msgIndex?: number; // 消息索引，用于按需加载
+}>();
+
+const emit = defineEmits<{
+	(e: "expand"): void;
 }>();
 
 // 使用展开状态管理
 const {
 	isExpanded,
-	toggleExpand,
+	toggleExpand: originalToggleExpand,
 	isItemExpanded,
 	toggleItemExpand,
 	getActiveTab,
@@ -23,6 +30,21 @@ const {
 	isContentExpanded,
 	toggleContentExpand
 } = useExpandState("summary");
+
+// 包装 toggleExpand，在展开时触发按需加载
+const toggleExpand = async () => {
+	const wasExpanded = isExpanded.value;
+	originalToggleExpand();
+
+	// 如果是展开操作
+	if (!wasExpanded) {
+		emit("expand");
+		// 如果没有详情数据但有列表数据，触发按需加载
+		if (!props.cases?.length && props.caseList?.length && props.msgIndex !== undefined) {
+			await consultSessionStore.loadReferencesDetailOnDemand(props.msgIndex, "case");
+		}
+	}
+};
 
 // Tab 配置
 const tabConfig = [

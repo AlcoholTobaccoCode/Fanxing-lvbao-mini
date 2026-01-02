@@ -123,22 +123,35 @@ async function restoreConsultSession(sessionId: string, sessionData: any): Promi
 	const messages = sessionData?.messages ?? [];
 
 	// 转换为 ConsultMessage 格式 (兼容新旧数据：优先读 role，没有再读 sender)
-	const consultMessages: ConsultMessage[] = messages.map((msg: any) => ({
-		role: msg.role ?? (msg.sender === "user" ? "user" : "system"),
-		content: msg.content || "",
-		fromVoice: !!msg.voice,
-		voiceUrl: msg.voice,
-		voiceLength: msg.voiceLength,
-		deepThink: msg.deepThink,
-		deepThinkStartTime: msg.thinkingTime ? Date.now() - msg.thinkingTime * 1000 : undefined,
-		deepThinkEndTime: msg.thinkingTime ? Date.now() : undefined,
-		recommendedLawyers: msg.recommendedLawyers || [],
-		references: msg.references || {
-			searchList: [],
-			lawList: [],
-			caseList: []
+	// 注意：过滤 lawDetails/caseDetails（兼容旧数据），仅保留 lawList/caseList/searchList
+	const consultMessages: ConsultMessage[] = messages.map((msg: any) => {
+		// 处理 references，过滤掉不需要的字段
+		let references = {
+			searchList: [] as any[],
+			lawList: [] as any[],
+			caseList: [] as any[]
+		};
+		if (msg.references) {
+			references = {
+				searchList: msg.references.searchList || [],
+				lawList: msg.references.lawList || [],
+				caseList: msg.references.caseList || []
+			};
 		}
-	}));
+
+		return {
+			role: msg.role ?? (msg.sender === "user" ? "user" : "system"),
+			content: msg.content || "",
+			fromVoice: !!msg.voice,
+			voiceUrl: msg.voice,
+			voiceLength: msg.voiceLength,
+			deepThink: msg.deepThink,
+			deepThinkStartTime: msg.thinkingTime ? Date.now() - msg.thinkingTime * 1000 : undefined,
+			deepThinkEndTime: msg.thinkingTime ? Date.now() : undefined,
+			recommendedLawyers: msg.recommendedLawyers || [],
+			references
+		};
+	});
 
 	// 设置 chatFlowStore 启动参数
 	chatFlowStore.startModule("consult", {

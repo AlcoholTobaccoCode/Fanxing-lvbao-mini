@@ -245,11 +245,13 @@ const handleRefTap = (
 	item: any
 ) => {
 	if (!e.json) return;
-
+	debugger;
 	if (e.type === "lawItem") {
-		// 尝试从 item.references.lawDetails 查找预加载数据
-		let preloadData: LawDetailResponse | undefined;
-		if (item?.references?.lawDetails?.length) {
+		// 优先从全局缓存获取，其次从消息引用数据
+		let preloadData: LawDetailResponse | undefined = consultSessionStore.getLawDetailFromCache(
+			e.json.lawId
+		);
+		if (!preloadData && item?.references?.lawDetails?.length) {
 			preloadData = item.references.lawDetails.find(
 				(law: LawDetailResponse) =>
 					law.lawId === e.json!.lawId &&
@@ -263,9 +265,10 @@ const handleRefTap = (
 		};
 		lawPopupVisible.value = true;
 	} else if (e.type === "case") {
-		// 尝试从 item.references.caseDetails 查找预加载数据
-		let preloadData: CaseDetailResponse | undefined;
-		if (item?.references?.caseDetails?.length) {
+		// 优先从全局缓存获取，其次从消息引用数据
+		let preloadData: CaseDetailResponse | undefined =
+			consultSessionStore.getCaseDetailFromCache(e.json.caseNo);
+		if (!preloadData && item?.references?.caseDetails?.length) {
 			preloadData = item.references.caseDetails.find(
 				(c: CaseDetailResponse) => c.caseDomain?.caseNo === e.json!.caseNo
 			);
@@ -349,6 +352,7 @@ const handleRefTap = (
 								<references-panel
 									v-if="item.references"
 									:references="item.references"
+									:msg-index="index"
 									@search-item-tap="handleSearchItemTap"
 								/>
 							</ai-message>
