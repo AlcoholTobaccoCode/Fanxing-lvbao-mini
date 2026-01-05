@@ -16,8 +16,8 @@ export const MODULE_TAB_LIST: ModuleTabItem[] = [
 	{ label: "案例", value: "case" },
 	{ label: "起诉状", value: "complaint" },
 	{ label: "答辩状", value: "defense" },
-	{ label: "合同生成", value: "contractGen" },
-	{ label: "合同审查", value: "contractReview", disabled: true }
+	{ label: "合同生成", value: "contractGen" }
+	// { label: "合同审查", value: "contractReview", disabled: true }
 ];
 
 // 当前选中的模块

@@ -5,6 +5,8 @@
 <script lang="ts" setup>
 import { computed } from "vue";
 import type { DocGenKey } from "@/cool/store/chatInput-store/docGenSession";
+import { Logger } from "@/cool/utils/log";
+import { useUi } from "@/uni_modules/cool-ui";
 
 const props = defineProps<{
 	/** 文档内容 */
@@ -18,6 +20,9 @@ const emit = defineEmits<{
 	(e: "export"): void;
 	(e: "copy"): void;
 }>();
+
+const log = new Logger("DocPreviewBox");
+const ui = useUi();
 
 /** 文书类型文案 */
 const docTypeText = computed(() => {
@@ -58,17 +63,36 @@ const documentTitle = computed(() => {
 
 /** 预览文书 */
 const handlePreview = () => {
+	log.debug("预览文档", props.documentContent);
+	// TODO: 打开预览弹窗或页面
+	ui.showToast({ message: "预览功能开发中..." });
 	emit("preview");
-};
-
-/** 导出文书 */
-const handleExport = () => {
-	emit("export");
 };
 
 /** 复制文书 */
 const handleCopy = () => {
-	emit("copy");
+	if (!props.documentContent) {
+		ui.showToast({ message: "暂无可复制的内容" });
+		return;
+	}
+	uni.setClipboardData({
+		data: props.documentContent,
+		showToast: false,
+		success: () => {
+			ui.showToast({ message: "已复制到剪贴板" });
+			emit("copy");
+		},
+		fail: () => {
+			ui.showToast({ message: "复制失败" });
+		}
+	});
+};
+
+/** 导出文书 */
+const handleExport = () => {
+	log.debug("导出文档", props.documentContent);
+	ui.showToast({ message: "文档导出功能开发中..." });
+	emit("export");
 };
 </script>
 
@@ -80,7 +104,7 @@ const handleCopy = () => {
 				<cl-icon name="file-text-line" size="24px" :color="iconColor" />
 			</view>
 			<view class="header-info">
-				<text class="header-title">{{ documentTitle }}</text>
+				<text class="header-title">{{ documentTitle }}(模板)</text>
 				<text class="header-desc">AI 已为您生成完整{{ docTypeText }}，可预览或导出</text>
 			</view>
 		</view>

@@ -176,37 +176,6 @@ const handleSend = async (data: SendData) => {
 		ui.showToast({ message: "生成失败，请稍后重试" });
 	}
 };
-
-// 预览文档
-const handlePreview = (item: any) => {
-	log.debug("预览文档", item.content);
-	// TODO: 打开预览弹窗或页面
-	ui.showToast({ message: "预览功能开发中..." });
-};
-
-// 复制文档（当 hasDocument 为 true 时，content 即为完整文书内容）
-const handleCopy = (item: any) => {
-	if (!item.content) {
-		ui.showToast({ message: "暂无可复制的内容" });
-		return;
-	}
-	uni.setClipboardData({
-		data: item.content,
-		success: () => {
-			ui.showToast({ message: "已复制到剪贴板" });
-		},
-		fail: () => {
-			ui.showToast({ message: "复制失败" });
-		}
-	});
-};
-
-// 导出文档
-const handleExport = (item: any) => {
-	log.debug("导出文档", item.content);
-	// TODO: 导出为 Word 文件
-	ui.showToast({ message: "文档导出功能开发中..." });
-};
 </script>
 
 <template>
@@ -254,9 +223,6 @@ const handleExport = (item: any) => {
 									v-if="item.hasDocument"
 									:document-content="item.content"
 									doc-type="complaint"
-									@preview="handlePreview(item)"
-									@copy="handleCopy(item)"
-									@export="handleExport(item)"
 								/>
 							</template>
 						</ai-message>
