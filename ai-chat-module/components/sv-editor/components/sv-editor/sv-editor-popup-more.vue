@@ -1,5 +1,5 @@
 <template>
-	<view @touchmove.stop.prevent="moveStop">
+	<view class="sv-editor-popup-wrapper" @touchmove.stop.prevent="moveStop">
 		<view class="sv-editor-popup" v-if="showPop">
 			<view class="editor-popup-header">
 				<view class="header-left" @click="cancel">取消</view>
@@ -363,6 +363,21 @@ export default {
 </script>
 
 <style lang="scss">
+.sv-editor-popup-wrapper {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 9998;
+	pointer-events: none;
+
+	.sv-editor-popup,
+	.mask {
+		pointer-events: auto;
+	}
+}
+
 .sv-editor-popup {
 	--editor-popup-radius: 30rpx 30rpx 0 0;
 	--editor-popup-bgcolor: #ffffff;
@@ -374,6 +389,7 @@ export default {
 	width: 100%;
 	position: absolute;
 	bottom: 0;
+	left: 0;
 	z-index: 10000;
 	border-radius: var(--editor-popup-radius);
 	padding: 30rpx;

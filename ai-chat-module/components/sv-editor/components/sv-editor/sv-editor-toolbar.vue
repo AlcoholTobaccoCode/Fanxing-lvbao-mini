@@ -527,6 +527,7 @@ export default {
 
 <style lang="scss">
 .sv-editor-toolbar {
+	position: relative;
 	--editor-toolbar-height: 88rpx;
 	--editor-toolbar-bgcolor: #ffffff;
 	--editor-toolbar-bordercolor: #eeeeee;
