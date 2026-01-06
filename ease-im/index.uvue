@@ -20,7 +20,12 @@ const titleUnReadCount = computed(() => {
 
 const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
 
-const { isLoading: isUsernamesLoading, usernameMap, fetchUsernames, getTitle } = useChatUsernames();
+const {
+	isLoading: isUsernamesLoading,
+	fetchUsernames,
+	getTitle,
+	getAvatarUrl
+} = useChatUsernames();
 
 // 使用环信服务端游标分页
 let serverCursor = "";
@@ -66,15 +71,21 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 		.filter((id) => Number.isFinite(id));
 	if (userIds.length) {
 		try {
-			const { userNames } = await fetchUsernames({ userIds });
-			conversations.forEach((conv, idx) => {
-				const name = userNames[idx];
-				if (!name) return;
+			const { users } = await fetchUsernames({ userIds });
+			// 创建 userId -> user 的映射
+			const userMap = new Map(users.map((user) => [user.userId, user]));
+
+			conversations.forEach((conv) => {
+				const userId = Number(conv.conversationId);
+				const user = userMap.get(userId);
+				if (!user) return;
+
 				const m: any = (conv as any).lastMessage || {};
 				m.ext = m.ext || {};
 				m.ext.sendUserInfo = {
 					...(m.ext.sendUserInfo || {}),
-					name: String(name)
+					name: String(user.username),
+					avatarUrl: user.avatarUrl
 				};
 				(conv as any).lastMessage = m;
 			});
@@ -82,6 +93,8 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 			console.error("get usernames error", e);
 		}
 	}
+
+	console.info("conversations ===> ", conversations);
 
 	render({
 		list: conversations,
@@ -238,7 +251,16 @@ onBeforeUnmount(() => {
 						>
 							<view class="easeim-chat-item__avatar">
 								<view class="avatar">
-									{{ getTitle(value).slice(0, 1) }}
+									<!-- {{ getTitle(value).slice(0, 1) }} -->
+									<cl-avatar
+										:src="getAvatarUrl(value)"
+										:pt="{
+											icon: {
+												size: 60,
+												name: 'user-line'
+											}
+										}"
+									></cl-avatar>
 								</view>
 								<cl-badge
 									v-if="value.unReadCount && value.unReadCount > 0"

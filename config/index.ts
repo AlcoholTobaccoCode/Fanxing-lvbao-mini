@@ -19,7 +19,7 @@ export const ignore404s: string[] = ["/lawyer/info"];
 
 // 过滤解析逻辑接口名单：这些路径返回数据时，直接返回，不走 200 parse
 export const ignoreParseData: string[] = [
-	"/chat/getUserToken"
+	// "/chat/getUserToken"
 	// , "/law/queryCase" // 2025 年 12 月 29 日 16:56:42 - 接口已统一返参结构
 ];
 

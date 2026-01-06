@@ -1,9 +1,5 @@
 <script lang="ts">
-import {
-	setupIMEventListeners,
-	handleIMAppShow,
-	handleIMAppHide
-} from "@/utils/easemob/lifecycle";
+import { setupIMEventListeners, handleIMAppShow, handleIMAppHide } from "@/utils/easemob/lifecycle";
 
 // #ifdef H5
 import TouchEmulator from "hammer-touchemulator";
@@ -116,5 +112,14 @@ page {
 	/* 可选：移除小程序中的阴影和点击效果（如需要）*/
 	box-shadow: none;
 	padding: 0; /* 移除内边距 */
+}
+
+.loading-view {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
 }
 </style>

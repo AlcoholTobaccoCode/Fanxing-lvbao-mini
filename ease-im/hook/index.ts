@@ -1,33 +1,23 @@
 import { ref } from "vue";
-import { GetUsernames, type GetUsernamesPayload, type GetUsernamesResponse } from "@/api/chat-im";
+import { GetUserProfiles, type GetUserProfilesPayload, type UserProfiles } from "@/api/chat-im";
 import type { EasemobConversationItem } from "@/utils/easemob";
 
 // 统一的用户名获取 hook，封装接口调用与缓存
 export const useChatUsernames = () => {
-	// 加载状态（外部可选用来控制骨架屏等）
+	// 加载状态
 	const isLoading = ref(false);
-	// userId -> userName 映射缓存下载
-	const usernameMap = ref<Record<string, string>>({});
 
 	// 批量获取用户名，并合并到本地缓存
-	const fetchUsernames = async (payload: GetUsernamesPayload) => {
+	const fetchUsernames = async (payload: GetUserProfilesPayload) => {
 		if (!payload?.userIds || payload.userIds.length === 0)
 			return {
-				userNames: [] as GetUsernamesResponse["userNames"]
+				users: [] as UserProfiles[]
 			};
 		isLoading.value = true;
 		try {
-			const res = await GetUsernames(payload);
-			const names = (res?.userNames || []) as GetUsernamesResponse["userNames"];
-			const nextMap: Record<string, string> = { ...usernameMap.value };
-			payload.userIds.forEach((id, idx) => {
-				const name = names[idx];
-				if (name) {
-					nextMap[String(id)] = String(name);
-				}
-			});
-			usernameMap.value = nextMap;
-			return { userNames: names };
+			const res = await GetUserProfiles(payload);
+			const users = res?.users || [];
+			return { users };
 		} finally {
 			isLoading.value = false;
 		}
@@ -36,16 +26,21 @@ export const useChatUsernames = () => {
 	const getTitle = (item: EasemobConversationItem) => {
 		const m: any = (item as any).lastMessage;
 		const extUser = m?.ext?.sendUserInfo;
-		const nameFromMap = usernameMap.value[item.conversationId];
-		const name = nameFromMap || extUser?.name || item.conversationId;
+		const name = extUser?.name || item.conversationId;
 		return String(name || "");
+	};
+
+	const getAvatarUrl = (item: EasemobConversationItem) => {
+		const m: any = (item as any).lastMessage;
+		const extUser = m?.ext?.sendUserInfo;
+		return String(extUser.avatarUrl || "");
 	};
 
 	return {
 		isLoading,
-		usernameMap,
 		fetchUsernames,
-		getTitle
+		getTitle,
+		getAvatarUrl
 	};
 };
 

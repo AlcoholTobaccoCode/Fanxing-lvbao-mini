@@ -102,22 +102,28 @@ export const UpdateReadStatus = (
 
 //#endregion
 
-//#region 获取用户名列表
+//#region 获取用户信息列表
 
-export interface GetUsernamesPayload {
+export interface GetUserProfilesPayload {
 	userIds: number[];
 }
 
-export interface GetUsernamesResponse {
-	userNames: (string | null)[];
+export interface UserProfiles {
+	userId: number;
+	username: string;
+	avatarUrl: string;
 }
 
-export const GetUsernames = (data: GetUsernamesPayload): Promise<GetUsernamesResponse> => {
+export interface GetUserProfilesResponse {
+	users: UserProfiles[];
+}
+
+export const GetUserProfiles = (data: GetUserProfilesPayload): Promise<GetUserProfilesResponse> => {
 	return request({
-		url: "/chat/usernames",
+		url: "/chat/user_profiles",
 		method: "POST",
 		data
-	}) as Promise<GetUsernamesResponse>;
+	}) as Promise<GetUserProfilesResponse>;
 };
 
 //#endregion
