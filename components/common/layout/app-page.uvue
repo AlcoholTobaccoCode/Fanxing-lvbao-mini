@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import { computed, nextTick, ref, useSlots, watch } from "vue";
-import { router, unReadCount as imUnReadCount, useStore } from "@/cool";
+import { router, useStore } from "@/cool";
 import { useUi } from "@/uni_modules/cool-ui";
 import { loginModalVisible } from "@/cool/store/login-modal";
 import { chatInputStore } from "@/cool/store";
@@ -10,6 +10,8 @@ import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
 import LoginContent from "@/components/login/login-content.uvue";
 import FloatMenu from "@/components/float-Menu/menu.uvue";
+import FloatMenuSingle from "@/components/float-Menu/index-single.vue";
+import { PermissionScope, requestMultiplePermissions } from "@/utils/permission";
 
 const props = withDefaults(
 	defineProps<{
@@ -24,11 +26,14 @@ const props = withDefaults(
 		titlePlaceholder?: string;
 		// 是否隐藏浮动菜单
 		hideFloatMenu?: boolean;
+		// 是否展示 ai 通话按钮
+		showAiCall?: boolean;
 	}>(),
 	{
 		backTop: false,
 		titleAction: true,
-		hideFloatMenu: false
+		hideFloatMenu: false,
+		showAiCall: false
 	}
 );
 
@@ -110,6 +115,53 @@ const handleDefaultLeftTap = () => {
 // header 内置返回按钮点击
 const handleHeaderClickLeft = () => {
 	emit("click-left");
+};
+
+// 动态获取屏幕高度，计算浮动菜单 y 坐标
+const floatMenuY = computed(() => {
+	const windowInfo = uni.getWindowInfo();
+	return windowInfo.windowHeight - 200;
+});
+
+const handleAiCall = async () => {
+	// 申请麦克风和摄像头权限
+	const results = await requestMultiplePermissions(
+		[
+			PermissionScope.RECORD
+			// PermissionScope.CAMERA
+		],
+		{
+			showConfirm: true
+		}
+	);
+
+	// 检查权限申请结果
+	const recordGranted = results[PermissionScope.RECORD]?.success;
+	// const cameraGranted = results[PermissionScope.CAMERA]?.success;
+
+	if (!recordGranted) {
+		console.warn("权限申请失败", { recordGranted });
+		return uni.showToast({
+			title: "需要麦克风和摄像头权限才能进行通话",
+			icon: "none",
+			duration: 2000
+		});
+	}
+
+	if (user.token) {
+		const isHomePage = router.isHomePage();
+		const path = "/ai-chat-module/voice-call/index";
+		if (isHomePage) {
+			router.to(path);
+		} else {
+			router.push({
+				path,
+				mode: "redirectTo"
+			});
+		}
+	} else {
+		loginModalVisible.value = true;
+	}
 };
 
 //#endregion
@@ -221,6 +273,17 @@ const beforePageContainerLeave = () => {
 		>
 			<float-menu @use-login="loginModalVisible = true"> </float-menu>
 		</view>
+
+		<!-- ai 通话 -->
+		<template v-if="showAiCall">
+			<float-menu-single
+				:icon-name="'phone-line'"
+				:icon-size="40"
+				:show-badge="true"
+				:y="floatMenuY"
+				@click="handleAiCall"
+			></float-menu-single>
+		</template>
 
 		<!-- 登录模态窗 -->
 		<cl-popup

@@ -156,7 +156,14 @@ const toTestPage = () => {
 </script>
 
 <template>
-	<app-page :title="config.name" :back-top="false" open-icon-picker @new-chat="handleOpenNewChat">
+	<app-page
+		:title="config.name"
+		:back-top="false"
+		:show-ai-call="currentModule === 'consult' ? true : false"
+		:hide-float-menu="currentModule === 'consult' ? true : false"
+		open-icon-picker
+		@new-chat="handleOpenNewChat"
+	>
 		<template #content>
 			<view class="h-full flex flex-col">
 				<simple-card class="flex-1 !p-0 !rounded-none">

@@ -504,6 +504,10 @@ watch(
 	@apply flex flex-col gap-2;
 }
 
+.chat-intent-row {
+	@apply py-2;
+}
+
 .chat-intent-row__inner {
 	@apply flex flex-row items-center gap-2 px-1 overflow-x-auto;
 }
@@ -521,7 +525,6 @@ watch(
 }
 
 .chat-main {
-	@apply mt-2;
 }
 
 .chat-main__row {
