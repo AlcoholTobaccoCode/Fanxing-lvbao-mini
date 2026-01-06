@@ -5,6 +5,7 @@
 import { chunkArray, type chunkArrayType } from "@/utils/index";
 import { ref, onMounted } from "vue";
 import { LEGAL_QUICK_QUESTIONS } from "../utils";
+import { config } from "@/config";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
@@ -35,13 +36,14 @@ const handleRefresh = () => {
 	<view class="consult-starter">
 		<!-- 标题区域 -->
 		<view class="header-section">
-			<cl-text size="24px" :pt="{ className: 'title-line' }">Hi,</cl-text>
-			<cl-text size="24px" :pt="{ className: 'title-line' }">欢迎使用</cl-text>
+			<cl-text size="28px" :pt="{ className: 'title-line' }">Hi,</cl-text>
+			<cl-text size="28px" :pt="{ className: 'title-line' }">欢迎使用</cl-text>
 			<view class="title-brand">
-				<cl-text size="28px" :pt="{ className: 'brand-text text-primary-500' }">律先峰</cl-text>
-				<cl-text size="28px" :pt="{ className: 'brand-suffix text-primary-500' }">AI</cl-text>
+				<cl-text size="28px" :pt="{ className: 'brand-text text-primary-500 font-bold' }"
+					>{{ config.name }} AI</cl-text
+				>
 			</view>
-			<cl-text size="14px" :pt="{ className: 'desc-text text-surface-400' }">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
 				基于百万级真实判例与全量法律法规训练，为您提供精准、深度、有据可依的法律智能分析。
 			</cl-text>
 		</view>
@@ -49,14 +51,14 @@ const handleRefresh = () => {
 		<!-- 问题推荐区域 -->
 		<view class="questions-section">
 			<view class="section-header">
-				<cl-text size="14px" :pt="{ className: 'text-surface-500' }">您可以试着问我：</cl-text>
+				<cl-text :pt="{ className: 'text-surface-500' }">您可以试着问我：</cl-text>
 				<view
 					class="refresh-btn bg-primary-50"
 					hover-class="hover-darker"
 					@click="handleRefresh"
 				>
-					<cl-icon name="refresh-line" size="14px" color="primary" />
-					<cl-text size="13px" :pt="{ className: 'text-primary-500' }">换一换</cl-text>
+					<cl-icon name="refresh-line" color="primary" />
+					<cl-text :pt="{ className: 'text-primary-500 text-sm' }">换一换</cl-text>
 				</view>
 			</view>
 
@@ -65,14 +67,12 @@ const handleRefresh = () => {
 				<view
 					v-for="(item, i) in presetQuestions"
 					:key="i"
-					class="question-card bg-primary-50 border-primary-100"
+					class="question-card bg-primary-50"
 					hover-class="hover-darker"
 					@click="handleClick(item)"
 				>
-					<view class="question-icon bg-primary-100">
-						<cl-icon name="chat-thread-line" size="18px" color="primary" />
-					</view>
-					<cl-text size="15px" :pt="{ className: 'question-text text-surface-700' }">{{
+					<cl-icon name="chat-thread-line" size="16px" color="primary" />
+					<cl-text :pt="{ className: 'question-text text-surface-700' }">{{
 						item
 					}}</cl-text>
 				</view>
@@ -136,23 +136,10 @@ const handleRefresh = () => {
 }
 
 .question-card {
-	@apply flex flex-row items-center;
-	padding: 10px 8px;
-	border-radius: 12px;
-	border-width: 1px;
-}
-
-.question-icon {
-	@apply flex items-center justify-center;
-	width: 32px;
-	height: 32px;
-	border-radius: 8px;
-	margin-right: 12px;
-	flex-shrink: 0;
+	@apply flex flex-row items-center gap-3 p-3 rounded-lg;
 }
 
 .question-text {
 	flex: 1;
-	line-height: 1.4;
 }
 </style>

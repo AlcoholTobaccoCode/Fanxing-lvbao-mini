@@ -22,13 +22,13 @@ const handleHotLawClick = (law: string) => {
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="placeholder-box h-[20px]"></view>
-			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
 				精准检索全量法律法规，快速定位条款内容，了解法规沿革与适用范围。
 			</cl-text>
 		</view>
 
 		<!-- 法规分类 -->
-		<view class="mt-4">
+		<!-- <view class="mt-4">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">法规分类</cl-text>
 			<view class="category-grid">
 				<view
@@ -39,12 +39,12 @@ const handleHotLawClick = (law: string) => {
 					@click="handleCategoryClick(item)"
 				>
 					<cl-icon :name="item.icon" size="20px" color="#f59e0b" />
-					<cl-text size="14px" :pt="{ className: 'category-label text-warning-600' }">{{
+					<cl-text :pt="{ className: 'category-label text-warning-600' }">{{
 						item.label
 					}}</cl-text>
 				</view>
 			</view>
-		</view>
+		</view> -->
 
 		<!-- 热门法规 -->
 		<view class="mt-4">
@@ -58,9 +58,7 @@ const handleHotLawClick = (law: string) => {
 					@click="handleHotLawClick(item)"
 				>
 					<cl-icon name="fire-line" size="16px" color="#f59e0b" />
-					<cl-text size="14px" :pt="{ className: 'hot-text text-surface-700' }">{{
-						item
-					}}</cl-text>
+					<cl-text :pt="{ className: 'hot-text text-surface-700' }">{{ item }}</cl-text>
 				</view>
 			</view>
 		</view>
@@ -84,7 +82,7 @@ const handleHotLawClick = (law: string) => {
 }
 
 .hot-item {
-	@apply flex flex-row items-center gap-2 p-3 rounded-lg;
+	@apply flex flex-row items-center gap-3 p-3 rounded-lg;
 }
 
 .hot-text {

@@ -3,7 +3,7 @@
 -->
 <script lang="ts" setup>
 import { ref } from "vue";
-import { CASE_TYPES, CASE_COURT_LEVELS, CASE_HOT_ITEMS } from "../utils";
+import { CASE_TYPES, CASE_HOT_ITEMS } from "../utils";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
@@ -29,13 +29,13 @@ const handleHotCaseClick = (caseName: string) => {
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="placeholder-box h-[20px]"></view>
-			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
 				海量真实判例智能检索，快速找到相似案例，了解法院裁判观点与判决趋势。
 			</cl-text>
 		</view>
 
-		<!-- 案由选择 -->
-		<view class="mt-4">
+		<!-- 热门案由 -->
+		<!-- <view class="mt-4">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">热门案由</cl-text>
 			<view class="case-type-wrap">
 				<view
@@ -43,14 +43,15 @@ const handleHotCaseClick = (caseName: string) => {
 					:key="i"
 					class="case-type-tag bg-warning-50 border-warning-200"
 					hover-class="hover-darker"
-					@click="handleCaseTypeClick(item)"
+					@click="handleCaseTypeClick(item.label)"
 				>
-					<cl-text size="14px" :pt="{ className: '!text-warning-600' }">{{
-						item
+					<cl-icon :name="item.icon" size="16px" color="#f59e0b" />
+					<cl-text :pt="{ className: '!text-warning-600 text-center' }">{{
+						item.label
 					}}</cl-text>
 				</view>
 			</view>
-		</view>
+		</view> -->
 
 		<!-- 法院级别筛选 -->
 		<!-- <view class="mt-4" v-if="false">
@@ -89,14 +90,12 @@ const handleHotCaseClick = (caseName: string) => {
 				<view
 					v-for="(item, i) in CASE_HOT_ITEMS"
 					:key="i"
-					class="hot-case-card bg-surface-50"
+					class="hot-case-card bg-warning-50"
 					hover-class="hover-darker"
 					@click="handleHotCaseClick(item)"
 				>
 					<view class="case-index bg-warning-500">{{ i + 1 }}</view>
-					<cl-text size="14px" :pt="{ className: 'case-title text-warning-600' }">{{
-						item
-					}}</cl-text>
+					<cl-text :pt="{ className: 'case-title text-warning-600' }">{{ item }}</cl-text>
 					<cl-icon name="arrow-right-s-line" size="16px" color="info" />
 				</view>
 			</view>
@@ -108,7 +107,7 @@ const handleHotCaseClick = (caseName: string) => {
 .case-type-wrap {
 	display: inline-grid;
 	gap: 4px;
-	grid-template-columns: repeat(auto-fill, 48%);
+	grid-template-columns: repeat(auto-fill, 32%);
 }
 
 .case-type-tag {

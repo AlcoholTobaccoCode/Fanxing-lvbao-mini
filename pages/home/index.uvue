@@ -201,37 +201,46 @@ const toTestPage = () => {
 							「{{ isDev ? "开发" : "生产" }}」前往测试页面
 						</cl-button>
 					</view>
-					<chat-input
-						v-model:model-value="inputValue"
-						v-model:input-mode="chatInputStore.inputMode.value"
-						:use-module="currentModule"
-						:show-default-deep-think="currentConfig?.enableDeepThink ?? false"
-						:show-default-knowledge="currentConfig?.enableKnowledge ?? false"
-						:show-default-network="currentConfig?.enableNetwork ?? false"
-						:show-intent-chips="currentModule !== 'law'"
-						:placeholder="currentConfig?.placeholder"
-						@send="handleSend"
-						@input-mode-change="handleInputModeChange"
-					>
-						<!-- 法规模块：模型选择器 -->
-						<template v-if="currentModule === 'law'" #tools-prepend>
-							<model-selector
-								v-model="lawModelType"
-								:locked="false"
-								search-type="law"
-							/>
-						</template>
-						<!-- 案例模块：模型选择器 -->
-						<template v-else-if="currentModule === 'case'" #tools-prepend>
-							<model-selector
-								v-model="caseModelType"
-								:locked="false"
-								search-type="case"
-							/>
-						</template>
-					</chat-input>
+					<view class="bottom-chat-input">
+						<chat-input
+							v-model:model-value="inputValue"
+							v-model:input-mode="chatInputStore.inputMode.value"
+							:use-module="currentModule"
+							:show-default-deep-think="currentConfig?.enableDeepThink ?? false"
+							:show-default-knowledge="currentConfig?.enableKnowledge ?? false"
+							:show-default-network="currentConfig?.enableNetwork ?? false"
+							:show-intent-chips="currentModule !== 'law'"
+							:placeholder="currentConfig?.placeholder"
+							@send="handleSend"
+							@input-mode-change="handleInputModeChange"
+						>
+							<!-- 法规模块：模型选择器 -->
+							<template v-if="currentModule === 'law'" #tools-prepend>
+								<model-selector
+									v-model="lawModelType"
+									:locked="false"
+									search-type="law"
+								/>
+							</template>
+							<!-- 案例模块：模型选择器 -->
+							<template v-else-if="currentModule === 'case'" #tools-prepend>
+								<model-selector
+									v-model="caseModelType"
+									:locked="false"
+									search-type="case"
+								/>
+							</template>
+						</chat-input>
+					</view>
 				</simple-card>
 			</view>
 		</template>
 	</app-page>
 </template>
+
+<style lang="scss">
+.bottom-chat-input {
+	padding-bottom: 20px;
+	background-color: #fafafa;
+}
+</style>

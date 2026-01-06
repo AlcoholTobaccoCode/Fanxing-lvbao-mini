@@ -1,6 +1,18 @@
 import { generateUUID, generateRandomString } from "./util";
 import type { ChatModuleKey } from "@/cool/store/chatInput-store/types";
 
+// 兜底头像
+export const avatarDefault =
+	"https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/common/default-avatar.png";
+
+// 默认头像
+export const avatarUser =
+	"https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/common/user-avatar.png";
+
+// 消息提醒音
+export const MSG_RECEIVE_BG =
+	"https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/msg-receive.wav";
+
 /**
  * 模块 Session ID 前缀映射
  */
@@ -31,7 +43,3 @@ export const createModelSessionId = (module: ChatModuleKey): string => {
 
 	return `${prefix}${generateRandomString(8)}`;
 };
-
-// TODO
-export const MSG_RECEIVE_BG =
-	"https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/msg-receive.wav";

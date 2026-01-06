@@ -37,13 +37,13 @@ export const LAW_HOT_ITEMS: string[] = [
 ];
 
 // ==================== 案例模块 ====================
-export const CASE_TYPES: string[] = [
-	"合同纠纷",
-	"劳动争议",
-	"离婚纠纷",
-	"民间借贷",
-	"交通事故",
-	"人身损害"
+export const CASE_TYPES = [
+	{ label: "合同纠纷", icon: "file-list-line", desc: "" },
+	{ label: "劳动争议", icon: "file-list-line", desc: "" },
+	{ label: "离婚纠纷", icon: "file-list-line", desc: "" }
+	// "民间借贷",
+	// "交通事故",
+	// "人身损害"
 ];
 
 export const CASE_COURT_LEVELS = [
@@ -61,9 +61,12 @@ export const CASE_HOT_ITEMS: string[] = [
 
 // ==================== 起诉状模块 ====================
 export const COMPLAINT_CATEGORIES = [
-	{ label: "民事起诉", icon: "file-list-line", desc: "合同、侵权等" },
-	{ label: "劳动仲裁", icon: "file-list-line", desc: "劳动争议申请书" },
-	{ label: "行政起诉", icon: "file-list-line", desc: "行政复议、诉讼" }
+	// { label: "民事起诉", icon: "file-list-line", desc: "合同、侵权等" },
+	// { label: "劳动仲裁", icon: "file-list-line", desc: "劳动争议申请书" },
+	// { label: "行政起诉", icon: "file-list-line", desc: "行政复议、诉讼" }
+	{ label: "民事起诉", icon: "file-list-line", desc: "" },
+	{ label: "劳动仲裁", icon: "file-list-line", desc: "" },
+	{ label: "行政起诉", icon: "file-list-line", desc: "" }
 ];
 
 export const COMPLAINT_STEPS = [

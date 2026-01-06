@@ -31,7 +31,7 @@ const handleTemplateClick = (template: string) => {
 		</view>
 
 		<!-- 合同类型网格 -->
-		<view class="mt-4">
+		<!-- <view class="mt-4">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">合同类型</cl-text>
 			<view class="category-grid">
 				<view
@@ -62,7 +62,7 @@ const handleTemplateClick = (template: string) => {
 			</view>
 		</view>
 
-		<!-- 展开的模板列表 -->
+		展开的模板列表
 		<view v-if="selectedCategory !== null" class="template-expand">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-2' }">
 				{{ CONTRACT_GEN_CATEGORIES[selectedCategory].label }}模板
@@ -82,7 +82,7 @@ const handleTemplateClick = (template: string) => {
 					<cl-icon name="arrow-right-s-line" size="16px" color="#a78bfa" />
 				</view>
 			</view>
-		</view>
+		</view> -->
 
 		<!-- 热门模板 -->
 		<view class="mt-4">

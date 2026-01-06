@@ -22,13 +22,13 @@ const handleScenarioClick = (scenario: string) => {
 		<!-- 标题区域 -->
 		<view class="mt-2">
 			<view class="placeholder-box h-[20px]"></view>
-			<cl-text :pt="{ className: 'text-sm text-surface-400 my-2' }">
+			<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
 				收到起诉状后，AI 帮你分析案情、梳理抗辩要点，生成专业答辩状。
 			</cl-text>
 		</view>
 
 		<!-- 答辩类型 -->
-		<view class="mt-4">
+		<!-- <view class="mt-4">
 			<cl-text :pt="{ className: 'text-sm text-surface-500 mb-3' }">答辩类型</cl-text>
 			<view class="type-list">
 				<view
@@ -51,7 +51,7 @@ const handleScenarioClick = (scenario: string) => {
 					</view>
 				</view>
 			</view>
-		</view>
+		</view> -->
 
 		<!-- 答辩要点 -->
 		<!-- <view class="mt-4">
