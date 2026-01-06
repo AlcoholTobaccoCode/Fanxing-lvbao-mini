@@ -172,6 +172,12 @@
 						"navigationBarTitleText": "更多律师",
 						"navigationStyle": "custom"
 					}
+				},
+				{
+					"path": "components/doc-preview-box/detail",
+					"style": {
+						"navigationBarTitleText": "预览"
+					}
 				}
 			]
 		},

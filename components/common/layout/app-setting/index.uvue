@@ -92,7 +92,19 @@ defineExpose({
 			<view class="app-setting-footer">
 				<view class="app-setting-footer__left">
 					<template v-if="isLogin">
-						<text class="app-setting-footer__name">{{ displayName }}</text>
+						<view class="flex flex-row gap-2" @click="openSettingPage">
+							<cl-avatar
+								:size="40"
+								:src="user.info.value?.avatarUrl"
+								:pt="{
+									icon: {
+										size: 32,
+										name: 'user-line'
+									}
+								}"
+							></cl-avatar>
+							<text class="app-setting-footer__name">{{ displayName }}</text>
+						</view>
 					</template>
 					<template v-else>
 						<cl-button type="primary" plain @tap="handleLogin"> 登录 </cl-button>
@@ -150,7 +162,9 @@ defineExpose({
 }
 
 .app-setting-footer {
-	@apply flex flex-row items-center justify-between h-14 border-t border-surface-100 mt-1 px-4;
+	@apply flex flex-row items-center justify-between h-14 border-t border-surface-100 mt-1;
+	width: 80%;
+	margin: 0 auto;
 }
 
 .app-setting-footer__name {

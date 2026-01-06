@@ -7,6 +7,7 @@ import { computed } from "vue";
 import type { DocGenKey } from "@/cool/store/chatInput-store/docGenSession";
 import { Logger } from "@/cool/utils/log";
 import { useUi } from "@/uni_modules/cool-ui";
+import { router } from "@/cool";
 
 const props = defineProps<{
 	/** 文档内容 */
@@ -17,8 +18,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
 	(e: "preview"): void;
-	(e: "export"): void;
-	(e: "copy"): void;
+	(e: "edit"): void;
 }>();
 
 const log = new Logger("DocPreviewBox");
@@ -64,35 +64,41 @@ const documentTitle = computed(() => {
 /** 预览文书 */
 const handlePreview = () => {
 	log.debug("预览文档", props.documentContent);
-	// TODO: 打开预览弹窗或页面
-	ui.showToast({ message: "预览功能开发中..." });
+
+	// 使用 uni.navigateTo 跳转并传递参数
+	uni.navigateTo({
+		url: "/ai-chat-module/components/doc-preview-box/detail",
+		success: (res) => {
+			// 通过 eventChannel 传递数据
+			res.eventChannel.emit("docData", {
+				title: documentTitle.value,
+				content: props.documentContent || "",
+				mode: "preview"
+			});
+		}
+	});
+
 	emit("preview");
 };
 
-/** 复制文书 */
-const handleCopy = () => {
-	if (!props.documentContent) {
-		ui.showToast({ message: "暂无可复制的内容" });
-		return;
-	}
-	uni.setClipboardData({
-		data: props.documentContent,
-		showToast: false,
-		success: () => {
-			ui.showToast({ message: "已复制到剪贴板" });
-			emit("copy");
-		},
-		fail: () => {
-			ui.showToast({ message: "复制失败" });
+/** 编辑文书 */
+const handleEdit = () => {
+	log.debug("编辑文书", props.documentContent);
+
+	// 使用 uni.navigateTo 跳转并传递参数
+	uni.navigateTo({
+		url: "/ai-chat-module/components/doc-preview-box/detail",
+		success: (res) => {
+			// 通过 eventChannel 传递数据
+			res.eventChannel.emit("docData", {
+				title: documentTitle.value,
+				content: props.documentContent || "",
+				mode: "edit"
+			});
 		}
 	});
-};
 
-/** 导出文书 */
-const handleExport = () => {
-	log.debug("导出文档", props.documentContent);
-	ui.showToast({ message: "文档导出功能开发中..." });
-	emit("export");
+	emit("edit");
 };
 </script>
 
@@ -101,7 +107,16 @@ const handleExport = () => {
 		<!-- 头部信息 -->
 		<view class="box-header">
 			<view class="header-icon">
-				<cl-icon name="file-text-line" size="24px" :color="iconColor" />
+				<cl-image
+					mode="aspectFit"
+					src="/static/other/word.png"
+					style="width: 24px; height: 24px"
+					:pt="{
+						inner: {
+							className: '!rounded-none'
+						}
+					}"
+				></cl-image>
 			</view>
 			<view class="header-info">
 				<text class="header-title">{{ documentTitle }}(模板)</text>
@@ -111,17 +126,13 @@ const handleExport = () => {
 
 		<!-- 操作按钮 -->
 		<view class="box-actions">
-			<view class="action-btn preview-btn" hover-class="hover-darker" @click="handlePreview">
-				<cl-icon name="eye-line" size="16px" :color="iconColor" />
-				<text class="btn-text">预览</text>
+			<view class="action-btn preview-btn" hover-class="hover-darker" @click="handleEdit">
+				<cl-icon name="file-edit-line" size="16px" :color="iconColor" />
+				<text class="btn-text">编辑</text>
 			</view>
-			<view class="action-btn copy-btn" hover-class="hover-darker" @click="handleCopy">
-				<cl-icon name="file-copy-line" size="16px" color="#6b7280" />
-				<text class="btn-text">复制</text>
-			</view>
-			<view class="action-btn export-btn" hover-class="hover-darker" @click="handleExport">
-				<cl-icon name="download-line" size="16px" color="#ffffff" />
-				<text class="btn-text-white">导出</text>
+			<view class="action-btn export-btn" hover-class="hover-darker" @click="handlePreview">
+				<cl-icon name="book-line" size="16px" color="#ffffff" />
+				<text class="btn-text-white">查看</text>
 			</view>
 		</view>
 	</view>
@@ -152,8 +163,9 @@ const handleExport = () => {
 }
 
 .header-icon {
-	@apply w-10 h-10 rounded-lg flex items-center justify-center mr-3;
-	background-color: rgba(255, 255, 255, 0.8);
+	@apply flex items-center justify-center mr-3;
+	width: 32px;
+	height: 32px;
 }
 
 .header-info {
@@ -179,15 +191,6 @@ const handleExport = () => {
 	&.preview-btn {
 		background-color: rgba(255, 255, 255, 0.8);
 		border: 1px solid rgba(0, 0, 0, 0.1);
-	}
-
-	&.copy-btn {
-		background-color: rgba(255, 255, 255, 0.8);
-		border: 1px solid rgba(0, 0, 0, 0.1);
-	}
-
-	&.export-btn {
-		// 背景色由主题控制
 	}
 }
 

@@ -1,0 +1,200 @@
+<script>
+import { marked } from "marked";
+
+import SvEditorToolbar from "../sv-editor/components/sv-editor/sv-editor-toolbar.vue";
+import SvEditor from "../sv-editor/components/sv-editor/index.vue";
+
+export default {
+	components: {
+		SvEditor,
+		SvEditorToolbar
+	},
+	data() {
+		return {
+			showEdit: false,
+			title: "",
+			content: "",
+			mode: "preview", // preview 或 edit
+			editorCtx: null
+		};
+	},
+	onLoad() {
+		// 接收页面传递的参数
+		const eventChannel = this.getOpenerEventChannel();
+		eventChannel.on("docData", (data) => {
+			this.title = data.title || "";
+			this.content = data.content || "";
+			this.mode = data.mode || "preview";
+
+			console.info("this.content ===> ", this.content);
+
+			uni.setNavigationBarTitle({
+				title: this.title
+			});
+
+			setTimeout(() => {
+				this.showEdit = true;
+			}, 1000 * 2);
+		});
+	},
+	mounted() {},
+	methods: {
+		ready(e) {
+			this.editorCtx = e;
+			// 使用接收到的 content 转换为 HTML
+			if (this.content) {
+				const htmlContent = marked(this.content);
+				this.editorCtx.initHtml(htmlContent);
+			}
+			// 根据模式设置只读状态
+			this.updateReadOnlyState();
+		},
+		updateReadOnlyState() {
+			if (this.editorCtx) {
+				this.editorCtx.setReadOnly(this.mode === "preview");
+			}
+		},
+		toggleMode() {
+			this.mode = this.mode === "preview" ? "edit" : "preview";
+			this.updateReadOnlyState();
+		},
+		input(e) {
+			console.log("input ==>", e);
+		},
+		epaste(e) {
+			console.log("epaste ==>", e);
+		},
+		overMax(e) {
+			console.log("overMax ==>", e);
+		},
+		changeTool(e) {
+			console.log("changeTool ==>", e);
+		},
+		onToolMoreItem(e) {
+			console.log("onToolMoreItem ==>", e);
+
+			if (e.name == "clear") {
+				uni.showModal({
+					title: "提示",
+					content: "确定要清空内容吗？",
+					success: ({ confirm }) => {
+						if (confirm) {
+							this.editorCtx.clear();
+						}
+					}
+				});
+			}
+		},
+		async moreItemConfirm(e) {
+			console.log("moreItemConfirm ==>", e);
+			// 关闭弹窗
+			this.$refs.toolbarRef.closeMorePop();
+		},
+		async onExport() {
+			console.log("onExport ==>", this.content);
+			// const contentRes = await this.editorCtx.getLastContent();
+			// const htmlHandler = this.editorCtx.exportHtml(contentRes.html);
+			// uni.navigateTo({
+			// 	url: "/pages/out/out",
+			// 	success: (res) => {
+			// 		res.eventChannel.emit("E_HTML_EXPORT", { data: htmlHandler });
+			// 	}
+			// });
+		}
+	}
+};
+</script>
+
+<template>
+	<view class="example">
+		<!-- 头部标题栏 -->
+		<view class="page-header">
+			<view class="flex flex-row gap-2">
+				<cl-button @click="toggleMode">
+					{{ mode === "preview" ? "编辑" : "预览" }}
+				</cl-button>
+				<cl-button text @click="onExport"> 导出 </cl-button>
+			</view>
+		</view>
+
+		<!-- 编辑器容器 -->
+		<template v-if="!showEdit">
+			<view class="loading-view">
+				<cl-loading :size="42"></cl-loading>
+				<cl-text color="info">文档加载中...</cl-text>
+			</view>
+		</template>
+		<template v-else>
+			<view class="page-editor-container">
+				<sv-editor
+					pasteMode="origin"
+					:read-only="mode === 'preview'"
+					@ready="ready"
+					@input="input"
+					@overmax="overMax"
+					@epaste="epaste"
+				></sv-editor>
+			</view>
+
+			<!-- 工具栏 - 仅编辑模式显示 -->
+			<view v-if="mode === 'edit'" class="page-editor-toolbar-container">
+				<sv-editor-toolbar
+					ref="toolbarRef"
+					:style-tools="[
+						'header',
+						'divider',
+						'bold',
+						'italic',
+						'underline',
+						'strike',
+						'align',
+						'color',
+						'backgroundColor',
+						'removeformat'
+					]"
+					:tools="['style', 'undo', 'redo']"
+					@changeTool="changeTool"
+					@toolMoreItem="onToolMoreItem"
+					@moreItemConfirm="moreItemConfirm"
+				>
+					<template #setting>
+						<button size="mini" @click="onExport">导出</button>
+					</template>
+				</sv-editor-toolbar>
+			</view>
+		</template>
+	</view>
+</template>
+
+<style lang="scss">
+.example {
+	box-sizing: border-box;
+	height: calc(100vh - var(--window-top) - env(safe-area-inset-bottom));
+	display: flex;
+	flex-direction: column;
+
+	.page-header {
+		display: flex;
+		flex-direction: row;
+		align-items: center;
+		justify-content: flex-end;
+		padding: 8px 20px;
+		border-bottom: 1px solid #e5e7eb;
+		background-color: #f9fafb;
+	}
+
+	.page-editor-container {
+		flex: 1;
+		overflow-y: auto;
+		box-sizing: border-box;
+		padding: 10px 20px;
+		padding-bottom: 20px;
+	}
+
+	.page-editor-toolbar-container {
+		position: sticky;
+		bottom: 0;
+		width: 100%;
+	}
+}
+</style>
