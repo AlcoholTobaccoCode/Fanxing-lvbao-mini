@@ -16,20 +16,27 @@ import type { SendData } from "@/cool/types/chat-input";
 import { imBus } from "@/utils/easemob/events";
 import { type OnTextMsgResult } from "@/utils/easemob/events";
 import { useChatUsernames } from "./hook";
+import { type UserProfiles } from "@/api/chat-im";
+import { useStore } from "@/cool";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/ai-chat-module/components/chat-input/user-chat/index.uvue";
 
 const log = new Logger("ChatDetailPage");
 const ui = useUi();
-const { usernameMap, fetchUsernames, getTitle } = useChatUsernames();
+const { user } = useStore();
+const { fetchUsernames, getTitle } = useChatUsernames();
 
 //#region 加载历史对话
 
 // 当前会话 ID（单聊为对端用户 ID，群聊为群组 ID）
 const targetId = ref<string>("");
 // 页面标题，默认使用会话 ID
-const pageTitle = ref<string>("IM 历史消息");
+const fromUserInfo = ref<UserProfiles>({
+	userId: 0,
+	username: "",
+	avatarUrl: ""
+});
 const loading = ref(false);
 const cursor = ref<string | number | null>(-1);
 const hasMore = ref(false);
@@ -137,6 +144,14 @@ const handleScroll = (e: any) => {
 	const distanceFromBottom = scrollHeight - (scrollTop + viewportHeight);
 	// 距离底部超过一定像素则认为用户离开了底部，这里用 50px 作为阈值
 	showJumpToLatest.value = distanceFromBottom > 50;
+};
+
+// 获取用户昵称、头像
+const getFromUserInfo = async (conversationId) => {
+	const { users } = await fetchUsernames({ userIds: [conversationId] });
+	const user = users.find((u) => u.userId === Number(conversationId));
+	fromUserInfo.value.username = user?.username || conversationId;
+	fromUserInfo.value.avatarUrl = user?.avatarUrl || "";
 };
 
 //#region 消息时间处理
@@ -316,6 +331,7 @@ const handleToggleAudio = (m: any) => {
 
 //#endregion
 
+//#region 环信消息处理
 const onTextMessageHandler = (msg: OnTextMsgResult) => {
 	console.group("[ChatDetail] onTextMessage");
 	console.info("[ChatDetail] im:onTextMessage 收到文本消息 ===> ", msg);
@@ -337,22 +353,20 @@ const onSendMsgHandler = (msg: any) => {
 	log.groupEnd();
 };
 
+//#endregion
+
 // 进入页面时，从路由参数中读取会话信息并自动加载历史记录
 const handlePageLoad = async (options) => {
 	const conversationId = (options?.conversationId || "").toString();
-
 	console.info("conversationId ===> ", conversationId);
 
 	if (conversationId) {
 		targetId.value = conversationId;
-		if (conversationId) {
-			const { userNames } = await fetchUsernames({ userIds: [conversationId] });
-			pageTitle.value = usernameMap.value[conversationId] || userNames[0] || conversationId;
-		}
-
+		fromUserInfo.value.userId = Number(conversationId);
+		await getFromUserInfo(conversationId);
 		loadHistory(true);
 	} else {
-		pageTitle.value = "IM 历史消息";
+		fromUserInfo.value.username = "IM 历史消息";
 	}
 };
 
@@ -396,11 +410,14 @@ const handleJumpToLatest = () => {
 	showJumpToLatest.value = false;
 	scrollToBottom();
 };
+
+// 跳转用户首页
+const handleToUserHome = () => {};
 </script>
 
 <template>
 	<app-page
-		:title="pageTitle"
+		:title="fromUserInfo.username"
 		back-top
 		:chat-list-btn="false"
 		:title-action="false"
@@ -435,11 +452,55 @@ const handleJumpToLatest = () => {
 								{{ formatMsgTimeLabel(m) }}
 							</view>
 							<view
-								class="w-full flex"
+								class="w-full flex flex-row items-start justify-start gap-2"
 								:class="[
-									m.from === targetId ? 'justify-start' : 'justify-end items-end'
+									m.from === targetId ? 'justify-start' : 'flex-row-reverse'
 								]"
 							>
+								<view class="avatar">
+									<!-- <cl-image
+										:width="64"
+										:height="64"
+										preview
+										mode="aspectFill"
+										:src="
+											m.from === targetId
+												? fromUserInfo.avatarUrl
+												: user.info.value?.avatarUrl
+										"
+										:pt="{
+											inner: {
+												className: '!rounded-md'
+											}
+										}"
+									>
+										<template #error>
+											<cl-avatar
+												:pt="{
+													icon: {
+														size: 32,
+														name: 'user-line'
+													}
+												}"
+											></cl-avatar>
+										</template>
+									</cl-image> -->
+									<cl-avatar
+										:size="64"
+										:src="
+											m.from === targetId
+												? fromUserInfo.avatarUrl
+												: user.info.value?.avatarUrl
+										"
+										:pt="{
+											icon: {
+												size: 32,
+												name: 'user-line'
+											}
+										}"
+										@click="handleToUserHome"
+									></cl-avatar>
+								</view>
 								<view
 									class="chat-message"
 									:style="{
@@ -534,6 +595,10 @@ const handleJumpToLatest = () => {
 	}
 }
 
+.avatar {
+	@apply w-[32px] h-[32px] flex flex-row items-center justify-center;
+}
+
 .chat-message {
 	@apply px-3 py-2 rounded-lg text-sm w-fit relative;
 	z-index: 1;
@@ -546,9 +611,6 @@ const handleJumpToLatest = () => {
 
 .audio-voice__duration {
 	@apply text-gray-600;
-}
-
-.audio-voice__bars {
 }
 
 .audio-voice__bar {

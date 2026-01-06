@@ -251,7 +251,6 @@ onBeforeUnmount(() => {
 						>
 							<view class="easeim-chat-item__avatar">
 								<view class="avatar">
-									<!-- {{ getTitle(value).slice(0, 1) }} -->
 									<cl-avatar
 										:src="getAvatarUrl(value)"
 										:pt="{
