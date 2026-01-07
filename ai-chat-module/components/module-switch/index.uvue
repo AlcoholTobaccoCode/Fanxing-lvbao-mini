@@ -78,21 +78,26 @@ watch(
 		<view class="mask-left" v-if="currentValue !== 'consult'"></view>
 
 		<!-- 滚动区域 -->
-		<view class="scroll-content">
-			<scroll-view
-				scroll-x
-				:scroll-left="scrollLeft"
-				scroll-with-animation
-				class="scroll-container"
-				:show-scrollbar="false"
-			>
+		<scroll-view
+			scroll-x
+			:scroll-left="scrollLeft"
+			scroll-with-animation
+			class="scroll-container"
+			:show-scrollbar="false"
+		>
+			<view class="scroll-container-box">
 				<view
-					v-for="item in list"
+					v-for="(item, index) in list"
 					:key="item.value"
 					class="module-item"
 					:class="{
 						'module-item--active': currentValue === item.value,
 						'module-item--disabled': item.disabled
+					}"
+					:style="{
+						'margin-left': index === 0 && currentValue === item.value ? '34px' : '0',
+						'margin-right':
+							index === list.length - 1 && currentValue === item.value ? '34px' : '0'
 					}"
 					@click="onItemClick(item)"
 				>
@@ -103,8 +108,8 @@ watch(
 						{{ item.label }}
 					</text>
 				</view>
-			</scroll-view>
-		</view>
+			</view>
+		</scroll-view>
 
 		<!-- 右侧虚化遮罩 -->
 		<view class="mask-right" v-if="currentValue !== 'contractReview'"></view>
@@ -116,17 +121,18 @@ watch(
 	position: relative;
 	width: 100%;
 	height: 54px;
-	overflow: hidden;
 }
 
 .scroll-content {
-	display: inline-flex;
-	align-items: center;
-	height: 100%;
 }
 
 .scroll-container {
 	width: 90%;
+	margin: 0 auto;
+}
+
+.scroll-container-box {
+	width: fit-content;
 	height: 100%;
 	display: flex;
 	align-items: center;
@@ -134,13 +140,13 @@ watch(
 }
 
 .module-item {
+	@apply flex items-center justify-center;
 	box-sizing: border-box;
+	width: 100px;
+	min-width: 100px;
+	height: 44px;
 	flex-shrink: 0;
-	padding: 6px 12px;
-	margin-top: 10px;
-	margin-left: 10px;
-	margin-right: 10px;
-	border-radius: 14px;
+	border-radius: 30px;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 	opacity: 0.5;
 
@@ -151,15 +157,11 @@ watch(
 			rgba(43, 91, 219, 0.15) 0%,
 			rgba(0, 201, 255, 0.15) 100%
 		);
-		transform: scale(1.4);
-		width: 140px;
 		text-align: center;
-		margin-left: 34px;
 	}
 
 	&--disabled {
 		opacity: 0.3;
-		// pointer-events: none;
 	}
 }
 
@@ -171,6 +173,7 @@ watch(
 	&--active {
 		color: #2b5bdb;
 		font-weight: 600;
+		transform: scale(1.3);
 	}
 }
 

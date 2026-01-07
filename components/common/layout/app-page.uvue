@@ -58,6 +58,15 @@ watch(
 		}
 	}
 );
+
+watch(
+	() => user.token,
+	(val) => {
+		if (val) {
+			loginModalVisible.value = false;
+		}
+	}
+);
 //#endregion
 
 // 语音播放开关（仅用于传给 header 的初始值和本地展示）
