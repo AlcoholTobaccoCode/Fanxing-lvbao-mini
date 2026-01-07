@@ -23,6 +23,7 @@ export type RequestOptions = {
 export type Response = {
 	code?: number;
 	message?: string;
+	msg?: string;
 	data?: any;
 	error?: string; // 后端错误码字符串，如 User.SmsCode.Invalid
 };
@@ -239,10 +240,11 @@ export function request(options: RequestOptions): Promise<any | null> {
 					// 其他 4xx：有结构化 body 时尽量解析错误码
 					if (res.statusCode >= 400 && res.statusCode < 500) {
 						if (res.data && isObject(res.data as any)) {
-							const { code, message, error } = parse<Response>(res.data) ?? {};
+							const { code, message, error, msg } = parse<Response>(res.data) ?? {};
 							const fallback =
 								(error && ERROR_DEFAULT_MESSAGE[error]) ||
 								(error && ERROR_DEFAULT_MESSAGE[error.trim?.() || error]) ||
+								msg ||
 								t("服务异常");
 							const finalMessage = message && message !== "" ? message : fallback;
 							reject({ message: finalMessage, code, error } as Response);
