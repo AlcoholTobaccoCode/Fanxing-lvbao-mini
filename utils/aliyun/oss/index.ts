@@ -26,6 +26,35 @@ const buildObjectKey = (fileNameOrPath: string, prefix = "app"): string => {
 	return `${prefix}/${date}/${rand}.${ext}`;
 };
 
+/**
+ * 根据文件扩展名获取 MIME 类型
+ */
+const getMimeType = (fileName: string): string => {
+	const ext = fileName.split(".").pop()?.toLowerCase() || "";
+	const mimeMap: Record<string, string> = {
+		// 文档
+		pdf: "application/pdf",
+		doc: "application/msword",
+		docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+		// 图片
+		png: "image/png",
+		jpg: "image/jpeg",
+		jpeg: "image/jpeg",
+		gif: "image/gif",
+		webp: "image/webp",
+		// 文本
+		txt: "text/plain",
+		md: "text/markdown",
+		// 音频
+		mp3: "audio/mpeg",
+		wav: "audio/wav",
+		// 视频
+		mp4: "video/mp4",
+		avi: "video/x-msvideo"
+	};
+	return mimeMap[ext] || "application/octet-stream";
+};
+
 export interface UploadOssOptions {
 	/** 本地文件路径（如 uni.chooseImage / 录音返回的 tempFilePath） */
 	filePath: string;
@@ -40,6 +69,20 @@ export interface UploadOssOptions {
 	dirPrefix?: string;
 }
 
+/**
+ * 文件扩展信息
+ */
+export interface FileExtInfo {
+	/** MIME 类型 */
+	mimeType: string;
+	/** 文件大小（字节） */
+	sizeBytes: number;
+	/** SHA256 哈希值（可选） */
+	sha256?: string;
+	/** OSS URL */
+	oss_url: string;
+}
+
 export interface UploadOssResult {
 	/** 最终可访问的 OSS URL */
 	url: string;
@@ -47,6 +90,8 @@ export interface UploadOssResult {
 	key: string;
 	/** uni.uploadFile 原始响应 */
 	raw: UniApp.UploadFileSuccessCallbackResult;
+	/** 文件扩展信息 */
+	ext: FileExtInfo;
 }
 
 /**
@@ -65,6 +110,26 @@ export const uploadToOss = async (options: UploadOssOptions): Promise<UploadOssR
 	}
 
 	const objectKey = key || buildObjectKey(filePath, dirPrefix);
+
+	// 获取文件信息
+	const getFileInfo = (): Promise<{ size: number }> => {
+		return new Promise((resolve, reject) => {
+			uni.getFileInfo({
+				filePath,
+				success: (res) => {
+					resolve({ size: res.size });
+				},
+				fail: (err) => {
+					// 如果获取失败，返回默认值
+					console.warn("获取文件信息失败:", err);
+					resolve({ size: 0 });
+				}
+			});
+		});
+	};
+
+	// 获取文件大小
+	const fileInfo = await getFileInfo();
 
 	const formData: UniApp.UploadFileOption["formData"] = {
 		key: objectKey,
@@ -86,10 +151,19 @@ export const uploadToOss = async (options: UploadOssOptions): Promise<UploadOssR
 			success(res) {
 				if (res.statusCode === 200 || res.statusCode === 204) {
 					const url = `${OSS_ENDPOINT}/${objectKey}`;
+
+					// 构建扩展信息
+					const ext: FileExtInfo = {
+						mimeType: getMimeType(filePath),
+						sizeBytes: fileInfo.size,
+						oss_url: url
+					};
+
 					resolve({
 						url,
 						key: objectKey,
-						raw: res
+						raw: res,
+						ext
 					});
 				} else {
 					reject(

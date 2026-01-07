@@ -150,8 +150,8 @@ const loadData = async () => {
 	try {
 		const res = await ListKnowledge();
 		knowledgeItems.value = res.data;
-	} catch (error) {
-		ui.showToast({ message: "加载失败", type: "error" });
+	} catch (error: any) {
+		ui.showToast({ message: error?.message || "加载失败", type: "error" });
 		log.error("加载知识库数据失败:", error);
 	} finally {
 		loading.value = false;
@@ -173,8 +173,8 @@ const renameItem = async () => {
 					await RenameKnowledge(currentItem.value!.id, { title: res.content });
 					ui.showToast({ message: "重命名成功", type: "success" });
 					loadData();
-				} catch (error) {
-					ui.showToast({ message: "重命名失败", type: "error" });
+				} catch (error: any) {
+					ui.showToast({ message: error?.message || "重命名失败", type: "error" });
 					log.error("重命名失败:", error);
 				}
 			}
@@ -196,8 +196,8 @@ const deleteItem = async () => {
 					await DeleteKnowledge(currentItem.value!.id);
 					ui.showToast({ message: "删除成功", type: "success" });
 					loadData();
-				} catch (error) {
-					ui.showToast({ message: "删除失败", type: "error" });
+				} catch (error: any) {
+					ui.showToast({ message: error?.message || "删除失败", type: "error" });
 					log.error("删除失败:", error);
 				}
 			}
@@ -219,8 +219,8 @@ const createItem = async (type: string) => {
 		await CreateKnowledge(payload);
 		ui.showToast({ message: "创建成功", type: "success" });
 		loadData();
-	} catch (error) {
-		ui.showToast({ message: "创建失败", type: "error" });
+	} catch (error: any) {
+		ui.showToast({ message: error?.message || "创建失败", type: "error" });
 		log.error("创建失败:", error);
 	}
 };
