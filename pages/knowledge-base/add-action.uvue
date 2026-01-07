@@ -1,0 +1,71 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import { type BtnListItem } from "@/components/float-Menu/types";
+import FloatPopupMenu from "@/components/float-Menu/index.vue";
+
+const emits = defineEmits(["create"]);
+
+// 动态获取屏幕高度，计算浮动菜单 y 坐标
+const floatMenuY = computed(() => {
+	const windowInfo = uni.getWindowInfo();
+	return windowInfo.windowHeight - 200;
+});
+
+// 知识库新增菜单项
+const addMenuItems = computed<BtnListItem[]>(() => [
+	{
+		icon: "file-text-line",
+		text: "文件",
+		menuBgColor: "#3498db",
+		cb: () => {
+			emits("create", "file");
+		}
+	},
+	{
+		icon: "image-line",
+		text: "图片",
+		menuBgColor: "#e74c3c",
+		cb: () => {
+			emits("create", "image");
+		}
+	},
+	{
+		icon: "sticky-note-line",
+		text: "笔记",
+		menuBgColor: "#f39c12",
+		cb: () => {
+			emits("create", "note");
+		}
+	},
+	{
+		icon: "link",
+		text: "引用",
+		menuBgColor: "#2ecc71",
+		cb: () => {
+			emits("create", "reference");
+		}
+	}
+]);
+
+const onMenuClick = (item: BtnListItem) => {
+	console.log("点击了菜单项:", item);
+	item?.cb?.();
+};
+</script>
+
+<template>
+	<!-- 知识库新增浮动菜单 -->
+	<view class="overflow-visible">
+		<float-popup-menu
+			:y="floatMenuY"
+			:use-mask="false"
+			root-icon="add-line"
+			:show-im-badge="false"
+			:menuItems="addMenuItems"
+			@menuClick="onMenuClick"
+		>
+		</float-popup-menu>
+	</view>
+</template>
+
+<style lang="scss" scoped></style>

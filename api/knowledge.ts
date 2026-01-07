@@ -37,7 +37,7 @@ export interface KnowledgeObject {
 /**
  * 创建文件或对象的请求参数
  */
-export interface CreateKnowledgeObjectPayload {
+export interface CreateKnowledgePayload {
 	type: KnowledgeObjectType;
 	title: string;
 	description?: string;
@@ -53,7 +53,7 @@ export interface CreateKnowledgeObjectPayload {
 /**
  * 创建对象的响应（简化版）
  */
-export interface CreateKnowledgeObjectResponse {
+export interface CreateKnowledgeResponse {
 	type: KnowledgeObjectType;
 	title: string;
 	description?: string;
@@ -64,14 +64,14 @@ export interface CreateKnowledgeObjectResponse {
 /**
  * 列出对象的查询参数
  */
-export interface ListKnowledgeObjectsQuery {
+export interface ListKnowledgeQuery {
 	title?: string;
 }
 
 /**
  * 重命名对象的请求参数
  */
-export interface RenameKnowledgeObjectPayload {
+export interface RenameKnowledgePayload {
 	title: string;
 }
 
@@ -84,14 +84,12 @@ export interface RenameKnowledgeObjectPayload {
  * @param data 创建对象的参数
  * @returns 创建成功的对象信息
  */
-export const CreateKnowledgeObject = (
-	data: CreateKnowledgeObjectPayload
-): Promise<CreateKnowledgeObjectResponse> => {
+export const CreateKnowledge = (data: CreateKnowledgePayload): Promise<CreateKnowledgeResponse> => {
 	return request({
 		url: "/knowledge/objects/create",
 		method: "POST",
 		data
-	}) as Promise<CreateKnowledgeObjectResponse>;
+	}) as Promise<CreateKnowledgeResponse>;
 };
 
 /**
@@ -99,8 +97,8 @@ export const CreateKnowledgeObject = (
  * @param params 查询参数，可选标题关键词进行模糊匹配
  * @returns 对象列表
  */
-export const ListKnowledgeObjects = (
-	params?: ListKnowledgeObjectsQuery
+export const ListKnowledge = (
+	params?: ListKnowledgeQuery
 ): Promise<ApiResponse<KnowledgeObject[]>> => {
 	return request({
 		url: "/knowledge/objects/list",
@@ -115,9 +113,9 @@ export const ListKnowledgeObjects = (
  * @param data 新标题，同一用户内唯一
  * @returns 更新后的对象信息
  */
-export const RenameKnowledgeObject = (
+export const RenameKnowledge = (
 	objectId: number | string,
-	data: RenameKnowledgeObjectPayload
+	data: RenameKnowledgePayload
 ): Promise<ApiResponse<KnowledgeObject>> => {
 	return request({
 		url: `/knowledge/objects/${objectId}/rename`,
@@ -131,7 +129,7 @@ export const RenameKnowledgeObject = (
  * @param objectId 对象 ID
  * @returns 删除结果
  */
-export const DeleteKnowledgeObject = (objectId: number | string): Promise<any> => {
+export const DeleteKnowledge = (objectId: number | string): Promise<any> => {
 	return request({
 		url: `/knowledge/objects/${objectId}`,
 		method: "DELETE"

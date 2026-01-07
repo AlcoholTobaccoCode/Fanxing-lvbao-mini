@@ -1,0 +1,633 @@
+<script lang="ts" setup>
+import { ref, computed, onMounted } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
+import {
+	ListKnowledge,
+	CreateKnowledge,
+	RenameKnowledge,
+	DeleteKnowledge,
+	type KnowledgeObject,
+	type KnowledgeObjectType
+} from "@/api/knowledge";
+
+const log = new Logger("KnowledgeBasePage");
+const ui = useUi();
+
+// 筛选器
+const filters = [
+	{ label: "全部", value: "all" },
+	{ label: "文件", value: "file" },
+	{ label: "图片", value: "image" },
+	{ label: "笔记", value: "note" },
+	{ label: "引用", value: "reference" }
+];
+
+// 类型映射：API 类型 (1,2,3,4) ↔ 前端类型 (file, image, note, reference)
+const typeMap: Record<number, string> = {
+	1: "file",
+	2: "image",
+	3: "note",
+	4: "reference"
+};
+
+const reverseTypeMap: Record<string, KnowledgeObjectType> = {
+	file: 1,
+	image: 2,
+	note: 3,
+	reference: 4
+};
+
+// 新增选项
+const addOptions = [
+	{ type: "file", label: "文件", icon: "file-text-line", color: "#3498db" },
+	{ type: "image", label: "图片", icon: "image-line", color: "#e74c3c" },
+	{ type: "note", label: "笔记", icon: "sticky-note-line", color: "#f39c12" },
+	{ type: "reference", label: "引用", icon: "link", color: "#2ecc71" }
+];
+
+// 状态变量
+const currentFilter = ref("all");
+const showAddModal = ref(false);
+const showItemMenuModal = ref(false);
+const currentItem = ref<KnowledgeObject | null>(null);
+const searchKeyword = ref("");
+const loading = ref(false);
+
+// 知识库项目数据
+const knowledgeItems = ref<KnowledgeObject[]>([]);
+
+// 过滤后的项目
+const filteredItems = computed(() => {
+	let items = knowledgeItems.value;
+
+	// 类型筛选
+	if (currentFilter.value !== "all") {
+		const filterType = reverseTypeMap[currentFilter.value];
+		items = items.filter((item) => item.type === filterType);
+	}
+
+	// 本地搜索过滤
+	if (searchKeyword.value) {
+		const keyword = searchKeyword.value.toLowerCase();
+		items = items.filter((item) => item.title.toLowerCase().includes(keyword));
+	}
+
+	return items;
+});
+
+// 切换筛选器
+const changeFilter = (filterValue: string) => {
+	currentFilter.value = filterValue;
+};
+
+// 获取图标名称（RemixIcon）
+const getIconName = (type: KnowledgeObjectType) => {
+	const typeStr = typeMap[type];
+	switch (typeStr) {
+		case "file":
+			return "file-text-line";
+		case "image":
+			return "image-line";
+		case "note":
+			return "sticky-note-line";
+		case "reference":
+			return "link";
+		default:
+			return "file-text-line";
+	}
+};
+
+// 获取图标颜色
+const getIconColor = (type: KnowledgeObjectType) => {
+	const typeStr = typeMap[type];
+	switch (typeStr) {
+		case "file":
+			return "#3498db";
+		case "image":
+			return "#e74c3c";
+		case "note":
+			return "#f39c12";
+		case "reference":
+			return "#2ecc71";
+		default:
+			return "#95a5a6";
+	}
+};
+
+// 获取图标背景色
+const getIconBgColor = (type: KnowledgeObjectType) => {
+	const typeStr = typeMap[type];
+	switch (typeStr) {
+		case "file":
+			return "rgba(52, 152, 219, 0.1)";
+		case "image":
+			return "rgba(231, 76, 60, 0.1)";
+		case "note":
+			return "rgba(243, 156, 18, 0.1)";
+		case "reference":
+			return "rgba(46, 204, 113, 0.1)";
+		default:
+			return "rgba(149, 165, 166, 0.1)";
+	}
+};
+
+// 获取类型标签
+const getTypeLabel = (type: KnowledgeObjectType | string) => {
+	const typeStr = typeof type === "number" ? typeMap[type] : type;
+	switch (typeStr) {
+		case "file":
+			return "文件";
+		case "image":
+			return "图片";
+		case "note":
+			return "笔记";
+		case "reference":
+			return "引用";
+		default:
+			return "未知";
+	}
+};
+
+// 加载数据
+const loadData = async () => {
+	loading.value = true;
+	try {
+		const res = await ListKnowledge();
+		knowledgeItems.value = res.data;
+	} catch (error) {
+		ui.showToast({ message: "加载失败", type: "error" });
+		log.error("加载知识库数据失败:", error);
+	} finally {
+		loading.value = false;
+	}
+};
+
+// 打开详情页
+const openDetail = (item: KnowledgeObject) => {
+	console.log("打开详情:", item);
+	// TODO: 跳转到详情页
+};
+
+// 显示项目菜单
+const showItemMenu = (item: KnowledgeObject) => {
+	currentItem.value = item;
+	showItemMenuModal.value = true;
+};
+
+// 重命名项目
+const renameItem = async () => {
+	if (!currentItem.value) return;
+
+	uni.showModal({
+		title: "重命名",
+		editable: true,
+		placeholderText: "请输入新名称",
+		content: currentItem.value.title,
+		success: async (res) => {
+			if (res.confirm && res.content) {
+				try {
+					await RenameKnowledge(currentItem.value!.id, { title: res.content });
+					ui.showToast({ message: "重命名成功", type: "success" });
+					loadData();
+				} catch (error) {
+					ui.showToast({ message: "重命名失败", type: "error" });
+					log.error("重命名失败:", error);
+				}
+			}
+		}
+	});
+	showItemMenuModal.value = false;
+};
+
+// 删除项目
+const deleteItem = async () => {
+	if (!currentItem.value) return;
+
+	uni.showModal({
+		title: "确认删除",
+		content: `确定要删除"${currentItem.value.title}"吗？`,
+		success: async (res) => {
+			if (res.confirm) {
+				try {
+					await DeleteKnowledge(currentItem.value!.id);
+					ui.showToast({ message: "删除成功", type: "success" });
+					loadData();
+				} catch (error) {
+					ui.showToast({ message: "删除失败", type: "error" });
+					log.error("删除失败:", error);
+				}
+			}
+		}
+	});
+	showItemMenuModal.value = false;
+};
+
+// 创建新项目
+const createItem = async (type: string) => {
+	try {
+		const payload = {
+			type: reverseTypeMap[type],
+			title: `新${getTypeLabel(type)}`,
+			textContent: type === "note" || type === "reference" ? "" : null,
+			oss_url: ""
+		};
+
+		await CreateKnowledge(payload);
+		ui.showToast({ message: "创建成功", type: "success" });
+		showAddModal.value = false;
+		loadData();
+	} catch (error) {
+		ui.showToast({ message: "创建失败", type: "error" });
+		log.error("创建失败:", error);
+	}
+};
+
+// 生命周期：页面加载时获取数据
+onMounted(() => {
+	loadData();
+});
+</script>
+
+<template>
+	<cl-page>
+		<view class="app-container">
+			<!-- 顶部导航栏 -->
+			<view class="nav-bar">
+				<view class="search-container">
+					<cl-input
+						v-model="searchKeyword"
+						placeholder="搜索知识库内容..."
+						:border="false"
+						class="search-input"
+					/>
+					<cl-icon name="search-line" :size="32" color="#666" class="search-icon" />
+				</view>
+				<view class="add-button" @tap="showAddModal = true">
+					<cl-icon name="add-line" :size="36" color="#667eea" />
+				</view>
+			</view>
+
+			<!-- 类型筛选栏 -->
+			<view class="filter-container">
+				<scroll-view scroll-x :show-scrollbar="false" class="filter-scroll">
+					<view class="filter-items">
+						<view
+							v-for="(filter, index) in filters"
+							:key="index"
+							class="filter-item"
+							:class="{ 'filter-item--active': currentFilter === filter.value }"
+							@tap="changeFilter(filter.value)"
+						>
+							<text class="filter-text">{{ filter.label }}</text>
+						</view>
+					</view>
+				</scroll-view>
+			</view>
+
+			<!-- 内容区域 -->
+			<view class="content-area">
+				<view
+					v-for="item in filteredItems"
+					:key="item.id"
+					class="item-card"
+					@tap="openDetail(item)"
+					hover-class="item-card--hover"
+				>
+					<view class="item-icon" :style="{ backgroundColor: getIconBgColor(item.type) }">
+						<cl-icon
+							:name="getIconName(item.type)"
+							:size="40"
+							:color="getIconColor(item.type)"
+						/>
+					</view>
+					<view class="item-info">
+						<text class="item-name">{{ item.title }}</text>
+						<view class="item-meta">
+							<text class="item-type">{{ getTypeLabel(item.type) }}</text>
+							<text class="item-time">{{ item.createdAt }}</text>
+						</view>
+					</view>
+					<view class="item-actions" @tap.stop="showItemMenu(item)">
+						<cl-icon name="more-line" :size="32" color="#999" />
+					</view>
+				</view>
+			</view>
+
+			<!-- 新增对象弹窗 -->
+			<cl-popup
+				v-model="showAddModal"
+				direction="bottom"
+				:show-close="false"
+				:show-header="false"
+			>
+				<view class="add-modal">
+					<cl-text :pt="{ className: 'modal-title' }">创建新对象</cl-text>
+					<view class="add-options">
+						<view
+							v-for="(option, index) in addOptions"
+							:key="index"
+							class="add-option"
+							@tap="createItem(option.type)"
+							hover-class="add-option--hover"
+						>
+							<cl-icon :name="option.icon" :size="48" :color="option.color" />
+							<text class="add-option-label">{{ option.label }}</text>
+						</view>
+					</view>
+					<view class="cancel-button" @tap="showAddModal = false">
+						<text class="cancel-text">取消</text>
+					</view>
+				</view>
+			</cl-popup>
+
+			<!-- 项目菜单弹窗 -->
+			<cl-popup
+				v-model="showItemMenuModal"
+				direction="bottom"
+				:show-close="false"
+				:show-header="false"
+			>
+				<view class="menu-modal">
+					<view class="menu-item" @tap="renameItem" hover-class="menu-item--hover">
+						<cl-icon name="edit-line" :size="32" color="#333" />
+						<text class="menu-text">重命名</text>
+					</view>
+					<view class="menu-item" @tap="deleteItem" hover-class="menu-item--hover">
+						<cl-icon name="delete-bin-line" :size="32" color="#ff4757" />
+						<text class="menu-text menu-text--danger">删除</text>
+					</view>
+					<view class="menu-divider"></view>
+					<view
+						class="menu-item"
+						@tap="showItemMenuModal = false"
+						hover-class="menu-item--hover"
+					>
+						<text class="menu-text">取消</text>
+					</view>
+				</view>
+			</cl-popup>
+		</view>
+	</cl-page>
+</template>
+
+<style lang="scss" scoped>
+// 通用样式变量
+$nav-height: 68px;
+$filter-height: 68px;
+$content-top: 120px;
+
+// 通用混合类
+@mixin card-base {
+	@apply bg-white;
+	border-radius: 12px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+@mixin hover-lift {
+	transition: all 0.2s ease;
+	&:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+	}
+}
+
+@mixin flex-center {
+	@apply flex items-center justify-center;
+}
+
+// 容器样式
+.app-container {
+	@apply w-full relative;
+	min-height: 100vh;
+	background: #f5f5f5;
+}
+
+// 导航栏样式
+.nav-bar {
+	@apply flex flex-row items-center justify-center;
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+	padding: 8px 10px;
+}
+
+.search-container {
+	@apply flex-1 relative flex items-center;
+}
+
+.search-input {
+	@apply flex-1;
+	// padding: 0 40px 0 12px;
+	// border-radius: 20px;
+	// font-size: 14px;
+	// background: rgba(255, 255, 255, 0.95);
+}
+
+.search-icon {
+	@apply absolute;
+	right: 12px;
+	top: 50%;
+	transform: translateY(-50%);
+}
+
+.add-button {
+	@include flex-center;
+	@apply flex-shrink-0;
+	width: 36px;
+	height: 36px;
+	border-radius: 50%;
+	background: white;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+// 筛选栏样式
+.filter-container {
+	@apply fixed left-0 right-0 bg-white;
+	top: $nav-height;
+	padding: 12px 20px;
+	z-index: 999;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.filter-scroll {
+	@apply w-full;
+	white-space: nowrap;
+}
+
+.filter-items {
+	@apply inline-flex;
+	gap: 16px;
+}
+
+.filter-item {
+	@apply bg-transparent;
+	padding: 6px 16px;
+	border-radius: 16px;
+	font-size: 14px;
+	color: #666;
+	white-space: nowrap;
+	transition: all 0.3s ease;
+}
+
+.filter-item--active {
+	@apply text-white;
+	background: #667eea;
+}
+
+.filter-text {
+	font-size: 14px;
+}
+
+// 内容区域样式
+.content-area {
+	margin-top: $content-top;
+	padding: 20px;
+	padding-bottom: 20px;
+}
+
+// 列表项样式
+.item-card {
+	@include card-base;
+	@include hover-lift;
+	@apply flex items-center;
+	padding: 16px;
+	margin-bottom: 12px;
+}
+
+.item-card--hover {
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.item-icon {
+	@include flex-center;
+	@apply flex-shrink-0;
+	width: 40px;
+	height: 40px;
+	border-radius: 8px;
+	margin-right: 12px;
+}
+
+.item-info {
+	@apply flex-1;
+	min-width: 0;
+}
+
+.item-name {
+	@apply font-medium overflow-hidden;
+	font-size: 16px;
+	color: #333;
+	margin-bottom: 4px;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.item-meta {
+	@apply flex items-center;
+	gap: 8px;
+}
+
+.item-type {
+	@apply bg-gray-100;
+	font-size: 12px;
+	color: #666;
+	padding: 2px 8px;
+	border-radius: 12px;
+}
+
+.item-time {
+	font-size: 12px;
+	color: #999;
+}
+
+.item-actions {
+	@apply flex-shrink-0;
+	color: #999;
+	padding: 4px;
+}
+
+// 新增对象弹窗样式
+.add-modal {
+	@apply bg-white;
+	padding: 24px;
+	border-radius: 20px 20px 0 0;
+}
+
+.modal-title {
+	@apply font-bold text-center;
+	font-size: 18px;
+	margin-bottom: 24px;
+	color: #333;
+}
+
+.add-options {
+	@apply grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 16px;
+	margin-bottom: 24px;
+}
+
+.add-option {
+	@apply flex flex-col items-center justify-center;
+	padding: 20px;
+	border: 1px solid #eee;
+	border-radius: 12px;
+	transition: all 0.3s ease;
+	gap: 8px;
+}
+
+.add-option--hover {
+	@apply bg-blue-50;
+	border-color: #667eea;
+	transform: scale(0.98);
+}
+
+.add-option-label {
+	font-size: 14px;
+	color: #333;
+}
+
+.cancel-button {
+	@apply w-full text-center;
+	padding: 16px;
+	border-radius: 12px;
+	background: #f5f5f5;
+}
+
+.cancel-text {
+	font-size: 16px;
+	color: #666;
+}
+
+// 菜单弹窗样式
+.menu-modal {
+	@apply bg-white;
+	padding: 12px 0;
+	border-radius: 20px 20px 0 0;
+}
+
+.menu-item {
+	@apply flex items-center;
+	padding: 16px 24px;
+	gap: 12px;
+	transition: background 0.2s ease;
+}
+
+.menu-item--hover {
+	@apply bg-gray-100;
+}
+
+.menu-text {
+	font-size: 16px;
+	color: #333;
+}
+
+.menu-text--danger {
+	color: #ff4757;
+}
+
+.menu-divider {
+	@apply bg-gray-200;
+	height: 1px;
+	margin: 8px 0;
+}
+</style>

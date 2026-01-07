@@ -4,6 +4,13 @@
 	// "entryPagePath": "user/login",
 	"pages": [
 		{
+			"path": "pages/knowledge-base/index",
+			"style": {
+				"navigationBarTitleText": "知识库"
+				// "navigationStyle": "custom"
+			}
+		},
+		{
 			"path": "pages/home/index",
 			"style": {
 				"navigationBarTitleText": "律先峰",
@@ -114,6 +121,7 @@
 			]
 		},
 		//#endregion
+		//#region ---------------- AI 会话 ----------------
 		{
 			"root": "ai-chat-module",
 			"pages": [
@@ -181,6 +189,7 @@
 				}
 			]
 		},
+		//#endregion
 		//#region ---------------- 环信 IM ----------------
 		{
 			"root": "ease-im",
@@ -209,18 +218,18 @@
 		},
 		//#endregion
 		//#region 知识库
-		{
-			"root": "knowledge-base",
-			"pages": [
-				{
-					"path": "index",
-					"style": {
-						"navigationBarTitleText": "知识库首页",
-						"navigationStyle": "custom"
-					}
-				}
-			]
-		},
+		// {
+		// 	"root": "knowledge-base",
+		// 	"pages": [
+		// 		{
+		// 			"path": "index",
+		// 			"style": {
+		// 				"navigationBarTitleText": "知识库首页",
+		// 				"navigationStyle": "custom"
+		// 			}
+		// 		}
+		// 	]
+		// },
 		//#endregion
 		//#region ---------------- TEST PAGE ----------------
 		{
