@@ -1,7 +1,8 @@
 <script>
 import { marked } from "marked";
-import { CanvasExporter } from "../../utils/markdown-canvas-exporter.js";
+import { CanvasExporter, WordExporter } from "../../utils/markdown-canvas-exporter.js";
 import { saveImageToAlbum, shareImage } from "../../utils/canvas-export.js";
+import { sleepWait } from "@/utils";
 
 import SvEditorToolbar from "../sv-editor/components/sv-editor/sv-editor-toolbar.vue";
 import SvEditor from "../sv-editor/components/sv-editor/index.vue";
@@ -137,18 +138,27 @@ export default {
 			await new Promise((resolve) => setTimeout(resolve, 300));
 
 			try {
-				// 使用封装好的 CanvasExporter 导出图片
-				const imagePath = await CanvasExporter.exportToImage({
+				// 使用封装好的 CanvasExporter 导出图片（支持分页）
+				const imagePaths = await CanvasExporter.exportToImage({
 					canvasId: this.canvasId,
 					title: this.title,
 					content: this.content
 				});
 
-				this.exportImagePath = imagePath;
+				this.exportImagePath = imagePaths;
 				uni.hideLoading();
 
 				// 显示操作选项
-				this.showImageActions(imagePath);
+				if (imagePaths.length > 1) {
+					uni.showToast({
+						title: `已生成 ${imagePaths.length} 张图片`,
+						icon: "success",
+						duration: 2000
+					});
+					await sleepWait(2000);
+				}
+
+				this.showImageActions(imagePaths);
 			} catch (error) {
 				console.error("导出图片失败:", error);
 				uni.hideLoading();
@@ -163,32 +173,84 @@ export default {
 		},
 
 		// 显示图片操作选项
-		showImageActions(imagePath) {
+		showImageActions(imagePaths) {
+			const isMultiple = imagePaths.length > 1;
+			const itemList = isMultiple
+				? ["保存全部", "预览全部"]
+				: ["保存", "分享", "预览"];
+
 			uni.showActionSheet({
-				itemList: ["保存", "分享", "预览"],
+				itemList: itemList,
 				success: (res) => {
-					if (res.tapIndex === 0) {
-						// 保存到相册
-						this.saveToAlbum(imagePath);
-					} else if (res.tapIndex === 1) {
-						// 分享图片
-						this.shareImageFile(imagePath);
-					} else if (res.tapIndex === 2) {
-						// 预览图片
-						this.previewImage(imagePath);
+					if (isMultiple) {
+						if (res.tapIndex === 0) {
+							// 保存全部
+							this.saveAllToAlbum(imagePaths);
+						} else if (res.tapIndex === 1) {
+							// 预览全部
+							this.previewAllImages(imagePaths);
+						}
+					} else {
+						if (res.tapIndex === 0) {
+							// 保存到相册
+							this.saveToAlbum(imagePaths[0]);
+						} else if (res.tapIndex === 1) {
+							// 分享图片
+							this.shareImageFile(imagePaths[0]);
+						} else if (res.tapIndex === 2) {
+							// 预览图片
+							this.previewImage(imagePaths[0]);
+						}
 					}
 				}
 			});
 		},
 
-		// 导出为 Word (待实现)
+		// 导出为 Word
 		async exportAsWord() {
-			uni.showToast({
-				title: "Word 导出功能开发中",
-				icon: "none"
+			if (this.isExporting) {
+				return;
+			}
+
+			this.isExporting = true;
+			uni.showLoading({
+				title: "正在生成 Word..."
 			});
-			// TODO: 实现 Word 导出功能
-			// 需要后端 API 支持
+
+			try {
+				const filePath = await WordExporter.exportToWord({
+					content: this.content,
+					filename: `${this.title}.docx`
+				});
+
+				await sleepWait(1000);
+
+				uni.hideLoading();
+
+				// 直接打开文件
+				uni.openDocument({
+					filePath: filePath,
+					showMenu: true,
+					success: () => {},
+					fail: (err) => {
+						console.error("打开文件失败:", err);
+						uni.showToast({
+							title: "打开文件失败",
+							icon: "none"
+						});
+					}
+				});
+			} catch (error) {
+				console.error("导出 Word 失败:", error);
+				uni.hideLoading();
+				uni.showToast({
+					title: error.message || "导出失败",
+					icon: "none",
+					duration: 2000
+				});
+			} finally {
+				this.isExporting = false;
+			}
 		},
 
 		// 保存到相册
@@ -217,6 +279,37 @@ export default {
 		previewImage(imagePath) {
 			uni.previewImage({
 				urls: [imagePath],
+				current: 0
+			});
+		},
+
+		// 保存全部到相册
+		async saveAllToAlbum(imagePaths) {
+			uni.showLoading({
+				title: "正在保存..."
+			});
+
+			let successCount = 0;
+			for (let i = 0; i < imagePaths.length; i++) {
+				try {
+					await saveImageToAlbum(imagePaths[i]);
+					successCount++;
+				} catch (error) {
+					console.error(`保存第 ${i + 1} 张图片失败:`, error);
+				}
+			}
+
+			uni.hideLoading();
+			uni.showToast({
+				title: `已保存 ${successCount}/${imagePaths.length} 张`,
+				icon: successCount > 0 ? "success" : "none"
+			});
+		},
+
+		// 预览全部图片
+		previewAllImages(imagePaths) {
+			uni.previewImage({
+				urls: imagePaths,
 				current: 0
 			});
 		}
