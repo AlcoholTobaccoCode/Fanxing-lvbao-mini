@@ -119,7 +119,12 @@ export function request(options: RequestOptions): Promise<any | null> {
 					...(header as UTSJSONObject)
 				},
 				timeout,
-				success(res) {
+				success(res: any) {
+					const requestMsg = res.data?.error
+						? ERROR_DEFAULT_MESSAGE[res.data.error]
+						: res.data?.msg;
+
+					console.info("request res ===> ", res);
 					// 401 无权限
 					if (res.statusCode == 401) {
 						// 尝试刷新 token
@@ -148,7 +153,10 @@ export function request(options: RequestOptions): Promise<any | null> {
 										// 刷新失败，退出登录
 										user.logout();
 										showLoginModal();
-										reject({ message: t("请先登录"), code: 401 } as Response);
+										reject({
+											message: t(requestMsg || "请先登录"),
+											code: 401
+										} as Response);
 										// 清空等待队列
 										pendingRequests = [];
 									}
@@ -157,7 +165,10 @@ export function request(options: RequestOptions): Promise<any | null> {
 									isRefreshing = false;
 									user.logout();
 									showLoginModal();
-									reject({ message: t("请先登录"), code: 401 } as Response);
+									reject({
+										message: t(requestMsg || "请先登录"),
+										code: 401
+									} as Response);
 									pendingRequests = [];
 								});
 						} else {
@@ -166,7 +177,7 @@ export function request(options: RequestOptions): Promise<any | null> {
 								user.logout();
 							}
 							showLoginModal();
-							reject({ message: t("请先登录"), code: 401 } as Response);
+							reject({ message: t(requestMsg || "请先登录"), code: 401 } as Response);
 						}
 						return;
 					}
@@ -174,7 +185,7 @@ export function request(options: RequestOptions): Promise<any | null> {
 					// 5xx 服务异常
 					if (res.statusCode >= 500 && res.statusCode < 600) {
 						reject({
-							message: t("服务异常")
+							message: t(requestMsg || "服务异常")
 						} as Response);
 						return;
 					}
@@ -185,7 +196,7 @@ export function request(options: RequestOptions): Promise<any | null> {
 							resolve(null);
 						} else {
 							reject({
-								message: `[404] ${url}`
+								message: requestMsg || `[404] ${url}`
 							} as Response);
 						}
 						return;
