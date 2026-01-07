@@ -208,6 +208,20 @@
 			]
 		},
 		//#endregion
+		//#region 知识库
+		{
+			"root": "knowledge-base",
+			"pages": [
+				{
+					"path": "index",
+					"style": {
+						"navigationBarTitleText": "知识库首页",
+						"navigationStyle": "custom"
+					}
+				}
+			]
+		},
+		//#endregion
 		//#region ---------------- TEST PAGE ----------------
 		{
 			"root": "test-pages",

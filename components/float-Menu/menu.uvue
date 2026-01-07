@@ -43,6 +43,26 @@ const unReadCountText = computed(() => {
 const showUnReadBadge = computed(() => imUnReadCount.value > 0);
 //#endregion
 
+const toPath = (path, useLogin = false) => {
+	if (useLogin) {
+		if (user.token) {
+			const isHomePage = router.isHomePage();
+			if (isHomePage) {
+				router.to(path);
+			} else {
+				router.push({
+					path,
+					mode: "redirectTo"
+				});
+			}
+		} else {
+			emits("use-login");
+		}
+	} else {
+		router.to(path);
+	}
+};
+
 // 基础菜单项（不包含首页）
 const baseMenuItems = computed<BtnListItem[]>(() => [
 	{
@@ -74,20 +94,7 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 				});
 			}
 
-			if (user.token) {
-				const isHomePage = router.isHomePage();
-				const path = "/ai-chat-module/voice-call/index";
-				if (isHomePage) {
-					router.to(path);
-				} else {
-					router.push({
-						path,
-						mode: "redirectTo"
-					});
-				}
-			} else {
-				emits("use-login");
-			}
+			toPath("/ai-chat-module/voice-call/index", true);
 		}
 	},
 	{
@@ -114,20 +121,15 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 		badge: showUnReadBadge.value,
 		badgeVal: unReadCountText.value,
 		cb: () => {
-			if (user.token) {
-				const isHomePage = router.isHomePage();
-				const path = "/ease-im/index";
-				if (isHomePage) {
-					router.to(path);
-				} else {
-					router.push({
-						path,
-						mode: "redirectTo"
-					});
-				}
-			} else {
-				emits("use-login");
-			}
+			toPath("/ease-im/index", true);
+		}
+	},
+	{
+		icon: "file-paper-line",
+		text: "知识库",
+		menuBgColor: "#2e3e5b",
+		cb: () => {
+			toPath("/knowledge-base/index", true);
 		}
 	}
 ]);

@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed } from "vue";
+import { ref, computed, nextTick } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { router, useStore } from "@/cool";
@@ -135,7 +135,13 @@ const handleSend = async (data: SendData) => {
 // 点击预设问题
 const handlePresetSelect = (question: string) => {
 	console.info("handlePresetSelect => ", question);
-	inputValue.value = question;
+	inputValue.value = "";
+	setTimeout(() => {
+		chatInputStore.inputMode.value = "text";
+		setTimeout(() => {
+			inputValue.value = question;
+		}, 300);
+	}, 200);
 };
 
 // 打开新对话（来自页面按钮或头部菜单）
