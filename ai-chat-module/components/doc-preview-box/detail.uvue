@@ -1,5 +1,6 @@
 <script>
 import { marked } from "marked";
+import { exportToImage, saveImageToAlbum, shareImage } from "../../utils/canvas-export.js";
 
 import SvEditorToolbar from "../sv-editor/components/sv-editor/sv-editor-toolbar.vue";
 import SvEditor from "../sv-editor/components/sv-editor/index.vue";
@@ -15,7 +16,10 @@ export default {
 			title: "",
 			content: "",
 			mode: "preview", // preview 或 edit
-			editorCtx: null
+			editorCtx: null,
+			exportImagePath: "", // 导出的图片路径
+			isExporting: false, // 导出中状态
+			canvasId: "export-canvas" // Canvas ID
 		};
 	},
 	onLoad() {
@@ -92,14 +96,277 @@ export default {
 		},
 		async onExport() {
 			console.log("onExport ==>", this.content);
-			// const contentRes = await this.editorCtx.getLastContent();
-			// const htmlHandler = this.editorCtx.exportHtml(contentRes.html);
-			// uni.navigateTo({
-			// 	url: "/pages/out/out",
-			// 	success: (res) => {
-			// 		res.eventChannel.emit("E_HTML_EXPORT", { data: htmlHandler });
-			// 	}
-			// });
+
+			// 显示导出选项
+			uni.showActionSheet({
+				itemList: ["导出为图片", "导出为 Word"],
+				success: (res) => {
+					if (res.tapIndex === 0) {
+						// 导出为图片
+						this.exportAsImage();
+					} else if (res.tapIndex === 1) {
+						// 导出为 Word
+						this.exportAsWord();
+					}
+				}
+			});
+		},
+
+		// 导出为图片
+		async exportAsImage() {
+			if (this.isExporting) {
+				return;
+			}
+
+			// 检查编辑器是否已加载
+			if (!this.showEdit) {
+				uni.showToast({
+					title: "编辑器未加载完成",
+					icon: "none"
+				});
+				return;
+			}
+
+			this.isExporting = true;
+			uni.showLoading({
+				title: "正在生成图片..."
+			});
+
+			// 延迟一下确保 DOM 渲染完成
+			await new Promise((resolve) => setTimeout(resolve, 300));
+
+			try {
+				// 直接使用 Canvas 绘制，不查询编辑器节点
+				const imagePath = await this.drawToCanvas();
+
+				this.exportImagePath = imagePath;
+				uni.hideLoading();
+
+				// 显示操作选项
+				this.showImageActions(imagePath);
+			} catch (error) {
+				console.error("导出图片失败:", error);
+				uni.hideLoading();
+				uni.showToast({
+					title: error.message || "导出失败",
+					icon: "none",
+					duration: 2000
+				});
+			} finally {
+				this.isExporting = false;
+			}
+		},
+
+		// 解析 markdown 为纯文本
+		parseMarkdownToText(markdown) {
+			let text = markdown
+				.replace(/^#{1,6}\s+/gm, "")
+				.replace(/\*\*(.*?)\*\*/g, "$1")
+				.replace(/\*(.*?)\*/g, "$1")
+				.replace(/~~(.*?)~~/g, "$1")
+				.replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1")
+				.replace(/!\[([^\]]*)\]\([^\)]+\)/g, "")
+				.replace(/```[\s\S]*?```/g, "")
+				.replace(/`([^`]+)`/g, "$1")
+				.replace(/^>\s+/gm, "")
+				.replace(/^[\*\-\+]\s+/gm, "• ")
+				.replace(/^\d+\.\s+/gm, "")
+				.replace(/\n{3,}/g, "\n\n");
+			return text.trim();
+		},
+
+		// 文本自动换行
+		wrapText(ctx, text, maxWidth) {
+			const lines = [];
+			const paragraphs = text.split("\n");
+
+			paragraphs.forEach((paragraph) => {
+				if (!paragraph.trim()) {
+					lines.push("");
+					return;
+				}
+
+				let currentLine = "";
+				for (let i = 0; i < paragraph.length; i++) {
+					const testLine = currentLine + paragraph[i];
+					const metrics = ctx.measureText(testLine);
+
+					if (metrics.width > maxWidth && currentLine) {
+						lines.push(currentLine);
+						currentLine = paragraph[i];
+					} else {
+						currentLine = testLine;
+					}
+				}
+
+				if (currentLine) {
+					lines.push(currentLine);
+				}
+			});
+
+			return lines;
+		},
+
+		// 直接绘制到 Canvas (使用新版 Canvas 2D API)
+		async drawToCanvas() {
+			return new Promise((resolve, reject) => {
+				console.log("开始绘制 Canvas, canvasId:", this.canvasId);
+
+				const query = uni.createSelectorQuery();
+				query
+					.select("#" + this.canvasId)
+					.fields({ node: true, size: true })
+					.exec((res) => {
+						console.log("Canvas 查询结果:", res);
+
+						if (!res || !res[0] || !res[0].node) {
+							console.error("Canvas 节点未找到");
+							reject(new Error("Canvas 节点未找到"));
+							return;
+						}
+
+						const canvas = res[0].node;
+						const ctx = canvas.getContext("2d");
+
+						const dpr = uni.getSystemInfoSync().pixelRatio;
+
+						// 解析 markdown 内容
+						const plainText = this.parseMarkdownToText(this.content);
+						console.log("解析后的文本长度:", plainText.length);
+
+						// 文本自动换行
+						const maxWidth = 630;
+						ctx.font = "24px sans-serif";
+						const lines = this.wrapText(ctx, plainText, maxWidth);
+						console.log("文本行数:", lines.length);
+
+						// 计算需要的高度
+						const lineHeight = 36;
+						const contentHeight = 180 + lines.length * lineHeight + 60;
+						const finalHeight = Math.max(1200, contentHeight);
+
+						// 设置 canvas 尺寸
+						canvas.width = 750 * dpr;
+						canvas.height = finalHeight * dpr;
+						ctx.scale(dpr, dpr);
+
+						console.log("Canvas 尺寸:", 750, finalHeight);
+
+						// 绘制背景
+						ctx.fillStyle = "#ffffff";
+						ctx.fillRect(0, 0, 750, finalHeight);
+
+						// 绘制标题
+						ctx.fillStyle = "#1a1a1a";
+						ctx.font = "bold 40px sans-serif";
+						ctx.textAlign = "center";
+						ctx.fillText(this.title, 375, 80);
+
+						// 绘制分割线
+						ctx.strokeStyle = "#e5e7eb";
+						ctx.lineWidth = 2;
+						ctx.beginPath();
+						ctx.moveTo(60, 140);
+						ctx.lineTo(690, 140);
+						ctx.stroke();
+
+						// 绘制文本内容
+						ctx.fillStyle = "#333333";
+						ctx.font = "24px sans-serif";
+						ctx.textAlign = "left";
+
+						let y = 180;
+						lines.forEach((line) => {
+							if (line) {
+								ctx.fillText(line, 60, y);
+							}
+							y += lineHeight;
+						});
+
+						console.log("Canvas 绘制完成，准备导出");
+
+						// 延迟后导出
+						setTimeout(() => {
+							uni.canvasToTempFilePath(
+								{
+									canvas: canvas,
+									fileType: "png",
+									quality: 0.9,
+									success: (res) => {
+										console.log("Canvas 导出成功:", res.tempFilePath);
+										resolve(res.tempFilePath);
+									},
+									fail: (err) => {
+										console.error("Canvas 导出失败:", err);
+										reject(
+											new Error("Canvas 导出失败: " + JSON.stringify(err))
+										);
+									}
+								},
+								this
+							);
+						}, 500);
+					});
+			});
+		},
+
+		// 显示图片操作选项
+		showImageActions(imagePath) {
+			uni.showActionSheet({
+				itemList: ["保存", "分享", "预览"],
+				success: (res) => {
+					if (res.tapIndex === 0) {
+						// 保存到相册
+						this.saveToAlbum(imagePath);
+					} else if (res.tapIndex === 1) {
+						// 分享图片
+						this.shareImageFile(imagePath);
+					} else if (res.tapIndex === 2) {
+						// 预览图片
+						this.previewImage(imagePath);
+					}
+				}
+			});
+		},
+
+		// 导出为 Word (待实现)
+		async exportAsWord() {
+			uni.showToast({
+				title: "Word 导出功能开发中",
+				icon: "none"
+			});
+			// TODO: 实现 Word 导出功能
+			// 需要后端 API 支持
+		},
+
+		// 保存到相册
+		async saveToAlbum(imagePath) {
+			try {
+				await saveImageToAlbum(imagePath);
+			} catch (error) {
+				console.error("保存到相册失败:", error);
+			}
+		},
+
+		// 分享图片
+		async shareImageFile(imagePath) {
+			try {
+				await shareImage(imagePath);
+			} catch (error) {
+				console.error("分享图片失败:", error);
+				uni.showToast({
+					title: "分享失败",
+					icon: "none"
+				});
+			}
+		},
+
+		// 预览图片
+		previewImage(imagePath) {
+			uni.previewImage({
+				urls: [imagePath],
+				current: 0
+			});
 		}
 	}
 };
@@ -163,6 +430,13 @@ export default {
 				</sv-editor-toolbar>
 			</view>
 		</template>
+
+		<!-- 隐藏的 Canvas 用于导出图片 -->
+		<canvas
+			type="2d"
+			:id="canvasId"
+			style="position: fixed; top: -9999px; left: -9999px; width: 750px; height: 1200px"
+		></canvas>
 	</view>
 </template>
 
