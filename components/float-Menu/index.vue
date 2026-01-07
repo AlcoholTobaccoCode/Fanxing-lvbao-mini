@@ -20,6 +20,11 @@ const props = defineProps({
 		type: String,
 		default: "#fff"
 	},
+	rootIcon: {
+		// 按钮图标
+		type: String,
+		default: "fxzh-caidan2"
+	},
 	iconColor: {
 		// 按钮图标
 		type: String,
@@ -49,6 +54,10 @@ const props = defineProps({
 		type: Number
 	},
 	useMask: {
+		type: Boolean,
+		default: () => true
+	},
+	showImBadge: {
 		type: Boolean,
 		default: () => true
 	}
@@ -226,7 +235,7 @@ const unReadCountText = computed(() => {
 });
 
 // 是否显示未读角标
-const showUnReadBadge = computed(() => imUnReadCount.value > 0);
+const showUnReadBadge = computed(() => imUnReadCount.value > 0 && props.showImBadge);
 //#endregion
 </script>
 <template>
@@ -300,7 +309,7 @@ const showUnReadBadge = computed(() => imUnReadCount.value > 0);
 							height: floatingButtonHeight
 						}"
 					>
-						<cl-icon name="fxzh-caidan2" :size="40"></cl-icon>
+						<cl-icon :name="rootIcon" :size="40"></cl-icon>
 						<cl-badge
 							v-if="!isMenuOpen && showUnReadBadge"
 							type="error"
