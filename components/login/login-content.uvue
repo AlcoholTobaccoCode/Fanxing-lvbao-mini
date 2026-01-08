@@ -79,11 +79,19 @@ const toLogin = async (res: any) => {
 	user.setToken(parse<Token>(res)!);
 	await user.get();
 
-	// 执行登录成功回调（如果在弹窗模式）
-	if (props.compact) {
-		await onLoginSuccess();
-	} else {
-		// 页面模式：跳转到登录后的页面
+	// // 执行登录成功回调（如果在弹窗模式）
+	// if (props.compact) {
+	// 	await onLoginSuccess();
+	// } else {
+	// 	// 页面模式：跳转到登录后的页面
+	// 	// 先关闭可能存在的登录模态框，再跳转
+	// 	await onLoginSuccess();
+	// 	router.nextLogin();
+	// }
+
+	// 不管是模态框还是登录页面，关闭可能存在的登录模态框
+	await onLoginSuccess();
+	if (!props.compact) {
 		router.nextLogin();
 	}
 };
