@@ -125,7 +125,6 @@ export function request(options: RequestOptions): Promise<any | null> {
 						? ERROR_DEFAULT_MESSAGE[res.data.error]
 						: res.data?.msg;
 
-					console.info("request res ===> ", res);
 					// 401 无权限
 					if (res.statusCode == 401) {
 						// 尝试刷新 token

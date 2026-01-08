@@ -8,9 +8,8 @@ import { type ApiResponse } from "./types";
  * 1: 文件
  * 2: 图片
  * 3: 笔记
- * 4: 引用
  */
-export type KnowledgeObjectType = 1 | 2 | 3 | 4;
+export type KnowledgeObjectType = 1 | 2 | 3;
 
 /**
  * 知识库对象基础信息
@@ -97,14 +96,12 @@ export const CreateKnowledge = (data: CreateKnowledgePayload): Promise<CreateKno
  * @param params 查询参数，可选标题关键词进行模糊匹配
  * @returns 对象列表
  */
-export const ListKnowledge = (
-	params?: ListKnowledgeQuery
-): Promise<ApiResponse<KnowledgeObject[]>> => {
+export const ListKnowledge = (params?: ListKnowledgeQuery): Promise<KnowledgeObject[]> => {
 	return request({
 		url: "/knowledge/objects/list",
 		method: "GET",
 		params
-	}) as Promise<ApiResponse<KnowledgeObject[]>>;
+	}) as Promise<KnowledgeObject[]>;
 };
 
 /**
@@ -116,12 +113,12 @@ export const ListKnowledge = (
 export const RenameKnowledge = (
 	objectId: number | string,
 	data: RenameKnowledgePayload
-): Promise<ApiResponse<KnowledgeObject>> => {
+): Promise<KnowledgeObject> => {
 	return request({
 		url: `/knowledge/objects/${objectId}/rename`,
 		method: "PUT",
 		data
-	}) as Promise<ApiResponse<KnowledgeObject>>;
+	}) as Promise<KnowledgeObject>;
 };
 
 /**

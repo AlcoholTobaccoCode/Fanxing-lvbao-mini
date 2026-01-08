@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import { type BtnListItem } from "@/components/float-Menu/types";
 import FloatPopupMenu from "@/components/float-Menu/index.vue";
+import { router } from "@/cool";
 
 const emits = defineEmits(["create"]);
 
@@ -22,27 +23,11 @@ const addMenuItems = computed<BtnListItem[]>(() => [
 		}
 	},
 	{
-		icon: "image-line",
-		text: "图片",
-		menuBgColor: "#e74c3c",
-		cb: () => {
-			emits("create", "image");
-		}
-	},
-	{
 		icon: "sticky-note-line",
 		text: "笔记",
 		menuBgColor: "#f39c12",
 		cb: () => {
 			emits("create", "note");
-		}
-	},
-	{
-		icon: "link",
-		text: "引用",
-		menuBgColor: "#2ecc71",
-		cb: () => {
-			emits("create", "reference");
 		}
 	}
 ]);

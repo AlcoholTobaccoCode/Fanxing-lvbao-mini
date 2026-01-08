@@ -4,13 +4,6 @@
 	// "entryPagePath": "user/login",
 	"pages": [
 		{
-			"path": "pages/knowledge-base/index",
-			"style": {
-				"navigationBarTitleText": "知识库"
-				// "navigationStyle": "custom"
-			}
-		},
-		{
 			"path": "pages/home/index",
 			"style": {
 				"navigationBarTitleText": "律先峰",
@@ -39,6 +32,13 @@
 					"contract-gen-starter": "view",
 					"model-selector": "view"
 				}
+			}
+		},
+		{
+			"path": "pages/knowledge-base/index",
+			"style": {
+				"navigationBarTitleText": "知识库"
+				// "navigationStyle": "custom"
 			}
 		}
 	],

@@ -129,7 +129,7 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 		text: "知识库",
 		menuBgColor: "#2e3e5b",
 		cb: () => {
-			toPath("/knowledge-base/index", true);
+			toPath("/pages/knowledge-base/index", true);
 		}
 	}
 ]);

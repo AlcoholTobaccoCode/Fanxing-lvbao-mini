@@ -2,11 +2,11 @@ import { GetOssSignature, type OssSignatureData } from "@/api/common";
 import { randomLenNum } from "@/utils";
 
 // 默认 Bucket 与 Region，可按需调整为你的实际配置
-const OSS_BUCKET = "fxzh01";
-const OSS_REGION = "oss-cn-hangzhou";
+export const OSS_BUCKET = "fxzh01";
+export const OSS_REGION = "oss-cn-hangzhou";
 
 // OSS 直传的完整域名，例如：https://bucket.oss-cn-hangzhou.aliyuncs.com
-const OSS_ENDPOINT = `https://${OSS_BUCKET}.${OSS_REGION}.aliyuncs.com`;
+export const OSS_ENDPOINT = `https://${OSS_BUCKET}.${OSS_REGION}.aliyuncs.com`;
 
 /**
  * 生成 OSS 对象存储的 key

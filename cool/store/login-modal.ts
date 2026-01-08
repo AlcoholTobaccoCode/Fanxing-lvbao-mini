@@ -40,6 +40,8 @@ export async function onLoginSuccess() {
 		if (callback) {
 			try {
 				await callback();
+				// 关闭弹窗
+				hideLoginModal();
 			} catch (error) {
 				console.error("Login callback error:", error);
 			}

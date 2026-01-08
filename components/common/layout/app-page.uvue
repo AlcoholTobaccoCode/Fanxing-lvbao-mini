@@ -16,6 +16,7 @@ import { PermissionScope, requestMultiplePermissions } from "@/utils/permission"
 const props = withDefaults(
 	defineProps<{
 		title?: string;
+		hideHeader?: boolean;
 		initialVoicePlay?: boolean;
 		voiceName?: string;
 		// 返回按钮
@@ -31,7 +32,8 @@ const props = withDefaults(
 	}>(),
 	{
 		backTop: false,
-		titleAction: true,
+		hideHeader: false,
+		titleAction: false,
 		hideFloatMenu: false,
 		showAiCall: false
 	}
@@ -239,6 +241,7 @@ const beforePageContainerLeave = () => {
 
 				<!-- 自定义头部 -->
 				<app-header
+					v-if="!props.hideHeader"
 					:title="props.title"
 					:initial-voice-play="voicePlay"
 					:voice-name="props.voiceName"
