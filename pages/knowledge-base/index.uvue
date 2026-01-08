@@ -412,6 +412,7 @@ const openDetail = async (item: KnowledgeObject) => {
 	if (item.type === 3 || isTextType(item.mimeType)) {
 		log.info("打开文本预览弹窗");
 		showTextPopup.value = true;
+		ui.showToast({ message: "敬请期待", type: "success" });
 		return;
 	}
 
@@ -606,25 +607,16 @@ onMounted(() => {
 			<add-action-menu @create="createItem"></add-action-menu>
 
 			<!-- 图片预览弹窗 -->
-			<cl-popup v-model="showImagePopup" direction="bottom" :size="80">
+			<cl-popup v-model="showImagePopup" direction="bottom" size="60%">
 				<view class="popup-container">
-					<view class="popup-header">
-						<cl-text :size="18" bold>{{
-							currentPreviewItem?.title || "图片预览"
-						}}</cl-text>
-						<cl-icon
-							name="close-line"
-							:size="32"
-							@tap="showImagePopup = false"
-							class="close-icon"
-						/>
-					</view>
 					<view class="popup-content">
 						<cl-image
 							v-if="currentPreviewUrl"
 							:src="currentPreviewUrl"
 							mode="aspectFit"
 							:preview="true"
+							width="100%"
+							height="100%"
 							class="preview-image"
 						/>
 						<cl-text v-else color="#999">暂无图片</cl-text>
@@ -633,19 +625,8 @@ onMounted(() => {
 			</cl-popup>
 
 			<!-- 文本预览弹窗 -->
-			<cl-popup v-model="showTextPopup" direction="bottom" :size="80">
+			<!-- <cl-popup v-model="showTextPopup" direction="bottom" size="80%">
 				<view class="popup-container">
-					<view class="popup-header">
-						<cl-text :size="18" bold>{{
-							currentPreviewItem?.title || "文本预览"
-						}}</cl-text>
-						<cl-icon
-							name="close-line"
-							:size="32"
-							@tap="showTextPopup = false"
-							class="close-icon"
-						/>
-					</view>
 					<view class="popup-content">
 						<cl-text v-if="currentPreviewItem?.textContent" class="preview-text">{{
 							currentPreviewItem.textContent
@@ -653,7 +634,7 @@ onMounted(() => {
 						<cl-text v-else color="#999">暂无内容</cl-text>
 					</view>
 				</view>
-			</cl-popup>
+			</cl-popup> -->
 
 			<!-- 重命名弹窗 -->
 			<cl-popup v-model="showRenamePopup" direction="center">
@@ -853,12 +834,6 @@ $content-top: 120px;
 	@apply flex items-center justify-center flex-1;
 	padding: 20px;
 	overflow: auto;
-}
-
-.preview-image {
-	width: 100%;
-	height: 100%;
-	max-height: 60vh;
 }
 
 .preview-text {
