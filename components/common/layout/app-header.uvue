@@ -65,6 +65,7 @@ onMounted(() => {
 });
 
 const toggleMenu = () => {
+	return;
 	showMenu.value = !showMenu.value;
 };
 
@@ -124,7 +125,30 @@ const handleClickLeft = () => {
 
 			<view class="flex flex-col" @tap.stop="toggleMenu">
 				<view class="flex flex-row items-center justify-center">
-					<cl-text :pt="{ className: 'text-base font-bold tracking-wide' }">
+					<!-- <cl-avatar
+						:size="40"
+						:src="config.logo"
+						:pt="{
+							icon: {
+								size: 15,
+								name: 'user-line'
+							}
+						}"
+					></cl-avatar> -->
+					<cl-image
+						:width="36"
+						:height="36"
+						preview
+						mode="aspectFill"
+						:src="config.logo"
+						:pt="{
+							inner: {
+								className: '!rounded-md'
+							}
+						}"
+					>
+					</cl-image>
+					<cl-text :pt="{ className: 'text-base font-bold tracking-wide ml-2' }">
 						{{ title }}
 					</cl-text>
 					<cl-icon
