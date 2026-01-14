@@ -229,19 +229,23 @@ const toTestPage = () => {
 						>
 							<!-- 法规模块：模型选择器 -->
 							<template v-if="currentModule === 'law'" #tools-prepend>
-								<model-selector
-									v-model="lawModelType"
-									:locked="false"
-									search-type="law"
-								/>
+								<view class="px-2">
+									<model-selector
+										v-model="lawModelType"
+										:locked="false"
+										search-type="law"
+									/>
+								</view>
 							</template>
 							<!-- 案例模块：模型选择器 -->
 							<template v-else-if="currentModule === 'case'" #tools-prepend>
-								<model-selector
-									v-model="caseModelType"
-									:locked="false"
-									search-type="case"
-								/>
+								<view class="px-2">
+									<model-selector
+										v-model="caseModelType"
+										:locked="false"
+										search-type="case"
+									/>
+								</view>
 							</template>
 						</chat-input>
 					</view>
