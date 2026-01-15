@@ -27,7 +27,8 @@ type AgentType = "0" | "1" | "2" | "3";
 const { user } = useStore();
 
 // 麦克风权限
-const useRecordPermission = ref<boolean>(false);
+const hasRecordPermission = ref<boolean>(false);
+const getPerEnd = ref<boolean>(false);
 
 // 智能体类型，默认语音通话
 const agentType = ref<AgentType>("0");
@@ -74,9 +75,10 @@ const recordPermission = async () => {
 		logger: log,
 		ui
 	});
-	useRecordPermission.value = result.success;
-	log.info("录音权限测试结果:", useRecordPermission.value);
-	if (!useRecordPermission.value) {
+	hasRecordPermission.value = result.success;
+	getPerEnd.value = true;
+	log.info("录音权限测试结果:", hasRecordPermission.value);
+	if (!hasRecordPermission.value) {
 		ui.showToast({ message: "未获得录音权限，无法使用语音通话功能" });
 		return;
 	}
@@ -107,8 +109,12 @@ onLoad(() => {
 <template>
 	<cl-page>
 		<view class="w-full h-full">
-			<template v-if="!useRecordPermission">
-				<view class="login-box" :class="useRecordPermission ? 'opacity-0' : 'opacity-100'">
+			<view class="loading-view" v-if="!getPerEnd">
+				<cl-loading :size="42" color="blue"></cl-loading>
+				<cl-text color="info" class="mt-2">加载中...</cl-text>
+			</view>
+			<template v-if="!hasRecordPermission">
+				<view class="login-box" :class="!hasRecordPermission ? 'opacity-0' : 'opacity-100'">
 					<cl-text color="warn">未获得录音权限，无法使用语音通话功能</cl-text>
 					<cl-button @click="checkAndShowWebview()">去授权</cl-button>
 				</view>
