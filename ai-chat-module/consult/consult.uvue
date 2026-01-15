@@ -3,7 +3,7 @@
 -->
 <script lang="ts" setup>
 import { chunkArray, type chunkArrayType } from "@/utils/index";
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { LEGAL_QUICK_QUESTIONS } from "../utils";
 import { config } from "@/config";
 
@@ -11,24 +11,86 @@ const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
 }>();
 
+const TIMING = {
+	DISPLAY_DURATION: 3000,
+	TRANSITION_DURATION: 1000
+};
+
+const currentQuestionIndex = ref(0);
+const textOpacity = ref(1);
+const barWidthPercent = ref(0);
+const barOpacity = ref(0.3);
+const barDirection = ref<"left" | "right">("right");
+const showGlowCircle = ref(true);
+
+let animationTimer: ReturnType<typeof setTimeout> | null = null;
+
 const questionPools = ref<chunkArrayType>([]);
 const currentPoolIndex = ref(0);
 const presetQuestions = ref<string[]>([]);
 
-onMounted(() => {
-	questionPools.value = chunkArray(LEGAL_QUICK_QUESTIONS, 3);
-	presetQuestions.value = questionPools.value[0] || [];
+const currentDisplayText = computed(() => {
+	return presetQuestions.value[currentQuestionIndex.value] || "";
 });
 
-const handleClick = (q: string) => {
-	emit("preset-select", q);
+const clearTimer = () => {
+	if (animationTimer) {
+		clearTimeout(animationTimer);
+		animationTimer = null;
+	}
 };
 
-const handleRefresh = () => {
-	if (!questionPools.value.length) return;
-	const nextIndex = (currentPoolIndex.value + 1) % questionPools.value.length;
-	currentPoolIndex.value = nextIndex;
-	presetQuestions.value = questionPools.value[nextIndex];
+const delay = (ms: number): Promise<void> => {
+	return new Promise((resolve) => {
+		animationTimer = setTimeout(resolve, ms);
+	});
+};
+
+const pageInit = async () => {
+	questionPools.value = chunkArray(LEGAL_QUICK_QUESTIONS, 3);
+	presetQuestions.value = questionPools.value[0] || [];
+	// 因为现在加了动画，所以等动画加载完成
+	await delay(1000);
+	startAnimation();
+};
+
+onMounted(() => {
+	pageInit();
+});
+
+onUnmounted(() => {
+	clearTimer();
+});
+
+const showText = async () => {
+	textOpacity.value = 1;
+	barWidthPercent.value = 100;
+	barOpacity.value = 0.3;
+
+	await delay(TIMING.DISPLAY_DURATION);
+	hideText();
+};
+
+const hideText = async () => {
+	textOpacity.value = 0;
+	barWidthPercent.value = 0;
+
+	await delay(TIMING.TRANSITION_DURATION);
+	nextQuestion();
+};
+
+const nextQuestion = () => {
+	currentQuestionIndex.value = (currentQuestionIndex.value + 1) % presetQuestions.value.length;
+	showText();
+};
+
+const startAnimation = async () => {
+	showText();
+};
+
+const handleClick = () => {
+	console.info("currentDisplayText.value ==> ", currentDisplayText.value);
+	emit("preset-select", currentDisplayText.value);
 };
 </script>
 
@@ -36,45 +98,46 @@ const handleRefresh = () => {
 	<view class="consult-starter">
 		<!-- 标题区域 -->
 		<view class="header-section">
-			<cl-text size="28px" :pt="{ className: 'title-line' }">Hi,</cl-text>
-			<cl-text size="28px" :pt="{ className: 'title-line' }">欢迎使用</cl-text>
-			<view class="title-brand">
-				<cl-text size="28px" :pt="{ className: 'brand-text text-primary-500 font-bold' }"
-					>{{ config.name }} AI</cl-text
-				>
+			<view class="fade-up delay-1">
+				<cl-text size="28px" :pt="{ className: 'title-line' }">Hi,</cl-text>
 			</view>
-			<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
-				基于百万级真实判例与全量法律法规训练，为您提供精准、深度、有据可依的法律智能分析。
-			</cl-text>
+			<view class="fade-up delay-2">
+				<cl-text size="28px" :pt="{ className: 'title-line' }">欢迎使用</cl-text>
+			</view>
+			<view class="title-brand fade-up delay-3">
+				<cl-text size="28px" :pt="{ className: 'brand-text text-primary-500 font-bold' }">
+					{{ config.name }} AI
+				</cl-text>
+			</view>
+			<view class="fade-up delay-4">
+				<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
+					基于百万级真实判例与全量法律法规训练，为您提供精准、深度、有据可依的法律智能分析。
+				</cl-text>
+			</view>
 		</view>
 
-		<!-- 问题推荐区域 -->
-		<view class="questions-section">
-			<view class="section-header">
-				<cl-text :pt="{ className: 'text-surface-500' }">您可以试着问我：</cl-text>
-				<view
-					class="refresh-btn bg-primary-50"
-					hover-class="hover-darker"
-					@click="handleRefresh"
-				>
-					<cl-icon name="refresh-line" color="primary" />
-					<cl-text :pt="{ className: 'text-primary-500 text-sm' }">换一换</cl-text>
+		<!-- 动画标题区域 -->
+		<view class="fade-up delay-5">
+			<view class="header-section">
+				<view>
+					<cl-text :pt="{ className: 'text-surface-500' }">您可以试着问我：</cl-text>
 				</view>
-			</view>
-
-			<!-- 问题卡片列表 -->
-			<view class="question-list">
-				<view
-					v-for="(item, i) in presetQuestions"
-					:key="i"
-					class="question-card bg-primary-50"
-					hover-class="hover-darker"
-					@click="handleClick(item)"
-				>
-					<cl-icon name="chat-thread-line" size="16px" color="primary" />
-					<cl-text :pt="{ className: 'question-text text-surface-700' }">{{
-						item
-					}}</cl-text>
+				<view class="text-bar-group" @click="handleClick">
+					<view class="display-text-box" :style="{ opacity: textOpacity }">
+						<text class="display-text">
+							{{ currentDisplayText }}
+						</text>
+						<cl-icon name="arrow-right-line" />
+					</view>
+					<!-- 横条容器 -->
+					<view class="bar-container">
+						<view v-if="showGlowCircle" class="glow-circle position-left" />
+						<view
+							class="gradient-bar"
+							:class="[`direction-${barDirection}`]"
+							:style="{ width: `${barWidthPercent}%`, opacity: barOpacity }"
+						/>
+					</view>
 				</view>
 			</view>
 		</view>
@@ -82,6 +145,10 @@ const handleRefresh = () => {
 </template>
 
 <style lang="scss" scoped>
+$gradient-start: #acb6e5;
+$gradient-end: #86fde8;
+$transition-duration: 1000ms;
+
 .consult-starter {
 	@apply flex flex-col px-6;
 }
@@ -89,6 +156,40 @@ const handleRefresh = () => {
 .header-section {
 	@apply flex flex-col;
 	margin-bottom: 32px;
+}
+
+// 自下而上渐显动画
+.fade-up {
+	opacity: 0;
+	transform: translateY(20px);
+	animation: fadeUpIn 0.6s ease-out forwards;
+}
+
+.delay-1 {
+	animation-delay: 0.1s;
+}
+.delay-2 {
+	animation-delay: 0.3s;
+}
+.delay-3 {
+	animation-delay: 0.5s;
+}
+.delay-4 {
+	animation-delay: 0.7s;
+}
+.delay-5 {
+	animation-delay: 1s;
+}
+
+@keyframes fadeUpIn {
+	0% {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(0);
+	}
 }
 
 .title-line {
@@ -106,14 +207,83 @@ const handleRefresh = () => {
 	font-weight: 700;
 }
 
-.brand-suffix {
-	font-weight: 700;
-	margin-left: 8px;
+.text-bar-group {
+	@apply inline-flex flex-col items-stretch relative w-fit px-5;
+	padding: 10px 20px;
+	overflow: visible;
 }
 
-.desc-text {
+.display-text-box {
+	@apply flex flex-row items-center;
+	transition: opacity $transition-duration ease-in-out;
+}
+.display-text {
+	@apply text-xl font-medium;
+	color: #334155;
+	white-space: pre-wrap;
 	line-height: 1.6;
-	margin-top: 16px;
+	padding-left: 18px;
+}
+
+.bar-container {
+	@apply absolute flex items-center;
+	top: 5px;
+	left: 0;
+	width: 100%;
+	height: 34px;
+}
+
+.gradient-bar {
+	height: 100%;
+	border-radius: 30px;
+	position: absolute;
+	background: linear-gradient(to right, $gradient-start, $gradient-end);
+	transition:
+		width $transition-duration ease-in-out,
+		opacity $transition-duration ease-in-out;
+
+	&.direction-right {
+		left: 0;
+		right: auto;
+	}
+}
+
+.glow-circle {
+	position: absolute;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: linear-gradient(135deg, $gradient-start, $gradient-end);
+	box-shadow:
+		0 0 10px rgba($gradient-start, 0.6),
+		0 0 20px rgba($gradient-end, 0.4);
+	z-index: 10;
+
+	&.position-left {
+		left: 10px;
+		top: 50%;
+		transform: translateY(-50%);
+	}
+
+	&.position-right {
+		right: 10px;
+		top: 50%;
+		transform: translateY(-50%);
+	}
+}
+
+@keyframes icon-bounce-in {
+	0% {
+		opacity: 0;
+		transform: translateY(-50%) scale(0);
+	}
+	60% {
+		transform: translateY(-50%) scale(1.2);
+	}
+	100% {
+		opacity: 1;
+		transform: translateY(-50%) scale(1);
+	}
 }
 
 .questions-section {
