@@ -98,7 +98,7 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 		}
 	},
 	{
-		icon: "user-settings-line",
+		icon: "settings-line",
 		text: "设置",
 		menuBgColor: "#2e3e5b",
 		cb: () => {
@@ -115,7 +115,7 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 		}
 	},
 	{
-		icon: "user-2-line",
+		icon: "chat-3-line",
 		text: "律师",
 		menuBgColor: "#2e3e5b",
 		badge: showUnReadBadge.value,
