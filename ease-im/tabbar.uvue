@@ -1,0 +1,87 @@
+<script setup lang="ts">
+import { ctx, isDark, parseClass, router } from "@/cool";
+import { t } from "@/locale";
+
+const activateValModal = defineModel("activateVal", {
+	type: Number,
+	default: 0
+});
+
+// tabbar 列表
+const list = [
+	{
+		icon: "chat-3-line",
+		text: "历史对话",
+		key: 0
+	},
+	{
+		icon: "user-3-line",
+		text: "律师列表",
+		key: 1
+	}
+];
+
+// 隐藏原生 tabBar
+// #ifndef MP
+if (ctx.tabBar.list != null) {
+	uni.hideTabBar();
+}
+// #endif
+
+const handleItemClick = (val) => {
+	activateValModal.value = val.key;
+};
+</script>
+
+<template>
+	<cl-footer
+		:pt="{
+			content: {
+				className: '!p-0 h-[60px]'
+			}
+		}"
+	>
+		<view class="custom-tabbar" :class="{ 'is-dark': isDark }">
+			<view
+				class="custom-tabbar-item"
+				v-for="item in list"
+				:key="item.key"
+				@tap="handleItemClick(item)"
+			>
+				<cl-icon
+					:name="item.icon"
+					:color="activateValModal == item.key ? 'primary' : 'info'"
+					:size="activateValModal == item.key ? '18px' : '14px'"
+					:pt="{
+						className: parseClass([
+							'transition-all',
+							[activateValModal == item.key, 'text-md', 'text-xs']
+						])
+					}"
+				></cl-icon>
+
+				<cl-text
+					v-if="item.text != null"
+					:color="activateValModal == item.key ? 'primary' : 'info'"
+					:pt="{
+						className: parseClass([
+							'mt-1 transition-all',
+							[activateValModal == item.key, 'text-md', 'text-xs']
+						])
+					}"
+					>{{ t(item.text!) }}</cl-text
+				>
+			</view>
+		</view>
+	</cl-footer>
+</template>
+
+<style lang="scss" scoped>
+.custom-tabbar {
+	@apply flex flex-row items-center flex-1;
+
+	&-item {
+		@apply flex flex-col items-center justify-center flex-1;
+	}
+}
+</style>

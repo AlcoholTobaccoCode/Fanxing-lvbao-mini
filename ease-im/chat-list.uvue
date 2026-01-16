@@ -1,0 +1,316 @@
+<script lang="ts" setup>
+import { onBeforeUnmount, onMounted, ref } from "vue";
+import { isDark, router, usePager } from "@/cool";
+import { type EasemobConversationItem, getEasemobServerConversations } from "@/utils/easemob";
+import { imBus } from "@/utils/easemob/events";
+import { useChatUsernames, formatUnread } from "./hook";
+import { sleepWait } from "@/utils";
+
+/* 
+	TODO
+	- 合并环信、本地接口
+*/
+
+const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
+
+const {
+	isLoading: isUsernamesLoading,
+	fetchUsernames,
+	getTitle,
+	getAvatarUrl
+} = useChatUsernames();
+
+// 使用环信服务端游标分页
+let serverCursor = "";
+let historyType = 0;
+
+const { refresh, list, listView, loading, loadMore } = usePager(async (params, { render }) => {
+	const page = Number(params["page"] || 1);
+	const size = Number(params["size"] || 20);
+
+	// 首次加载或下拉刷新：重置游标
+	if (page === 1) {
+		serverCursor = "";
+	}
+
+	// 如果已经没有更多游标了，并且是向后翻页，则直接返回空列表，避免重复请求首页数据
+	if (page > 1 && !serverCursor) {
+		const total = (page - 1) * size;
+		return render({
+			list: [],
+			pagination: {
+				page,
+				size,
+				total
+			}
+		});
+	}
+
+	const res = await getEasemobServerConversations({
+		pageSize: size,
+		cursor: serverCursor,
+		includeEmptyConversations: false
+	});
+
+	let conversations = (res?.data?.conversations || []) as EasemobConversationItem[];
+	serverCursor = res?.data?.cursor || "";
+	historyType = res.type;
+
+	// 这里只能估算 total，主要用于驱动 cl-list-view 的翻页行为
+	const total = page * size + (serverCursor ? 1 : 0);
+
+	const userIds = conversations
+		.map((e) => Number(e.conversationId))
+		.filter((id) => Number.isFinite(id));
+	if (userIds.length) {
+		try {
+			const { users } = await fetchUsernames({ userIds });
+			// 创建 userId -> user 的映射
+			const userMap = new Map(users.map((user) => [user.userId, user]));
+
+			conversations.forEach((conv) => {
+				const userId = Number(conv.conversationId);
+				const user = userMap.get(userId);
+				if (!user) return;
+
+				const m: any = (conv as any).lastMessage || {};
+				m.ext = m.ext || {};
+				m.ext.sendUserInfo = {
+					...(m.ext.sendUserInfo || {}),
+					name: String(user.username),
+					avatarUrl: user.avatarUrl
+				};
+				(conv as any).lastMessage = m;
+			});
+		} catch (e) {
+			console.error("get usernames error", e);
+		}
+	}
+
+	console.info("conversations ===> ", conversations);
+
+	render({
+		list: [conversations],
+		pagination: {
+			page,
+			size,
+			total
+		}
+	});
+});
+
+const handleClickItem = (item: EasemobConversationItem) => {
+	// 跳转到会话详情页，携带会话 ID 和类型
+	const conversationId = encodeURIComponent(item.conversationId || "");
+	const conversationType = encodeURIComponent(item.conversationType || "singleChat");
+	const url = `/ease-im/chat-detail?conversationId=${conversationId}&conversationType=${conversationType}`;
+	router.to(url);
+};
+
+// 最近一条消息预览：根据 type 显示
+const getLastMessagePreview = (item: EasemobConversationItem) => {
+	const m = (item as any).lastMessage;
+	if (!m) return "";
+	const type = m.type;
+	if (type === "txt") {
+		return m.msg || "";
+	}
+	if (type === "img" || type === "image") {
+		return "[图片消息]";
+	}
+	if (type === "file") {
+		return "[文件消息]";
+	}
+	return "[新消息]";
+};
+
+// 时间标签：当天显示 HH:mm，昨天显示"昨天"，其余显示 年/月/日
+const getTimeLabel = (item: EasemobConversationItem) => {
+	const m = (item as any).lastMessage;
+	const t = m?.time || m?.serverTime;
+	if (!t) return "";
+	try {
+		const d = new Date(t);
+		const now = new Date();
+
+		// 判断是否是当天
+		const isSameDay =
+			d.getFullYear() === now.getFullYear() &&
+			d.getMonth() === now.getMonth() &&
+			d.getDate() === now.getDate();
+
+		if (isSameDay) {
+			const h = String(d.getHours()).padStart(2, "0");
+			const m2 = String(d.getMinutes()).padStart(2, "0");
+			return `${h}:${m2}`;
+		}
+
+		// 判断是否是昨天
+		const yesterday = new Date(now);
+		yesterday.setDate(now.getDate() - 1);
+		const isYesterday =
+			d.getFullYear() === yesterday.getFullYear() &&
+			d.getMonth() === yesterday.getMonth() &&
+			d.getDate() === yesterday.getDate();
+
+		if (isYesterday) {
+			return "昨天";
+		}
+
+		// 其余显示 年/月/日
+		const y = d.getFullYear();
+		const mon = String(d.getMonth() + 1).padStart(2, "0");
+		const day = String(d.getDate()).padStart(2, "0");
+		return `${y}/${mon}/${day}`;
+	} catch {
+		return "";
+	}
+};
+
+const onPull = async () => {
+	await refresh({ page: 1 });
+	if (listViewRef.value) {
+		listViewRef.value.stopRefresh();
+	}
+};
+
+const updateScrollListData = async () => {
+	await sleepWait(600);
+	await refresh({ page: 1 });
+};
+
+onMounted(() => {
+	refresh({});
+	imBus.on("im:onTextMessage", updateScrollListData);
+	imBus.on("im:onReadStatusUpdated", updateScrollListData);
+	imBus.on("im:onSendMsg", updateScrollListData);
+});
+
+onBeforeUnmount(() => {
+	imBus.off("im:onTextMessage", updateScrollListData);
+	imBus.off("im:onReadStatusUpdated", updateScrollListData);
+	imBus.off("im:onSendMsg", updateScrollListData);
+});
+</script>
+
+<template>
+	<view class="chat-list-root">
+		<view v-if="loading && !list.length && isUsernamesLoading" class="px-3">
+			<view v-for="n in 5" :key="n" class="easeim-chat-item">
+				<view class="easeim-chat-item__avatar">
+					<cl-skeleton type="image" loading></cl-skeleton>
+				</view>
+				<view class="easeim-chat-item__main">
+					<cl-skeleton type="text" loading></cl-skeleton>
+					<cl-skeleton type="text" loading class="mt-2 !w-[160rpx]"></cl-skeleton>
+				</view>
+				<view class="easeim-chat-item__right">
+					<cl-skeleton type="text" loading class="!w-[80rpx]"></cl-skeleton>
+				</view>
+			</view>
+		</view>
+		<cl-list-view
+			v-else
+			ref="listViewRef"
+			:data="listView"
+			:virtual="false"
+			:bufferSize="15"
+			:itemHeight="66"
+			:pt="{
+				refresher: {
+					className: 'pt-3'
+				}
+			}"
+			:refresher-enabled="true"
+			@pull="onPull"
+			@bottom="loadMore"
+		>
+			<template #item="{ value }">
+				<view
+					class="easeim-chat-item"
+					:class="{
+						'is-dark': isDark
+					}"
+					@tap="handleClickItem(value)"
+				>
+					<view class="easeim-chat-item__avatar">
+						<view class="avatar">
+							<cl-avatar
+								:src="getAvatarUrl(value)"
+								:pt="{
+									icon: {
+										size: 60,
+										name: 'user-line'
+									}
+								}"
+							></cl-avatar>
+						</view>
+						<cl-badge
+							v-if="value.unReadCount && value.unReadCount > 0"
+							:value="formatUnread(value.unReadCount)"
+							shape="round"
+							position
+							:pt="{
+								className: '!top-[4rpx] !right-[4rpx] text-2xl p-4'
+							}"
+						></cl-badge>
+					</view>
+					<view class="easeim-chat-item__main">
+						<view class="easeim-chat-item__title">
+							<view class="easeim-chat-item__username">
+								<cl-text>{{ getTitle(value) }}</cl-text>
+							</view>
+							<view class="easeim-chat-item__time">
+								<cl-text color="info">{{ getTimeLabel(value) }}</cl-text>
+							</view>
+						</view>
+						<view class="easeim-chat-item__preview">
+							<cl-text :size="24" color="info" ellipsis :lines="1">
+								{{ getLastMessagePreview(value) || " " }}
+							</cl-text>
+						</view>
+					</view>
+				</view>
+			</template>
+
+			<template #bottom>
+				<view class="py-3">
+					<cl-loadmore :loading="loading" v-if="list.length > 0"></cl-loadmore>
+				</view>
+			</template>
+		</cl-list-view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.chat-list-root {
+	@apply flex-1 w-full h-full overflow-visible py-2 box-border;
+}
+
+.easeim-chat-item {
+	@apply w-full h-[66px] flex flex-row items-center gap-4 px-3 py-2 box-border;
+
+	&__avatar {
+		@apply relative overflow-visible bg-gray-100 rounded-md;
+		.avatar {
+			@apply w-[40px] h-[40px] flex flex-row items-center justify-center;
+		}
+	}
+
+	&__main {
+		@apply flex-1 flex flex-col;
+	}
+
+	&__title {
+		@apply flex flex-row items-center justify-between px-2 mb-1;
+	}
+
+	&__username {
+		@apply flex-1;
+	}
+
+	&__preview {
+		@apply flex-1;
+	}
+}
+</style>

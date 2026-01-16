@@ -1,0 +1,90 @@
+<script lang="ts" setup>
+import { useUi } from "@/uni_modules/cool-ui";
+import { ref } from "vue";
+import { usePager } from "@/cool";
+import GoodsItem from "./goods-item.uvue";
+import { t } from "@/locale";
+
+const ui = useUi();
+
+const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
+
+let id = 0;
+
+const { refresh, list, listView, loading, loadMore } = usePager((params, { render }) => {
+	// 模拟请求
+	setTimeout(() => {
+		render({
+			list: [
+				{
+					id: id++,
+					title: "春日樱花盛开时节，粉色花瓣如诗如画般飘洒",
+					image: "https://unix.cool-js.com/images/demo/1.jpg"
+				},
+				{
+					id: id++,
+					title: "夕阳西下的海滩边，金色阳光温柔地洒在波光粼粼的海面上，构成令人心旷神怡的日落美景",
+					image: "https://unix.cool-js.com/images/demo/2.jpg"
+				},
+				{
+					id: id++,
+					title: "寒冬腊月时分，洁白雪花纷纷扬扬地覆盖着整个世界，感受冬日的宁静与美好",
+					image: "https://unix.cool-js.com/images/demo/3.jpg"
+				}
+			],
+			pagination: {
+				page: params["page"],
+				size: params["size"],
+				total: 100
+			}
+		});
+
+		ui.hideLoading();
+	}, 1000);
+});
+
+async function onPull() {
+	await refresh({ page: 1 });
+	listViewRef.value!.stopRefresh();
+}
+
+onReady(() => {
+	ui.showLoading(t("加载中"));
+	// 默认请求
+	refresh({});
+});
+</script>
+
+<template>
+	<view class="lawyer-list-root">
+		<cl-list-view
+			ref="listViewRef"
+			:data="listView"
+			:virtual="false"
+			:pt="{
+				refresher: {
+					className: 'pt-3'
+				}
+			}"
+			:refresher-enabled="true"
+			@pull="onPull"
+			@bottom="loadMore"
+		>
+			<template #item="{ value }">
+				<goods-item :value="value"></goods-item>
+			</template>
+
+			<template #bottom>
+				<view class="py-3">
+					<cl-loadmore :loading="loading" v-if="list.length > 0"></cl-loadmore>
+				</view>
+			</template>
+		</cl-list-view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.lawyer-list-root {
+	@apply flex-1 w-full h-full overflow-visible py-2 box-border;
+}
+</style>
