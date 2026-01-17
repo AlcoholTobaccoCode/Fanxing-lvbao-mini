@@ -29,11 +29,11 @@ const pageTitle = computed(() => {
 		back-top
 		:chat-list-btn="false"
 		:title-action="false"
+		:hide-float-menu="tabVal === 0 ? false : true"
 		openIconPicker
 		titlePlaceholder=""
 	>
 		<template #content>
-			<!-- 内容区域 -->
 			<view class="content-area">
 				<chat-list v-show="tabVal === 0"></chat-list>
 				<lawyer-list v-show="tabVal === 1"></lawyer-list>

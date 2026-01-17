@@ -1,0 +1,187 @@
+<!--
+@desc 律师卡片组件
+-->
+<script lang="ts" setup>
+import { computed } from "vue";
+import { parse } from "@/cool";
+
+type LawyerItem = {
+	user_id: number;
+	name: string;
+	law_firm_name: string;
+	addr: string;
+	grade_name: string;
+	professional_years: number;
+	expertise: string;
+	intro: string;
+	score: number;
+	rating_count: number;
+	case_count: number;
+	license_no?: string;
+	updated_at: string;
+};
+
+const props = defineProps({
+	value: {
+		type: Object,
+		default: () => ({})
+	}
+});
+
+const emits = defineEmits(["consult"]);
+
+const item = computed(() => parse<LawyerItem>(props.value));
+
+// 获取姓氏（头像显示）
+const firstName = computed(() => {
+	const name = item.value?.name || "";
+	return name.charAt(0) || "律";
+});
+
+// 格式化评分
+const formatScore = (score?: number) => {
+	if (score == null) return "0.0";
+	return score.toFixed(1);
+};
+
+// 点击咨询
+const handleConsult = () => {
+	emits("consult", item.value);
+};
+</script>
+
+<template>
+	<view class="px-4 pt-4">
+		<view class="lawyer-card">
+			<!-- 头部：头像、姓名、评分 -->
+			<view class="lawyer-card__header">
+				<!-- 左侧头像 -->
+				<view class="lawyer-card__avatar">
+					<cl-text :size="32" color="white" bold>{{ firstName }}</cl-text>
+				</view>
+				<!-- 中间姓名和级别 -->
+				<view class="lawyer-card__info">
+					<cl-text :size="30" bold>{{ item?.name }}</cl-text>
+					<cl-text :size="22" color="info">{{ item?.grade_name || "律师" }}</cl-text>
+				</view>
+				<!-- 右侧评分 -->
+				<view class="lawyer-card__rating">
+					<view class="flex flex-row items-center">
+						<cl-icon name="star-fill" :size="32" color="#FACC15"></cl-icon>
+						<cl-text :size="30" bold :pt="{ className: 'ml-1 text-yellow-500' }">{{
+							formatScore(item?.score)
+						}}</cl-text>
+					</view>
+					<cl-text :size="20" color="info">({{ item?.rating_count || 0 }}人评价)</cl-text>
+				</view>
+			</view>
+
+			<!-- 执业信息 -->
+			<view class="lawyer-card__details">
+				<!-- 执业经验和案例 -->
+				<view class="lawyer-card__row">
+					<view class="lawyer-card__detail-item flex-1">
+						<cl-icon name="briefcase-line" :size="28"></cl-icon>
+						<cl-text :size="24" :pt="{ className: 'ml-1' }"
+							>{{ item?.professional_years || 0 }}年执业经验</cl-text
+						>
+					</view>
+					<view class="lawyer-card__detail-item flex-1">
+						<cl-icon name="file-text-line" :size="28"></cl-icon>
+						<cl-text :size="24" :pt="{ className: 'ml-1' }"
+							>{{ item?.case_count || 0 }}个案例</cl-text
+						>
+					</view>
+				</view>
+				<!-- 律所 -->
+				<view class="lawyer-card__row">
+					<view class="lawyer-card__detail-item">
+						<cl-icon name="send-plane-line" :size="28" color="#3B82F6"></cl-icon>
+						<cl-text :size="24" :pt="{ className: 'ml-1' }">{{
+							item?.law_firm_name || "-"
+						}}</cl-text>
+					</view>
+				</view>
+				<!-- 地址 -->
+				<view class="lawyer-card__row">
+					<view class="lawyer-card__detail-item flex-1">
+						<cl-icon name="map-pin-line" :size="28" color="#3B82F6"></cl-icon>
+						<cl-text
+							:size="24"
+							:pt="{ className: 'ml-1 flex-1' }"
+							ellipsis
+							:lines="1"
+							>{{ item?.addr || "-" }}</cl-text
+						>
+					</view>
+				</view>
+			</view>
+
+			<!-- 专业领域 -->
+			<view class="lawyer-card__section">
+				<cl-text :size="26" bold>专业领域</cl-text>
+				<cl-text :size="24" color="info" :pt="{ className: 'mt-1' }">{{
+					item?.expertise || "-"
+				}}</cl-text>
+			</view>
+
+			<!-- 个人简介 -->
+			<view class="lawyer-card__section">
+				<cl-text :size="26" bold>个人简介</cl-text>
+				<cl-text :size="24" color="info" :pt="{ className: 'mt-1' }">{{
+					item?.intro || "-"
+				}}</cl-text>
+			</view>
+
+			<!-- 立即咨询按钮 -->
+			<view class="lawyer-card__action">
+				<cl-button type="primary" rounded @tap="handleConsult">立即咨询</cl-button>
+			</view>
+		</view>
+	</view>
+</template>
+
+<style lang="scss" scoped>
+.lawyer-card {
+	@apply w-full bg-white rounded-2xl box-border;
+	padding: 24rpx;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+	border: 1px solid #f3f4f6;
+
+	&__header {
+		@apply flex flex-row items-center;
+	}
+
+	&__avatar {
+		@apply w-[80rpx] h-[80rpx] rounded-full bg-primary-500 flex items-center justify-center;
+	}
+
+	&__info {
+		@apply flex-1 flex flex-col ml-3;
+	}
+
+	&__rating {
+		@apply flex flex-col items-end;
+	}
+
+	&__details {
+		@apply mt-3 pt-3;
+	}
+
+	&__row {
+		@apply flex flex-row items-center mb-2;
+	}
+
+	&__detail-item {
+		@apply flex flex-row items-center;
+	}
+
+	&__section {
+		@apply mt-3 border-t border-gray-100;
+	}
+
+	&__action {
+		@apply mt-4;
+	}
+}
+</style>

@@ -2,61 +2,241 @@
 import { useUi } from "@/uni_modules/cool-ui";
 import { ref } from "vue";
 import { usePager } from "@/cool";
-import GoodsItem from "./goods-item.uvue";
+import LawyerItem from "./lawyer-item.uvue";
 import { t } from "@/locale";
 
 const ui = useUi();
 
 const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
 
-let id = 0;
+// 搜索关键字
+const keyword = ref("");
+
+// 排序状态（默认倒序）
+const sortScore = ref<"desc" | "asc" | "none">("desc");
+const sortCase = ref<"desc" | "asc" | "none">("desc");
+const sortYears = ref<"desc" | "asc" | "none">("desc");
+
+// Mock 数据源
+const mockLawyers = [
+	{
+		user_id: 1,
+		name: "刘静",
+		law_firm_name: "浙江六和律师事务所",
+		addr: "中国浙江省杭州市西湖区文三路108号",
+		grade_name: "资深律师",
+		professional_years: 7,
+		expertise: "交通事故、人身损害赔偿",
+		intro: "长期专注于交通事故和人身损害赔偿领域，熟悉交警程序和保险理赔规则，善于通过证据梳理为当事人争取合理赔偿。",
+		score: 3.0,
+		rating_count: 1,
+		case_count: 2,
+		updated_at: "2026-01-13 19:01:55"
+	},
+	{
+		user_id: 2,
+		name: "王明",
+		law_firm_name: "北京市中伦律师事务所",
+		addr: "北京市朝阳区建国门外大街1号",
+		grade_name: "高级合伙人",
+		professional_years: 15,
+		expertise: "公司法、合同纠纷",
+		intro: "从事法律工作十五年，专注于企业并购、投融资、股权争议等商事领域，为多家上市公司提供法律顾问服务。",
+		score: 4.8,
+		rating_count: 128,
+		case_count: 86,
+		updated_at: "2026-01-12 10:30:00"
+	},
+	{
+		user_id: 3,
+		name: "张丽",
+		law_firm_name: "上海市锦天城律师事务所",
+		addr: "上海市浦东新区陆家嘴环路1000号",
+		grade_name: "合伙人律师",
+		professional_years: 10,
+		expertise: "婚姻家庭、继承纠纷",
+		intro: "擅长处理复杂的婚姻家庭纠纷，包括离婚财产分割、子女抚养权、遗产继承等案件，注重调解与诉讼相结合。",
+		score: 4.5,
+		rating_count: 56,
+		case_count: 42,
+		updated_at: "2026-01-11 14:20:00"
+	},
+	{
+		user_id: 4,
+		name: "李强",
+		law_firm_name: "广东广信君达律师事务所",
+		addr: "广州市天河区珠江新城华夏路8号",
+		grade_name: "执业律师",
+		professional_years: 5,
+		expertise: "刑事辩护、经济犯罪",
+		intro: "专注刑事辩护领域，代理过多起重大刑事案件，在经济犯罪、职务犯罪辩护方面有丰富经验。",
+		score: 4.2,
+		rating_count: 32,
+		case_count: 28,
+		updated_at: "2026-01-10 09:15:00"
+	},
+	{
+		user_id: 5,
+		name: "陈芳",
+		law_firm_name: "江苏东恒律师事务所",
+		addr: "南京市鼓楼区汉中路2号",
+		grade_name: "资深律师",
+		professional_years: 12,
+		expertise: "知识产权、商标专利",
+		intro: "在知识产权保护领域深耕多年，为众多企业提供商标注册、专利申请、著作权保护等法律服务。",
+		score: 4.6,
+		rating_count: 78,
+		case_count: 65,
+		updated_at: "2026-01-09 16:45:00"
+	},
+	{
+		user_id: 6,
+		name: "赵伟",
+		law_firm_name: "四川君合律师事务所",
+		addr: "成都市高新区天府大道北段1700号",
+		grade_name: "合伙人律师",
+		professional_years: 18,
+		expertise: "房产建筑、工程纠纷",
+		intro: "专注于房地产与建设工程法律服务，为大型房企、建筑公司提供全流程法律顾问服务。",
+		score: 4.9,
+		rating_count: 156,
+		case_count: 120,
+		updated_at: "2026-01-08 11:20:00"
+	}
+];
 
 const { refresh, list, listView, loading, loadMore } = usePager((params, { render }) => {
-	// 模拟请求
+	const page = Number(params["page"] || 1);
+	const size = Number(params["size"] || 10);
+
+	// 模拟请求延迟
 	setTimeout(() => {
+		// 模拟分页数据
+		const startIndex = (page - 1) * size;
+		const endIndex = startIndex + size;
+
+		// 循环复用 mock 数据模拟更多数据
+		const pageData = [];
+		for (let i = startIndex; i < endIndex && i < 20; i++) {
+			const mockItem = mockLawyers[i % mockLawyers.length];
+			pageData.push({
+				...mockItem,
+				user_id: i + 1
+			});
+		}
+
 		render({
-			list: [
-				{
-					id: id++,
-					title: "春日樱花盛开时节，粉色花瓣如诗如画般飘洒",
-					image: "https://unix.cool-js.com/images/demo/1.jpg"
-				},
-				{
-					id: id++,
-					title: "夕阳西下的海滩边，金色阳光温柔地洒在波光粼粼的海面上，构成令人心旷神怡的日落美景",
-					image: "https://unix.cool-js.com/images/demo/2.jpg"
-				},
-				{
-					id: id++,
-					title: "寒冬腊月时分，洁白雪花纷纷扬扬地覆盖着整个世界，感受冬日的宁静与美好",
-					image: "https://unix.cool-js.com/images/demo/3.jpg"
-				}
-			],
+			list: pageData,
 			pagination: {
-				page: params["page"],
-				size: params["size"],
-				total: 100
+				page,
+				size,
+				total: 20
 			}
 		});
 
 		ui.hideLoading();
-	}, 1000);
+	}, 800);
 });
 
+// 下拉刷新
 async function onPull() {
 	await refresh({ page: 1 });
-	listViewRef.value!.stopRefresh();
+	listViewRef.value?.stopRefresh();
 }
+
+// 搜索
+const handleSearch = () => {
+	console.log("搜索关键字：", keyword.value);
+	ui.showLoading(t("搜索中"));
+	refresh({ page: 1, keyword: keyword.value });
+};
+
+// 排序变化
+const handleSortScore = (val: "desc" | "asc" | "none") => {
+	sortScore.value = val;
+	sortCase.value = "desc";
+	sortYears.value = "desc";
+	console.log("评分排序：", val);
+	ui.showLoading(t("加载中"));
+	refresh({ page: 1, sortField: "score", sortOrder: val });
+};
+
+const handleSortCase = (val: "desc" | "asc" | "none") => {
+	sortCase.value = val;
+	sortScore.value = "desc";
+	sortYears.value = "desc";
+	console.log("案例数排序：", val);
+	ui.showLoading(t("加载中"));
+	refresh({ page: 1, sortField: "case_count", sortOrder: val });
+};
+
+const handleSortYears = (val: "desc" | "asc" | "none") => {
+	sortYears.value = val;
+	sortScore.value = "desc";
+	sortCase.value = "desc";
+	console.log("执业年限排序：", val);
+	ui.showLoading(t("加载中"));
+	refresh({ page: 1, sortField: "professional_years", sortOrder: val });
+};
+
+// 处理咨询点击
+const handleConsult = (lawyer: any) => {
+	console.log("咨询律师：", lawyer);
+	ui.showToast({
+		message: "功能开发中，敬请期待"
+	});
+};
 
 onReady(() => {
 	ui.showLoading(t("加载中"));
-	// 默认请求
 	refresh({});
 });
 </script>
 
 <template>
 	<view class="lawyer-list-root">
+		<!-- 搜索框 -->
+		<view class="lawyer-list__search">
+			<cl-input
+				v-model="keyword"
+				placeholder="搜索律师姓名..."
+				:pt="{
+					className: 'bg-white rounded-lg',
+					input: {
+						className: 'text-sm'
+					}
+				}"
+				@confirm="handleSearch"
+			>
+				<template #prepend>
+					<cl-icon name="search-line" :size="36" color="#9CA3AF"></cl-icon>
+				</template>
+			</cl-input>
+		</view>
+
+		<!-- 筛选栏 -->
+		<cl-filter-bar :pt="{ className: 'bg-white' }">
+			<cl-filter-item
+				label="评分"
+				type="sort"
+				:value="sortScore"
+				@change="handleSortScore"
+			></cl-filter-item>
+			<cl-filter-item
+				label="案例"
+				type="sort"
+				:value="sortCase"
+				@change="handleSortCase"
+			></cl-filter-item>
+			<cl-filter-item
+				label="执业"
+				type="sort"
+				:value="sortYears"
+				@change="handleSortYears"
+			></cl-filter-item>
+		</cl-filter-bar>
+
+		<!-- 列表 -->
 		<cl-list-view
 			ref="listViewRef"
 			:data="listView"
@@ -71,7 +251,7 @@ onReady(() => {
 			@bottom="loadMore"
 		>
 			<template #item="{ value }">
-				<goods-item :value="value"></goods-item>
+				<lawyer-item :value="value" @consult="handleConsult"></lawyer-item>
 			</template>
 
 			<template #bottom>
@@ -85,6 +265,10 @@ onReady(() => {
 
 <style lang="scss" scoped>
 .lawyer-list-root {
-	@apply flex-1 w-full h-full overflow-visible py-2 box-border;
+	@apply flex-1 w-full h-full overflow-visible box-border flex flex-col;
+}
+
+.lawyer-list__search {
+	@apply px-3 py-2;
 }
 </style>

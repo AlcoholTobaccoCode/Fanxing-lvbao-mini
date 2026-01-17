@@ -90,7 +90,7 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 	console.info("conversations ===> ", conversations);
 
 	render({
-		list: [conversations],
+		list: conversations,
 		pagination: {
 			page,
 			size,

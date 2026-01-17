@@ -56,8 +56,8 @@ const formPassword = reactive<LoginByPassword>({
 
 // 临时：快速填充登录信息
 const setLoginInfo = () => {
-	formCode.phone = "15237148092";
-	formPassword.phone = "15237148092";
+	formCode.phone = "18768196490";
+	formPassword.phone = "18768196490";
 	formPassword.password = "123456";
 };
 
