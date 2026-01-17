@@ -83,7 +83,7 @@ const handleContractTypeClick = (type: string) => {
 
 <style lang="scss" scoped>
 .coming-soon-badge {
-	@apply px-2 py-0.5 rounded-full;
+	@apply px-2 py-1 rounded-full;
 }
 
 .upload-area {

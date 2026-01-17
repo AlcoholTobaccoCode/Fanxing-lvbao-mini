@@ -194,7 +194,7 @@ const handleLoadMore = () => {
 }
 
 .load-more-btn {
-	@apply flex flex-row items-center justify-center px-6 py-2.5 rounded-full;
+	@apply flex flex-row items-center justify-center px-6 py-2 rounded-full;
 	background-color: #eff6ff;
 	border: 1px solid #dbeafe;
 

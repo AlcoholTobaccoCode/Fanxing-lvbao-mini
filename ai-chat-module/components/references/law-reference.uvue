@@ -232,7 +232,7 @@ const formatContent = (law: LawDetailResponse) => {
 }
 
 .timeliness-badge {
-	@apply px-2 py-0.5 rounded ml-2;
+	@apply px-2 py-1 rounded ml-2;
 	flex-shrink: 0;
 }
 

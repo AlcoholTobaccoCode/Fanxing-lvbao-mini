@@ -273,7 +273,7 @@ onLoad((options: any) => {
 }
 
 .grade-badge {
-	@apply px-2 py-0.5 rounded;
+	@apply px-2 py-1 rounded;
 	background-color: #eff6ff;
 }
 

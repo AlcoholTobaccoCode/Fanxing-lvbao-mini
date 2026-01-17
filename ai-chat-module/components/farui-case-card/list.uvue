@@ -221,7 +221,7 @@ const getVerdictExpanded = (caseId: string) => {
 }
 
 .header-count {
-	@apply ml-2 px-2 py-0.5 rounded-full;
+	@apply ml-2 px-2 py-1 rounded-full;
 	background-color: #3b82f6;
 }
 
@@ -272,7 +272,7 @@ const getVerdictExpanded = (caseId: string) => {
 }
 
 .load-more-btn {
-	@apply flex flex-row items-center justify-center px-6 py-2.5 rounded-full;
+	@apply flex flex-row items-center justify-center px-6 py-2 rounded-full;
 	background-color: #eff6ff;
 	border: 1px solid #dbeafe;
 

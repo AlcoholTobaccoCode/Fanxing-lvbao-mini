@@ -216,6 +216,6 @@ const handleTemplateClick = (template: string) => {
 }
 
 .custom-desc {
-	@apply mt-0.5;
+	@apply mt-1;
 }
 </style>

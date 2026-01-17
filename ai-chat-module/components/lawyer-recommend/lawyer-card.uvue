@@ -164,7 +164,7 @@ const handleClick = () => {
 }
 
 .stat-value {
-	@apply text-sm font-semibold mr-0.5;
+	@apply text-sm font-semibold mr-1;
 	color: #1f2937;
 }
 

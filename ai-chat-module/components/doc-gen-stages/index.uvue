@@ -366,7 +366,7 @@ const completedCount = computed(() => {
 }
 
 .stage-desc {
-	@apply text-xs text-center mt-0.5;
+	@apply text-xs text-center mt-1;
 	color: #94a3b8;
 	font-size: 10px;
 	line-height: 1.3;

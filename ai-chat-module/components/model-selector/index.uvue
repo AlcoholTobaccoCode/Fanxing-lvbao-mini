@@ -119,7 +119,7 @@ const currentOption = computed(() => {
 }
 
 .model-desc {
-	@apply text-xs text-gray-500 mt-0.5;
+	@apply text-xs text-gray-500 mt-1;
 }
 
 .model-locked {
