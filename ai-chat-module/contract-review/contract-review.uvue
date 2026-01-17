@@ -28,10 +28,16 @@ const handleContractTypeClick = (type: string) => {
 			<view class="upload-icon-wrap">
 				<cl-icon name="upload-cloud-line" size="40px" color="info" />
 			</view>
-			<cl-text size="16px" :pt="{ className: 'upload-title text-surface-700' }">上传合同文件</cl-text>
-			<cl-text size="14px" :pt="{ className: 'upload-desc text-surface-400' }">支持 Word、PDF、图片格式</cl-text>
+			<cl-text size="16px" :pt="{ className: 'upload-title text-surface-700' }"
+				>上传合同文件</cl-text
+			>
+			<cl-text size="14px" :pt="{ className: 'upload-desc text-surface-400' }"
+				>支持 Word、PDF、图片格式</cl-text
+			>
 			<view class="upload-btn bg-surface-200">
-				<cl-text size="14px" :pt="{ className: 'text-surface-500' }">选择文件（暂未开放）</cl-text>
+				<cl-text size="14px" :pt="{ className: 'text-surface-500' }"
+					>选择文件（暂未开放）</cl-text
+				>
 			</view>
 		</view>
 
@@ -126,7 +132,7 @@ const handleContractTypeClick = (type: string) => {
 }
 
 .contract-tag {
-	@apply px-3 py-1.5 rounded-full;
+	@apply px-3 py-2 rounded-full;
 }
 
 .contract-tag.disabled {

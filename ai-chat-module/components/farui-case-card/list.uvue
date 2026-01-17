@@ -191,7 +191,7 @@ const getVerdictExpanded = (caseId: string) => {
 }
 
 .keyword-tag {
-	@apply px-3 py-1.5 rounded-full;
+	@apply px-3 py-2 rounded-full;
 	background-color: #fff;
 	border: 1px solid #e5e7eb;
 }

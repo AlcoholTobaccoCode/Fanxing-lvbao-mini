@@ -402,7 +402,7 @@ const completedCount = computed(() => {
 }
 
 .detail-label {
-	@apply text-xs ml-1.5;
+	@apply text-xs ml-2;
 	color: #64748b;
 }
 
@@ -423,7 +423,7 @@ const completedCount = computed(() => {
 }
 
 .detail-text {
-	@apply text-xs ml-1.5;
+	@apply text-xs ml-2;
 	color: #64748b;
 }
 
@@ -433,7 +433,7 @@ const completedCount = computed(() => {
 }
 
 .summary-text {
-	@apply text-xs ml-1.5;
+	@apply text-xs ml-2;
 	color: #10b981;
 }
 

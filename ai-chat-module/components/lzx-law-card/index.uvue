@@ -237,12 +237,12 @@ const toggleExpand = () => {
 }
 
 .meta-type {
-	@apply px-1.5 py-0.5 rounded;
+	@apply px-2 py-1 rounded;
 	background-color: #f3f4f6;
 }
 
 .article-number {
-	@apply flex flex-row items-center gap-1.5 mx-4 mb-3 px-3 py-2 rounded-lg;
+	@apply flex flex-row items-center gap-2 mx-4 mb-3 px-3 py-2 rounded-lg;
 	background-color: #eff6ff;
 }
 

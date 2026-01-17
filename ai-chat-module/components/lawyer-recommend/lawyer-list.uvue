@@ -109,7 +109,7 @@ const hasMore = computed(() => {
 }
 
 .title {
-	@apply text-sm font-medium ml-1.5;
+	@apply text-sm font-medium ml-2;
 	color: #1f2937;
 }
 
