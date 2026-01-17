@@ -8,7 +8,7 @@ import { isNull } from "../utils";
 type Theme = "light" | "dark";
 
 // 是否为自动主题模式（跟随系统）
-export const isAuto = ref(true);
+export const isAuto = ref(false);
 
 /**
  * 获取页面样式
@@ -99,7 +99,9 @@ const getTheme = () => {
 	}
 	// #endif
 
-	return value as Theme;
+	// TODO - 暗黑主题
+	// return value as Theme;
+	return "light" as Theme;
 };
 
 // 当前主题响应式变量
