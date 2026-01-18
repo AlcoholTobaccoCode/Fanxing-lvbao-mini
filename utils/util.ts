@@ -192,6 +192,7 @@ export const compressImage = (options: CompressOptions): Promise<string | null> 
 		// #endif
 	});
 };
+
 export const sleepWait = (ms: number = 100) => {
 	return new Promise((r) => setTimeout(r, ms));
 };
