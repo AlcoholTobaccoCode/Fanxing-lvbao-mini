@@ -4,22 +4,7 @@
 <script lang="ts" setup>
 import { computed } from "vue";
 import { parse } from "@/cool";
-
-type LawyerItem = {
-	user_id: number;
-	name: string;
-	law_firm_name: string;
-	addr: string;
-	grade_name: string;
-	professional_years: number;
-	expertise: string;
-	intro: string;
-	score: number;
-	rating_count: number;
-	case_count: number;
-	license_no?: string;
-	updated_at: string;
-};
+import type { LawyerInfo } from "@/api/lawyer";
 
 const props = defineProps({
 	value: {
@@ -30,7 +15,7 @@ const props = defineProps({
 
 const emits = defineEmits(["consult"]);
 
-const item = computed(() => parse<LawyerItem>(props.value));
+const item = computed(() => parse<LawyerInfo>(props.value));
 
 // 获取姓氏（头像显示）
 const firstName = computed(() => {
@@ -69,7 +54,7 @@ const handleConsult = () => {
 					<view class="flex flex-row items-center">
 						<cl-icon name="star-fill" :size="32" color="#FACC15"></cl-icon>
 						<cl-text :size="30" bold :pt="{ className: 'ml-1 text-yellow-500' }">{{
-							formatScore(item?.score)
+							formatScore(item?.rating)
 						}}</cl-text>
 					</view>
 					<cl-text :size="20" color="info">({{ item?.rating_count || 0 }}人评价)</cl-text>
@@ -83,7 +68,7 @@ const handleConsult = () => {
 					<view class="lawyer-card__detail-item flex-1">
 						<cl-icon name="briefcase-line" :size="28"></cl-icon>
 						<cl-text :size="24" :pt="{ className: 'ml-1' }"
-							>{{ item?.professional_years || 0 }}年执业经验</cl-text
+							>{{ item?.practice_years || 0 }}年执业经验</cl-text
 						>
 					</view>
 					<view class="lawyer-card__detail-item flex-1">

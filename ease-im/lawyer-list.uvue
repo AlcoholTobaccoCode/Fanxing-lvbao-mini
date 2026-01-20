@@ -1,9 +1,11 @@
 <script lang="ts" setup>
 import { useUi } from "@/uni_modules/cool-ui";
-import { ref } from "vue";
-import { usePager } from "@/cool";
+import { nextTick, ref } from "vue";
+import { router, usePager } from "@/cool";
 import LawyerItem from "./lawyer-item.uvue";
 import { t } from "@/locale";
+import { GetLawyerList, type LawyerListParams } from "@/api/lawyer";
+import { debounce } from "@/cool/utils/comm";
 
 const ui = useUi();
 
@@ -12,130 +14,85 @@ const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
 // 搜索关键字
 const keyword = ref("");
 
-// 排序状态（默认倒序）
-const sortScore = ref<"desc" | "asc" | "none">("desc");
-const sortCase = ref<"desc" | "asc" | "none">("desc");
-const sortYears = ref<"desc" | "asc" | "none">("desc");
+// 筛选面板显示状态
+const showFilterPanel = ref(false);
 
-// Mock 数据源
-const mockLawyers = [
-	{
-		user_id: 1,
-		name: "刘静",
-		law_firm_name: "浙江六和律师事务所",
-		addr: "中国浙江省杭州市西湖区文三路108号",
-		grade_name: "资深律师",
-		professional_years: 7,
-		expertise: "交通事故、人身损害赔偿",
-		intro: "长期专注于交通事故和人身损害赔偿领域，熟悉交警程序和保险理赔规则，善于通过证据梳理为当事人争取合理赔偿。",
-		score: 3.0,
-		rating_count: 1,
-		case_count: 2,
-		updated_at: "2026-01-13 19:01:55"
-	},
-	{
-		user_id: 2,
-		name: "王明",
-		law_firm_name: "北京市中伦律师事务所",
-		addr: "北京市朝阳区建国门外大街1号",
-		grade_name: "高级合伙人",
-		professional_years: 15,
-		expertise: "公司法、合同纠纷",
-		intro: "从事法律工作十五年，专注于企业并购、投融资、股权争议等商事领域，为多家上市公司提供法律顾问服务。",
-		score: 4.8,
-		rating_count: 128,
-		case_count: 86,
-		updated_at: "2026-01-12 10:30:00"
-	},
-	{
-		user_id: 3,
-		name: "张丽",
-		law_firm_name: "上海市锦天城律师事务所",
-		addr: "上海市浦东新区陆家嘴环路1000号",
-		grade_name: "合伙人律师",
-		professional_years: 10,
-		expertise: "婚姻家庭、继承纠纷",
-		intro: "擅长处理复杂的婚姻家庭纠纷，包括离婚财产分割、子女抚养权、遗产继承等案件，注重调解与诉讼相结合。",
-		score: 4.5,
-		rating_count: 56,
-		case_count: 42,
-		updated_at: "2026-01-11 14:20:00"
-	},
-	{
-		user_id: 4,
-		name: "李强",
-		law_firm_name: "广东广信君达律师事务所",
-		addr: "广州市天河区珠江新城华夏路8号",
-		grade_name: "执业律师",
-		professional_years: 5,
-		expertise: "刑事辩护、经济犯罪",
-		intro: "专注刑事辩护领域，代理过多起重大刑事案件，在经济犯罪、职务犯罪辩护方面有丰富经验。",
-		score: 4.2,
-		rating_count: 32,
-		case_count: 28,
-		updated_at: "2026-01-10 09:15:00"
-	},
-	{
-		user_id: 5,
-		name: "陈芳",
-		law_firm_name: "江苏东恒律师事务所",
-		addr: "南京市鼓楼区汉中路2号",
-		grade_name: "资深律师",
-		professional_years: 12,
-		expertise: "知识产权、商标专利",
-		intro: "在知识产权保护领域深耕多年，为众多企业提供商标注册、专利申请、著作权保护等法律服务。",
-		score: 4.6,
-		rating_count: 78,
-		case_count: 65,
-		updated_at: "2026-01-09 16:45:00"
-	},
-	{
-		user_id: 6,
-		name: "赵伟",
-		law_firm_name: "四川君合律师事务所",
-		addr: "成都市高新区天府大道北段1700号",
-		grade_name: "合伙人律师",
-		professional_years: 18,
-		expertise: "房产建筑、工程纠纷",
-		intro: "专注于房地产与建设工程法律服务，为大型房企、建筑公司提供全流程法律顾问服务。",
-		score: 4.9,
-		rating_count: 156,
-		case_count: 120,
-		updated_at: "2026-01-08 11:20:00"
-	}
-];
+// 排序维度（统一管理）
+const sortDimension = ref<"rating" | "case_count" | "practice_years" | "updated_at">("rating");
 
-const { refresh, list, listView, loading, loadMore } = usePager((params, { render }) => {
+// 排序方向
+const sortOrder = ref<"asc" | "desc">("desc");
+
+// 范围筛选（使用字符串类型以兼容 cl-input）
+const minYears = ref<string>("");
+const maxYears = ref<string>("");
+const minScore = ref<string>("");
+const maxScore = ref<string>("");
+
+// 维度标签映射
+const dimensionLabels = {
+	rating: "评分",
+	case_count: "案例数",
+	practice_years: "执业年限",
+	updated_at: "更新时间"
+};
+
+const { refresh, list, listView, loading, loadMore } = usePager(async (params, { render }) => {
 	const page = Number(params["page"] || 1);
-	const size = Number(params["size"] || 10);
+	const size = Number(params["size"] || 20);
 
-	// 模拟请求延迟
-	setTimeout(() => {
-		// 模拟分页数据
-		const startIndex = (page - 1) * size;
-		const endIndex = startIndex + size;
+	try {
+		// 构建请求参数
+		const requestParams: LawyerListParams = {
+			page,
+			page_size: size
+		};
 
-		// 循环复用 mock 数据模拟更多数据
-		const pageData = [];
-		for (let i = startIndex; i < endIndex && i < 20; i++) {
-			const mockItem = mockLawyers[i % mockLawyers.length];
-			pageData.push({
-				...mockItem,
-				user_id: i + 1
-			});
+		// 添加搜索关键字
+		if (params["keyword"]) {
+			requestParams.keyword = params["keyword"] as string;
 		}
 
+		// 添加排序参数
+		if (params["sortDimension"] && params["sortOrder"]) {
+			requestParams.sort_by = params["sortDimension"] as LawyerListParams["sort_by"];
+			requestParams.order = params["sortOrder"] as "asc" | "desc";
+		}
+
+		// 添加范围筛选参数
+		if (params["minYears"]) requestParams.min_years = Number(params["minYears"]);
+		if (params["maxYears"]) requestParams.max_years = Number(params["maxYears"]);
+		if (params["minScore"]) requestParams.min_score = Number(params["minScore"]);
+		if (params["maxScore"]) requestParams.max_score = Number(params["maxScore"]);
+
+		// 调用 API
+		const response = await GetLawyerList(requestParams);
+
 		render({
-			list: pageData,
+			list: response.items,
+			pagination: {
+				page: response.page,
+				size: response.page_size,
+				total: response.total
+			}
+		});
+	} catch (error) {
+		console.error("获取律师列表失败：", error);
+		ui.showToast({
+			message: t("获取律师列表失败"),
+			type: "error"
+		});
+		render({
+			list: [],
 			pagination: {
 				page,
 				size,
-				total: 20
+				total: 0
 			}
 		});
-
+	} finally {
 		ui.hideLoading();
-	}, 800);
+	}
 });
 
 // 下拉刷新
@@ -144,46 +101,174 @@ async function onPull() {
 	listViewRef.value?.stopRefresh();
 }
 
-// 搜索
+// 防抖搜索函数
+const debouncedSearch = debounce(() => {
+	console.info("keyword.value.trim() =>>", keyword.value.trim());
+	if (keyword.value.trim() === "") {
+		// 如果搜索框为空，重置搜索
+		refresh({ page: 1, keyword: "" });
+	} else {
+		ui.showLoading(t("搜索中"));
+		refresh({ page: 1, keyword: keyword.value });
+	}
+}, 500);
+
+// 输入变化时触发搜索
+const handleInput = () => {
+	nextTick(() => debouncedSearch());
+};
+
+// 确认搜索（保留原有功能）
 const handleSearch = () => {
 	console.log("搜索关键字：", keyword.value);
 	ui.showLoading(t("搜索中"));
 	refresh({ page: 1, keyword: keyword.value });
 };
 
-// 排序变化
-const handleSortScore = (val: "desc" | "asc" | "none") => {
-	sortScore.value = val;
-	sortCase.value = "desc";
-	sortYears.value = "desc";
-	console.log("评分排序：", val);
+// 切换排序方向
+const toggleSortOrder = () => {
+	sortOrder.value = sortOrder.value === "desc" ? "asc" : "desc";
 	ui.showLoading(t("加载中"));
-	refresh({ page: 1, sortField: "score", sortOrder: val });
+	refresh({
+		page: 1,
+		keyword: keyword.value,
+		sortDimension: sortDimension.value,
+		sortOrder: sortOrder.value,
+		minYears: minYears.value,
+		maxYears: maxYears.value,
+		minScore: minScore.value,
+		maxScore: maxScore.value
+	});
 };
 
-const handleSortCase = (val: "desc" | "asc" | "none") => {
-	sortCase.value = val;
-	sortScore.value = "desc";
-	sortYears.value = "desc";
-	console.log("案例数排序：", val);
-	ui.showLoading(t("加载中"));
-	refresh({ page: 1, sortField: "case_count", sortOrder: val });
+// 打开筛选面板
+const openFilterPanel = () => {
+	showFilterPanel.value = true;
 };
 
-const handleSortYears = (val: "desc" | "asc" | "none") => {
-	sortYears.value = val;
-	sortScore.value = "desc";
-	sortCase.value = "desc";
-	console.log("执业年限排序：", val);
+// 验证范围输入
+const validateRanges = (): boolean => {
+	// 验证执业年限范围
+	const minY = minYears.value.trim() ? Number(minYears.value) : null;
+	const maxY = maxYears.value.trim() ? Number(maxYears.value) : null;
+
+	if (minY !== null && maxY !== null) {
+		if (minY > maxY) {
+			ui.showToast({
+				message: "最小年限不能大于最大年限",
+				type: "error"
+			});
+			return false;
+		}
+	}
+	if (minY !== null && minY < 0) {
+		ui.showToast({
+			message: "执业年限不能为负数",
+			type: "error"
+		});
+		return false;
+	}
+	if (maxY !== null && maxY < 0) {
+		ui.showToast({
+			message: "执业年限不能为负数",
+			type: "error"
+		});
+		return false;
+	}
+
+	// 验证评分范围
+	const minS = minScore.value.trim() ? Number(minScore.value) : null;
+	const maxS = maxScore.value.trim() ? Number(maxScore.value) : null;
+
+	if (minS !== null && maxS !== null) {
+		if (minS > maxS) {
+			ui.showToast({
+				message: "最低评分不能大于最高评分",
+				type: "error"
+			});
+			return false;
+		}
+	}
+	if (minS !== null && (minS < 0 || minS > 5)) {
+		ui.showToast({
+			message: "评分范围为 0-5 分",
+			type: "error"
+		});
+		return false;
+	}
+	if (maxS !== null && (maxS < 0 || maxS > 5)) {
+		ui.showToast({
+			message: "评分范围为 0-5 分",
+			type: "error"
+		});
+		return false;
+	}
+
+	return true;
+};
+
+// 应用筛选
+const applyFilters = () => {
+	if (!validateRanges()) {
+		return;
+	}
+
+	showFilterPanel.value = false;
 	ui.showLoading(t("加载中"));
-	refresh({ page: 1, sortField: "professional_years", sortOrder: val });
+	refresh({
+		page: 1,
+		keyword: keyword.value,
+		sortDimension: sortDimension.value,
+		sortOrder: sortOrder.value,
+		minYears: minYears.value,
+		maxYears: maxYears.value,
+		minScore: minScore.value,
+		maxScore: maxScore.value
+	});
+};
+
+// 重置筛选条件
+const resetFilters = () => {
+	sortDimension.value = "rating";
+	sortOrder.value = "desc";
+	minYears.value = "";
+	maxYears.value = "";
+	minScore.value = "";
+	maxScore.value = "";
+};
+
+// 取消筛选
+const cancelFilter = () => {
+	showFilterPanel.value = false;
+};
+
+// 重置所有筛选条件
+const handleReset = () => {
+	// 重置搜索关键字
+	keyword.value = "";
+
+	// 重置所有筛选条件
+	resetFilters();
+
+	// 刷新列表
+	ui.showLoading(t("加载中"));
+	refresh({ page: 1 });
 };
 
 // 处理咨询点击
 const handleConsult = (lawyer: any) => {
 	console.log("咨询律师：", lawyer);
-	ui.showToast({
-		message: "功能开发中，敬请期待"
+	if (!lawyer) {
+		return ui.showToast({
+			message: "律师信息为空，请联系管理员"
+		});
+	}
+	// 跳转到环信 IM 聊天页面
+	router.push({
+		path: "/ease-im/chat-detail",
+		query: {
+			conversationId: String(lawyer.user_id)
+		}
 	});
 };
 
@@ -199,42 +284,131 @@ onReady(() => {
 		<view class="lawyer-list__search">
 			<cl-input
 				v-model="keyword"
+				clearable
 				placeholder="搜索律师姓名..."
 				:pt="{
-					className: 'bg-white rounded-lg',
+					className: '!bg-white !rounded-xl !shadow-sm !border !border-gray-100',
 					input: {
-						className: 'text-sm'
+						className: '!text-base !text-gray-900 !placeholder-gray-400'
 					}
 				}"
+				@input="handleInput"
 				@confirm="handleSearch"
+				@clear="handleInput"
 			>
 				<template #prepend>
-					<cl-icon name="search-line" :size="36" color="#9CA3AF"></cl-icon>
+					<cl-icon name="search-line" :size="40" color="#9CA3AF"></cl-icon>
 				</template>
 			</cl-input>
 		</view>
 
-		<!-- 筛选栏 -->
-		<cl-filter-bar :pt="{ className: 'bg-white' }">
-			<cl-filter-item
-				label="评分"
-				type="sort"
-				:value="sortScore"
-				@change="handleSortScore"
-			></cl-filter-item>
-			<cl-filter-item
-				label="案例"
-				type="sort"
-				:value="sortCase"
-				@change="handleSortCase"
-			></cl-filter-item>
-			<cl-filter-item
-				label="执业"
-				type="sort"
-				:value="sortYears"
-				@change="handleSortYears"
-			></cl-filter-item>
-		</cl-filter-bar>
+		<!-- 筛选栏容器 -->
+		<view class="lawyer-list__filter-section">
+			<view class="filter-dimension-btn" @tap="toggleSortOrder">
+				<text class="filter-dimension-btn__label">{{
+					dimensionLabels[sortDimension]
+				}}</text>
+				<cl-icon
+					v-if="sortOrder === 'desc'"
+					name="arrow-down-s-fill"
+					:size="28"
+					color="#3B82F6"
+				></cl-icon>
+				<cl-icon
+					v-if="sortOrder === 'asc'"
+					name="arrow-up-s-fill"
+					:size="28"
+					color="#3B82F6"
+				></cl-icon>
+			</view>
+
+			<view class="filter-action-btn" @tap="openFilterPanel">
+				<cl-icon name="filter-3-line" :size="28" color="#3B82F6"></cl-icon>
+				<text class="filter-action-btn__label">筛选</text>
+			</view>
+		</view>
+
+		<!-- 筛选弹窗 -->
+		<cl-popup
+			v-model="showFilterPanel"
+			direction="bottom"
+			size="65%"
+			title="筛选"
+			:swipe-close="true"
+		>
+			<view class="filter-panel">
+				<!-- 排序维度选择 -->
+				<view class="filter-section">
+					<text class="filter-section__title">排序维度</text>
+					<view class="filter-dimension-group">
+						<view
+							v-for="(label, key) in dimensionLabels"
+							:key="key"
+							class="dimension-btn"
+							:class="{ active: sortDimension === key }"
+							@tap="sortDimension = key"
+						>
+							<text class="dimension-btn__text">{{ label }}</text>
+						</view>
+					</view>
+				</view>
+
+				<!-- 执业年限范围 -->
+				<view class="filter-section">
+					<text class="filter-section__title">执业年限</text>
+					<view class="filter-range">
+						<cl-input
+							v-model="minYears"
+							type="number"
+							placeholder="最小年限"
+							:pt="{ className: '!flex-1' }"
+						></cl-input>
+						<text class="filter-range__separator">~</text>
+						<cl-input
+							v-model="maxYears"
+							type="number"
+							placeholder="最大年限"
+							:pt="{ className: '!flex-1' }"
+						></cl-input>
+					</view>
+				</view>
+
+				<!-- 评分区间 -->
+				<view class="filter-section">
+					<text class="filter-section__title">评分区间</text>
+					<view class="filter-range">
+						<cl-input
+							v-model="minScore"
+							type="digit"
+							placeholder="最低评分"
+							:pt="{ className: '!flex-1' }"
+						></cl-input>
+						<text class="filter-range__separator">~</text>
+						<cl-input
+							v-model="maxScore"
+							type="digit"
+							placeholder="最高评分"
+							:pt="{ className: '!flex-1' }"
+						></cl-input>
+					</view>
+				</view>
+
+				<!-- 操作按钮 -->
+				<view class="filter-actions">
+					<cl-button @tap="cancelFilter" :pt="{ className: '!flex-1' }"> 取消 </cl-button>
+					<cl-button @tap="resetFilters" :pt="{ className: '!flex-1 !ml-3' }">
+						重置
+					</cl-button>
+					<cl-button
+						type="primary"
+						@tap="applyFilters"
+						:pt="{ className: '!flex-1 !ml-3' }"
+					>
+						确定
+					</cl-button>
+				</view>
+			</view>
+		</cl-popup>
 
 		<!-- 列表 -->
 		<cl-list-view
@@ -266,9 +440,135 @@ onReady(() => {
 <style lang="scss" scoped>
 .lawyer-list-root {
 	@apply flex-1 w-full h-full overflow-visible box-border flex flex-col;
+	min-height: 500px;
 }
 
 .lawyer-list__search {
-	@apply px-3 py-2;
+	@apply px-4 py-3;
+}
+
+.lawyer-list__filter-section {
+	@apply flex flex-row items-center justify-between bg-white mx-4 rounded-2xl;
+	padding: 12px 16px;
+	box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+	gap: 12px;
+}
+
+.filter-dimension-btn {
+	@apply flex flex-row items-center cursor-pointer;
+
+	&__label {
+		font-size: 28rpx;
+		color: #111827;
+		font-weight: 500;
+		margin-right: 4px;
+	}
+
+	&:active {
+		opacity: 0.7;
+	}
+}
+
+.filter-sort-toggle {
+	@apply flex items-center justify-center cursor-pointer;
+	padding: 4px;
+
+	&:active {
+		opacity: 0.7;
+		transform: scale(0.95);
+	}
+}
+
+.filter-action-btn {
+	@apply flex flex-row items-center cursor-pointer;
+
+	&__label {
+		font-size: 28rpx;
+		color: #3b82f6;
+		font-weight: 500;
+		margin-left: 4px;
+	}
+
+	&:active {
+		opacity: 0.7;
+	}
+}
+
+.lawyer-list__reset-btn {
+	@apply flex items-center justify-center cursor-pointer;
+	padding: 4px;
+	transition: all 0.2s ease;
+
+	&:active {
+		opacity: 0.7;
+		transform: scale(0.95);
+	}
+}
+
+// Filter panel styles
+.filter-panel {
+	@apply flex flex-col;
+	padding: 20px;
+	gap: 24px;
+}
+
+.filter-section {
+	@apply flex flex-col;
+	gap: 12px;
+
+	&__title {
+		font-size: 28rpx;
+		color: #111827;
+		font-weight: 500;
+	}
+}
+
+.filter-dimension-group {
+	@apply flex flex-row flex-wrap;
+	gap: 12px;
+}
+
+.dimension-btn {
+	@apply flex items-center justify-center cursor-pointer;
+	padding: 8px 20px;
+	background-color: #f3f4f6;
+	border-radius: 8px;
+	transition: all 0.2s ease;
+
+	&__text {
+		font-size: 26rpx;
+		color: #6b7280;
+	}
+
+	&.active {
+		background-color: #eff6ff;
+		border: 1px solid #3b82f6;
+
+		.dimension-btn__text {
+			color: #3b82f6;
+			font-weight: 500;
+		}
+	}
+
+	&:active {
+		opacity: 0.7;
+		transform: scale(0.95);
+	}
+}
+
+.filter-range {
+	@apply flex flex-row items-center;
+	gap: 12px;
+
+	&__separator {
+		font-size: 28rpx;
+		color: #9ca3af;
+	}
+}
+
+.filter-actions {
+	@apply flex flex-row;
+	gap: 12px;
+	margin-top: 12px;
 }
 </style>

@@ -154,7 +154,6 @@ async function toLogin() {
 					<cl-input
 						v-model="form.code"
 						:clearable="false"
-						:type="'number'"
 						:placeholder="t('请输入验证码')"
 						:maxlength="6"
 						:border="false"

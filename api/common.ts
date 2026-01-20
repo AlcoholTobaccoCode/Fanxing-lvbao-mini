@@ -1,6 +1,4 @@
-import { config } from "@/config";
 import { request } from "@/cool";
-import { type ApiResponse } from "./types";
 
 //#region SMS 相关
 

@@ -79,6 +79,13 @@ const handleItemClick = (val) => {
 <style lang="scss" scoped>
 .custom-tabbar {
 	@apply flex flex-row items-center flex-1;
+	box-shadow: 0 -2px 8px 0 rgba(0, 0, 0, 0.08);
+	background-color: #ffffff;
+
+	&.is-dark {
+		box-shadow: 0 -2px 8px 0 rgba(0, 0, 0, 0.3);
+		background-color: #1f2937;
+	}
 
 	&-item {
 		@apply flex flex-col items-center justify-center flex-1;
