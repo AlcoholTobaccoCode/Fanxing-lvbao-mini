@@ -38,6 +38,9 @@ export class ChatInputStore {
 	/** 语音录制浮层是否显示 */
 	isVoiceRecordVisible = ref(false);
 
+	/** 键盘高度（用于 iOS 键盘适配） */
+	keyboardHeight = ref(0);
+
 	// ==================== 计算属性 ====================
 	/** 是否有输入内容 */
 	hasInput = computed(() => !!this.inputValue.value.trim());

@@ -36,6 +36,9 @@ const { user } = useStore();
 // 对话输入内容
 const inputValue = ref("");
 
+// 键盘高度（用于 iOS 适配）
+const keyboardHeight = ref(0);
+
 // 法规模块模型选择（仅 law 模块使用）
 const lawModelType = ref<LawModelType>("fabao");
 
@@ -159,6 +162,11 @@ const toTestPage = () => {
 	// router.to("/test-pages/index");
 };
 //#endregion
+
+// 键盘高度变化处理
+const handleKeyboardHeightChange = (height: number) => {
+	keyboardHeight.value = height;
+};
 </script>
 
 <template>
@@ -214,7 +222,10 @@ const toTestPage = () => {
 							「{{ isDev ? "开发" : "生产" }}」前往测试页面
 						</cl-button>
 					</view>
-					<view class="bottom-chat-input">
+					<view
+						class="bottom-chat-input"
+						:style="{ paddingBottom: keyboardHeight > 0 ? keyboardHeight + 'px' : '' }"
+					>
 						<chat-input
 							v-model:model-value="inputValue"
 							v-model:input-mode="chatInputStore.inputMode.value"
@@ -226,6 +237,7 @@ const toTestPage = () => {
 							:placeholder="currentConfig?.placeholder"
 							@send="handleSend"
 							@input-mode-change="handleInputModeChange"
+							@keyboard-height-change="handleKeyboardHeightChange"
 						>
 							<!-- 法规模块：模型选择器 -->
 							<template v-if="currentModule === 'law'" #tools-prepend>
@@ -258,6 +270,8 @@ const toTestPage = () => {
 <style lang="scss">
 .bottom-chat-input {
 	padding-bottom: 20px;
+	padding-bottom: calc(20px + constant(safe-area-inset-bottom));
+	padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
 	background-color: #fafafa;
 }
 </style>

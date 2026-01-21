@@ -87,18 +87,32 @@ const isIgnoreParseData = (url: string) => {
  * @returns Promise<T>
  */
 export function request(options: RequestOptions): Promise<any | null> {
-	let { url, method = "GET", data = {}, header = {}, timeout = 60000 } = options;
+	let { url, method = "GET", data = {}, params, header = {}, timeout = 60000 } = options;
 
 	const { user } = useStore();
 
 	// 开发环境下打印请求信息
 	if (isDev) {
 		console.log(`[${method}] ${url}`);
+		if (params) {
+			console.log(`[PARAMS]`, params);
+		}
 	}
 
 	// 拼接基础 url
 	if (!url.startsWith("http")) {
 		url = config.baseUrl + url;
+	}
+
+	// 处理 GET 请求的查询参数
+	if (method === "GET" && params) {
+		const queryString = Object.keys(params)
+			.filter(key => params[key] !== undefined && params[key] !== null)
+			.map(key => `${encodeURIComponent(key)}=${encodeURIComponent(params[key])}`)
+			.join("&");
+		if (queryString) {
+			url += (url.includes("?") ? "&" : "?") + queryString;
+		}
 	}
 
 	// 是否忽略 token 校验
