@@ -2,7 +2,6 @@ import { ref } from "vue";
 import { config } from "@/config";
 import { useStore } from "@/cool";
 import { RecommendLawyers, type RecommendLawyerItem } from "@/api/consult";
-import { createModelSessionId } from "@/utils/assetsConfig";
 import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID } from "@/utils/util";
 import { createSseDecoder } from "@/cool/utils/sse-decoder";
@@ -14,9 +13,7 @@ import {
 	type LawDetailResponse,
 	type CaseDetailResponse
 } from "@/api/references";
-
-// TODO - MOCK
-import { LawyerList } from "./mockData";
+import { createModelSessionId } from "@/utils/assetsConfig";
 
 // ============ 全局缓存类型定义 ============
 /** 法条详情缓存 Map，以 lawId 为 key */
@@ -825,11 +822,9 @@ export class ConsultSessionStore {
 				order: "desc",
 				limit: 5
 			})) as any;
-			const list = res ? [...(res as RecommendLawyerItem[])] : [...LawyerList];
-
-			if (Array.isArray(list) && list.length) {
+			if (Array.isArray(res) && res.length) {
 				aiMsg.haveRecommendLawyer = true;
-				aiMsg.recommendedLawyers = list;
+				aiMsg.recommendedLawyers = res;
 				// 推荐结果挂载后，再保存一份包含推荐律师信息的会话快照
 				await this.saveCurrentSessionSnapshot();
 			}

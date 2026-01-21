@@ -1,7 +1,6 @@
 import { ref } from "vue";
 import { config } from "@/config";
 import { useStore } from "@/cool";
-import { createModelSessionId } from "@/utils/assetsConfig";
 import { SaveMessages, type SaveMessagesPayload } from "@/api/history-chat";
 import { generateUUID } from "@/utils/util";
 import { createSseDecoder } from "@/cool/utils/sse-decoder";
@@ -13,6 +12,7 @@ import {
 } from "@/api/retrieve";
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
+import { createModelSessionId } from "@/utils/assetsConfig";
 
 //#region 类型定义
 
