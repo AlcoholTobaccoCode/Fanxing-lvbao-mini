@@ -85,7 +85,20 @@ const emit = defineEmits<{
 	// 顶部工具选中变化
 	(e: "tool-change", value: Tools): void;
 	(e: "tool-toggle", value: ToolItem): void;
+	// 键盘高度变化
+	(e: "keyboard-height-change", height: number): void;
 }>();
+
+// 键盘高度
+const keyboardHeight = ref(0);
+
+// 键盘高度变化处理
+const handleKeyboardHeightChange = (e: any) => {
+	const height = e?.detail?.height ?? 0;
+	keyboardHeight.value = height;
+	chatInputStore.keyboardHeight.value = height;
+	emit("keyboard-height-change", height);
+};
 
 // 顶部意图 chips：默认工具 + 外部传入工具
 const createDefaultTools = (): Tools => {
@@ -362,11 +375,7 @@ watch(
 							:class="{ 'chat-intent-chip--active': item.enable }"
 							@tap.stop="handleToolTap(item)"
 						>
-							<cl-icon
-								:name="item.icon"
-								color="currentColor"
-								:pt="{ className: 'mr-1' }"
-							></cl-icon>
+							<cl-icon :name="item.icon" :pt="{ className: 'mr-1' }"></cl-icon>
 							<cl-text size="13px" class="chat-intent-chip__text">{{
 								item.text
 							}}</cl-text>
@@ -395,14 +404,12 @@ watch(
 						<cl-icon
 							:name="`fullscreen${inputExtend ? '-exit' : ''}-line`"
 							:size="44"
-							color="currentColor"
 						></cl-icon>
 					</view>
 					<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 						<cl-icon
 							:name="inputModeModal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
 							:size="48"
-							color="currentColor"
 						></cl-icon>
 					</view>
 				</view>
@@ -422,9 +429,11 @@ watch(
 							v-model="modelValueModal"
 							clearable
 							auto-height
+							fixed
 							:border="false"
 							:maxlength="20000"
-							:cursorSpacing="20"
+							:cursorSpacing="100"
+							:adjustPosition="false"
 							:showWordLimit="false"
 							:showConfirmBar="false"
 							:disabled="disabled"
@@ -433,6 +442,7 @@ watch(
 							adjustKeyboardTo="bottom"
 							@confirm="handleConfirm"
 							@linechange="handleLineChange"
+							@keyboardheightchange="handleKeyboardHeightChange"
 						></cl-textarea>
 					</scroll-view>
 					<view v-else class="chat-main__voice">

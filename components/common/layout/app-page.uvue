@@ -258,7 +258,6 @@ const beforePageContainerLeave = () => {
 							<cl-icon
 								name="menu-line"
 								:size="40"
-								color="currentColor"
 								@tap.stop="handleDefaultLeftTap"
 							></cl-icon>
 						</slot>

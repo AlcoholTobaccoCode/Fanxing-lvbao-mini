@@ -67,12 +67,7 @@ defineExpose({
 			<cl-topbar :show-back="false" :backable="false">
 				<template #prepend>
 					<view class="app-setting-header">
-						<cl-icon
-							name="close-line"
-							:size="48"
-							color="currentColor"
-							@tap.stop="handleClose"
-						></cl-icon>
+						<cl-icon name="close-line" :size="48" @tap.stop="handleClose"></cl-icon>
 					</view>
 				</template>
 			</cl-topbar>

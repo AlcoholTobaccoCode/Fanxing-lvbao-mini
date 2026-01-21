@@ -213,14 +213,12 @@ const handleSend = () => {
 					<cl-icon
 						:name="`fullscreen${inputExtend ? '-exit' : ''}-line`"
 						:size="44"
-						color="currentColor"
 					></cl-icon>
 				</view>
 				<view class="chat-main__icon-btn" @tap.stop="handleRecording">
 					<cl-icon
 						:name="inputModeModal === 'text' ? 'fxzh-saying' : 'keyboard-box-line'"
 						:size="44"
-						color="currentColor"
 					></cl-icon>
 				</view>
 			</view>
