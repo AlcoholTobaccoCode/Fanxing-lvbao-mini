@@ -39,7 +39,7 @@
 			"style": {
 				"navigationBarTitleText": "知识库",
 				"usingComponents": {
-					"sv-editor": "/ai-chat-module/components/sv-editor/index",
+					"sv-editor": "/ai-chat-module/components/sv-editor/components/sv-editor/index",
 					"sv-editor-toolbar": "/ai-chat-module/components/sv-editor/components/sv-editor/sv-editor-toolbar"
 				},
 				"componentPlaceholder": {
@@ -82,6 +82,18 @@
 					"path": "cs",
 					"style": {
 						"navigationBarTitleText": "联系客服"
+					}
+				},
+				{
+					"path": "privacy-policy",
+					"style": {
+						"navigationBarTitleText": "隐私政策"
+					}
+				},
+				{
+					"path": "user-agreement",
+					"style": {
+						"navigationBarTitleText": "用户服务协议"
 					}
 				}
 			]

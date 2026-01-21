@@ -43,6 +43,24 @@
 					@tap="router.to('/setting/cs')"
 				>
 				</cl-list-item>
+
+				<cl-list-item
+					:label="t('隐私政策')"
+					icon="shield-check-line"
+					arrow
+					hoverable
+					@tap="router.to('/setting/privacy-policy')"
+				>
+				</cl-list-item>
+
+				<cl-list-item
+					:label="t('用户服务协议')"
+					icon="file-text-line"
+					arrow
+					hoverable
+					@tap="router.to('/setting/user-agreement')"
+				>
+				</cl-list-item>
 			</cl-list>
 
 			<cl-list v-if="isLogin" :pt="{ className: 'mb-3' }">

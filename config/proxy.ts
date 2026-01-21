@@ -9,7 +9,8 @@ export const proxy = {
 
 	// 生产环境配置
 	prod: {
-		target: "https://lxf-api.legal-heroes.cn",
+		target: "https://lawapi-test.fanxingzhihui.com",
+		// target: "https://lxf-api.legal-heroes.cn",
 		changeOrigin: true,
 		rewrite: (path: string) => path.replace("/prod", "")
 	}

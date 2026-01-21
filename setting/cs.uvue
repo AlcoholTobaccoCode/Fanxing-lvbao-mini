@@ -11,11 +11,11 @@
 						<text> - </text>
 					</template>
 				</cl-image> -->
-				<view
+				<!-- <view
 					class="w-[320rpx] h-[320rpx] bg-gray-300 flex items-center justify-center text-xl rounded-xl"
 				>
 					<cl-text color="primary">占位图</cl-text>
-				</view>
+				</view> -->
 			</view>
 
 			<!-- #ifndef H5 -->

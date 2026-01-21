@@ -100,12 +100,20 @@ const toLogin = async (res: any) => {
 const agree = ref(false);
 
 // 跳转文档
-const toDoc = (name: string, path: string) => {
-	uni.showToast({
-		title: `查看${name}`,
-		icon: "success",
-		mask: true
-	});
+const toDoc = (_name: string, path: string) => {
+	const routeMap: Record<string, string> = {
+		'userAgreement': '/setting/user-agreement',
+		'privacyPolicy': '/setting/privacy-policy'
+	};
+
+	const targetPath = routeMap[path];
+	if (targetPath) {
+		router.to(targetPath);
+	} else {
+		ui.showToast({
+			message: t("页面不存在")
+		});
+	}
 };
 
 // 是否同意
