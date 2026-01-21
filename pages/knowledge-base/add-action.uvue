@@ -23,6 +23,14 @@ const addMenuItems = computed<BtnListItem[]>(() => [
 		}
 	},
 	{
+		icon: "wechat-fill",
+		text: "记录",
+		menuBgColor: "#05dd6c",
+		cb: () => {
+			emits("create", "record");
+		}
+	},
+	{
 		icon: "sticky-note-line",
 		text: "笔记",
 		menuBgColor: "#f39c12",

@@ -7,14 +7,18 @@ import {
 	CreateKnowledge,
 	RenameKnowledge,
 	DeleteKnowledge,
+	UpdateKnowledgeNote,
 	type KnowledgeObject,
 	type KnowledgeObjectType,
-	type CreateKnowledgePayload
+	type CreateKnowledgePayload,
+	type ListKnowledgeQuery
 } from "@/api/knowledge";
 import { OSS_BUCKET, uploadToOss } from "@/utils/aliyun/oss";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import AddActionMenu from "./add-action.uvue";
+import SvEditor from "@/ai-chat-module/components/sv-editor/components/sv-editor/index.vue";
+import SvEditorToolbar from "@/ai-chat-module/components/sv-editor/components/sv-editor/sv-editor-toolbar.vue";
 
 const log = new Logger("KnowledgeBasePage");
 const ui = useUi();
@@ -54,8 +58,8 @@ const loading = ref(false);
 //#region 预览弹窗状态
 // 弹窗显示状态
 const showImagePopup = ref(false);
-const showTextPopup = ref(false);
 const showRenamePopup = ref(false);
+const showNoteEditorPopup = ref(false);
 
 // 当前预览的项目
 const currentPreviewItem = ref<KnowledgeObject | null>(null);
@@ -65,6 +69,14 @@ const renameInputValue = ref("");
 const currentRenameItem = ref<KnowledgeObject | null>(null);
 const MAX_TITLE_LENGTH = 24;
 
+// 笔记编辑相关
+const noteTitle = ref("");
+const noteContent = ref("");
+const noteEditorMode = ref<"edit" | "preview">("edit");
+const isEditingNote = ref(false);
+const currentEditNoteId = ref<number | null>(null);
+const noteEditorCtx = ref<any>(null);
+
 // 当前预览项的 OSS URL
 const currentPreviewUrl = computed(() => {
 	if (!currentPreviewItem.value) return "";
@@ -73,8 +85,10 @@ const currentPreviewUrl = computed(() => {
 
 // 切换筛选器
 const changeFilter = (filterValue: string) => {
+	log.info("切换筛选器 - 原值:", currentFilter.value, "新值:", filterValue);
 	currentFilter.value = filterValue;
-	// TODO 等接口兼容
+	log.info("切换筛选器 - 映射类型:", reverseTypeMap[filterValue]);
+	loadData();
 };
 
 //#endregion
@@ -161,69 +175,11 @@ const formatTime = (dateStr: string) => {
 
 //#endregion
 
-//#region 文件类型判断
-
-// OSS 基础地址
-const OSS_BASE_URL = "https://fxzh01.oss-cn-hangzhou.aliyuncs.com";
+//#region 辅助方法
 
 // 获取完整的 OSS URL
 const getOssUrl = (item: KnowledgeObject): string => {
-	// 如果已经有 oss_url，直接返回
-	if (item.oss_url) {
-		return item.oss_url;
-	}
-	// 否则通过 ossBucket 和 ossKey 拼接
-	if (item.ossBucket && item.ossKey) {
-		return `${OSS_BASE_URL}/${item.ossKey}`;
-	}
-	return "";
-};
-
-// 定义支持的文件类型
-const FILE_TYPES = {
-	// 文档
-	pdf: "application/pdf",
-	doc: "application/msword",
-	docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-	// 图片
-	png: "image/png",
-	jpg: "image/jpeg",
-	jpeg: "image/jpeg",
-	gif: "image/gif",
-	webp: "image/webp",
-	// 文本
-	txt: "text/plain",
-	md: "text/markdown",
-	// 音频
-	mp3: "audio/mpeg",
-	wav: "audio/wav",
-	// 视频
-	mp4: "video/mp4",
-	avi: "video/x-msvideo"
-};
-
-// 判断是否为图片类型
-const isImageType = (mimeType: string | null) => {
-	if (!mimeType) return false;
-	return mimeType.startsWith("image/");
-};
-
-// 判断是否为文本类型
-const isTextType = (mimeType: string | null) => {
-	if (!mimeType) return false;
-	return mimeType.startsWith("text/");
-};
-
-// 判断是否为文档类型
-const isDocumentType = (mimeType: string | null) => {
-	if (!mimeType) return false;
-	return (
-		mimeType.includes("pdf") ||
-		mimeType.includes("msword") ||
-		mimeType.includes("document") ||
-		mimeType.includes("audio") ||
-		mimeType.includes("video")
-	);
+	return item.ossUrl || "";
 };
 
 //#endregion
@@ -234,7 +190,25 @@ const isDocumentType = (mimeType: string | null) => {
 const loadData = async () => {
 	loading.value = true;
 	try {
-		knowledgeItems.value = await ListKnowledge();
+		// 构建查询参数
+		const params: ListKnowledgeQuery = {};
+
+		// 类型筛选
+		if (currentFilter.value !== "all") {
+			params.type = reverseTypeMap[currentFilter.value];
+		}
+
+		// 标题搜索
+		if (searchKeyword.value.trim()) {
+			params.title = searchKeyword.value.trim();
+		}
+
+		log.info("加载数据 - 当前筛选:", currentFilter.value);
+		log.info("加载数据 - 请求参数:", params);
+
+		const response = await ListKnowledge(params);
+		log.info("加载数据 - 响应数据:", response);
+		knowledgeItems.value = response.items;
 	} catch (error: any) {
 		ui.showToast({ message: error?.message || "加载失败", type: "error" });
 		log.error("加载知识库数据失败:", error);
@@ -283,6 +257,120 @@ const cancelRename = () => {
 	showRenamePopup.value = false;
 	renameInputValue.value = "";
 	currentRenameItem.value = null;
+};
+
+// 打开笔记编辑器（新建）
+const openNoteEditor = () => {
+	isEditingNote.value = false;
+	currentEditNoteId.value = null;
+	noteTitle.value = "";
+	noteContent.value = "";
+	noteEditorMode.value = "edit";
+	showNoteEditorPopup.value = true;
+};
+
+// 打开笔记编辑器（编辑）
+const editNote = (item: KnowledgeObject) => {
+	isEditingNote.value = true;
+	currentEditNoteId.value = item.id;
+	noteTitle.value = item.title;
+	noteContent.value = item.textContent || "";
+	// 不在这里设置 mode，让调用者决定
+	showNoteEditorPopup.value = true;
+};
+
+// 编辑器准备就绪
+const handleEditorReady = (ctx: any) => {
+	log.info("编辑器准备就绪 - 上下文:", ctx);
+	log.info("编辑器准备就绪 - 当前模式:", noteEditorMode.value);
+	log.info("编辑器准备就绪 - 笔记内容:", noteContent.value);
+
+	noteEditorCtx.value = ctx;
+	// 如果有内容，初始化编辑器
+	if (noteContent.value) {
+		log.info("编辑器准备就绪 - 开始初始化内容");
+		ctx.initHtml(noteContent.value);
+	}
+	// 设置只读状态
+	ctx.setReadOnly(noteEditorMode.value === "preview");
+	log.info("编辑器准备就绪 - 设置只读状态:", noteEditorMode.value === "preview");
+};
+
+// 切换编辑/预览模式
+const toggleNoteEditorMode = () => {
+	noteEditorMode.value = noteEditorMode.value === "edit" ? "preview" : "edit";
+	if (noteEditorCtx.value) {
+		noteEditorCtx.value.setReadOnly(noteEditorMode.value === "preview");
+	}
+};
+
+// 保存笔记
+const saveNote = async () => {
+	const title = noteTitle.value.trim();
+	if (!title) {
+		ui.showToast({ message: "标题不能为空", type: "error" });
+		return;
+	}
+
+	try {
+		// 获取编辑器内容（HTML格式）
+		let htmlContent = noteContent.value;
+		log.info("保存笔记 - 初始内容:", htmlContent);
+		log.info("保存笔记 - 编辑器上下文:", noteEditorCtx.value);
+
+		if (noteEditorCtx.value && noteEditorCtx.value.getLastContent) {
+			log.info("保存笔记 - 开始获取编辑器内容");
+			const content = await noteEditorCtx.value.getLastContent();
+			log.info("保存笔记 - 获取到的内容:", content);
+			htmlContent = content.html;
+			log.info("保存笔记 - HTML内容:", htmlContent);
+		} else {
+			log.warn("保存笔记 - 编辑器上下文不可用或没有 getLastContent 方法");
+		}
+
+		if (isEditingNote.value && currentEditNoteId.value) {
+			// 编辑模式：更新笔记内容
+			await UpdateKnowledgeNote(currentEditNoteId.value, {
+				action: "update",
+				content: htmlContent
+			});
+
+			// 只在标题修改时调用重命名API
+			const originalItem = knowledgeItems.value.find(
+				(item) => item.id === currentEditNoteId.value
+			);
+			if (originalItem && originalItem.title !== title) {
+				await RenameKnowledge(currentEditNoteId.value, { title });
+			}
+
+			ui.showToast({ message: "保存成功", type: "success" });
+		} else {
+			// 新建模式：创建笔记
+			const payload: CreateKnowledgePayload = {
+				type: 3,
+				title,
+				textContent: htmlContent
+			};
+			await CreateKnowledge(payload);
+			ui.showToast({ message: "创建成功", type: "success" });
+		}
+		showNoteEditorPopup.value = false;
+		loadData();
+	} catch (error: any) {
+		ui.showToast({ message: error?.message || "保存失败", type: "error" });
+		log.error("保存笔记失败:", error);
+	}
+};
+
+// 取消笔记编辑
+const cancelNoteEdit = () => {
+	showNoteEditorPopup.value = false;
+	noteTitle.value = "";
+	noteContent.value = "";
+	noteEditorMode.value = "edit";
+	isEditingNote.value = false;
+	currentEditNoteId.value = null;
+	noteEditorCtx.value = null;
 };
 
 // 删除项目
@@ -356,29 +444,17 @@ const createItem = async (type: string) => {
 			const payload: CreateKnowledgePayload = {
 				type: finalType,
 				title: chooseResult.name,
-				ossBucket: OSS_BUCKET,
-				ossKey: uploadResult.key,
-				mimeType: uploadResult.ext.mimeType,
-				sizeBytes: uploadResult.ext.sizeBytes,
-				textContent: null,
-				oss_url: uploadResult.ext.oss_url
+				filename: uploadResult.key.split("/").pop() || chooseResult.name,
+				ossUrl: uploadResult.ext.oss_url,
+				textContent: null
 			};
 
 			await CreateKnowledge(payload);
 			ui.showToast({ message: "创建成功", type: "success" });
 			loadData();
-		} else {
-			// 笔记和引用类型直接创建
-			const payload = {
-				type: reverseTypeMap[type],
-				title: `新${getTypeLabel(type)}`,
-				textContent: "",
-				oss_url: ""
-			};
-
-			await CreateKnowledge(payload);
-			ui.showToast({ message: "创建成功", type: "success" });
-			loadData();
+		} else if (type === "note") {
+			// 笔记类型打开编辑弹窗
+			openNoteEditor();
 		}
 	} catch (error: any) {
 		uni.hideLoading();
@@ -393,7 +469,6 @@ const createItem = async (type: string) => {
 const openDetail = async (item: KnowledgeObject) => {
 	log.info("打开详情:", item);
 	log.info("item.type:", item.type);
-	log.info("item.mimeType:", item.mimeType);
 
 	currentPreviewItem.value = item;
 
@@ -402,22 +477,22 @@ const openDetail = async (item: KnowledgeObject) => {
 	log.info("ossUrl:", ossUrl);
 
 	// 1. 如果是图片类型，打开图片预览弹窗
-	if (item.type === 2 || isImageType(item.mimeType)) {
+	if (item.type === 2) {
 		log.info("打开图片预览弹窗");
 		showImagePopup.value = true;
 		return;
 	}
 
-	// 2. 如果是笔记或文本类型，打开文本预览弹窗
-	if (item.type === 3 || isTextType(item.mimeType)) {
-		log.info("打开文本预览弹窗");
-		showTextPopup.value = true;
-		ui.showToast({ message: "敬请期待", type: "success" });
+	// 2. 如果是笔记类型，打开编辑器弹窗(预览模式)
+	if (item.type === 3) {
+		log.info("打开笔记编辑器弹窗(预览模式)");
+		noteEditorMode.value = "preview";  // 先设置模式
+		editNote(item);  // 再打开编辑器
 		return;
 	}
 
 	// 3. 如果是文件类型（文档、音频、视频），使用 uni.openDocument
-	if (item.type === 1 || isDocumentType(item.mimeType)) {
+	if (item.type === 1) {
 		if (!ossUrl) {
 			ui.showToast({ message: "文件地址不存在", type: "error" });
 			return;
@@ -498,6 +573,7 @@ onMounted(() => {
 								:pt="{
 									className: 'ml-2'
 								}"
+								@click="loadData"
 							></cl-button>
 						</template>
 					</cl-input>
@@ -609,6 +685,9 @@ onMounted(() => {
 			<!-- 图片预览弹窗 -->
 			<cl-popup v-model="showImagePopup" direction="bottom" size="60%">
 				<view class="popup-container">
+					<view class="popup-header">
+						<cl-text bold size="18">{{ currentPreviewItem?.title }}</cl-text>
+					</view>
 					<view class="popup-content">
 						<cl-image
 							v-if="currentPreviewUrl"
@@ -624,20 +703,8 @@ onMounted(() => {
 				</view>
 			</cl-popup>
 
-			<!-- 文本预览弹窗 -->
-			<!-- <cl-popup v-model="showTextPopup" direction="bottom" size="80%">
-				<view class="popup-container">
-					<view class="popup-content">
-						<cl-text v-if="currentPreviewItem?.textContent" class="preview-text">{{
-							currentPreviewItem.textContent
-						}}</cl-text>
-						<cl-text v-else color="#999">暂无内容</cl-text>
-					</view>
-				</view>
-			</cl-popup> -->
-
 			<!-- 重命名弹窗 -->
-			<cl-popup v-model="showRenamePopup" direction="center">
+			<cl-popup v-model="showRenamePopup" direction="center" @close="cancelRename">
 				<view class="rename-popup-container">
 					<view class="rename-popup-header">
 						<cl-text bold>重命名</cl-text>
@@ -658,6 +725,82 @@ onMounted(() => {
 					<view class="rename-popup-footer">
 						<cl-button text @tap="cancelRename">取消</cl-button>
 						<cl-button type="primary" @tap="confirmRename">确定</cl-button>
+					</view>
+				</view>
+			</cl-popup>
+
+			<!-- 笔记编辑器弹窗 -->
+			<cl-popup
+				v-model="showNoteEditorPopup"
+				direction="bottom"
+				size="90%"
+				@close="cancelNoteEdit"
+			>
+				<view class="note-editor-popup-container">
+					<!-- 头部 -->
+					<view class="note-editor-header">
+						<view class="header-title-row">
+							<cl-text bold size="18">{{
+								isEditingNote ? "编辑笔记" : "新建笔记"
+							}}</cl-text>
+							<view class="header-actions">
+								<cl-button
+									v-if="noteEditorMode === 'preview'"
+									size="small"
+									@tap="toggleNoteEditorMode"
+								>
+									编辑
+								</cl-button>
+								<template v-else>
+									<cl-button size="small" text @tap="toggleNoteEditorMode">
+										预览
+									</cl-button>
+									<cl-button size="small" type="primary" @tap="saveNote">
+										保存
+									</cl-button>
+								</template>
+							</view>
+						</view>
+						<!-- 标题输入 -->
+						<cl-input
+							v-model="noteTitle"
+							placeholder="请输入标题"
+							:maxlength="MAX_TITLE_LENGTH"
+							:border="false"
+							:pt="{
+								className: 'note-title-input'
+							}"
+						/>
+					</view>
+
+					<!-- 编辑器内容区 -->
+					<view class="note-editor-content">
+						<sv-editor
+							v-if="showNoteEditorPopup"
+							pasteMode="origin"
+							:read-only="noteEditorMode === 'preview'"
+							placeholder="现在的想法是..."
+							@ready="handleEditorReady"
+						></sv-editor>
+					</view>
+
+					<!-- 工具栏 - 仅编辑模式显示 -->
+					<view v-if="noteEditorMode === 'edit'" class="note-editor-toolbar">
+						<sv-editor-toolbar
+							:style-tools="[
+								'header',
+								'divider',
+								'bold',
+								'italic',
+								'underline',
+								'strike',
+								'align',
+								'color',
+								'backgroundColor',
+								'removeformat'
+							]"
+							:tools="['style', 'undo', 'redo']"
+						></sv-editor-toolbar>
 					</view>
 				</view>
 			</cl-popup>
@@ -826,6 +969,10 @@ $content-top: 120px;
 	border-bottom: 1px solid #f0f0f0;
 }
 
+.header-actions {
+	@apply flex flex-row items-center gap-2;
+}
+
 .close-icon {
 	cursor: pointer;
 }
@@ -840,6 +987,12 @@ $content-top: 120px;
 	width: 100%;
 	line-height: 1.6;
 	white-space: pre-wrap;
+	word-break: break-word;
+}
+
+.preview-rich-text {
+	width: 100%;
+	line-height: 1.6;
 	word-break: break-word;
 }
 
@@ -874,5 +1027,41 @@ $content-top: 120px;
 .rename-popup-footer {
 	@apply flex flex-row items-center justify-end;
 	gap: 12px;
+}
+
+// 笔记编辑器弹窗样式
+.note-editor-popup-container {
+	@apply flex flex-col;
+	height: 100%;
+	background: #fff;
+	border-radius: 20px 20px 0 0;
+}
+
+.note-editor-header {
+	@apply flex flex-col;
+	padding: 16px 20px 12px;
+	border-bottom: 1px solid #f0f0f0;
+	gap: 12px;
+}
+
+.header-title-row {
+	@apply flex flex-row items-center justify-between;
+}
+
+.note-title-input {
+	font-size: 16px;
+	font-weight: 600;
+}
+
+.note-editor-content {
+	@apply flex-1;
+	overflow-y: auto;
+	padding: 10px 20px;
+}
+
+.note-editor-toolbar {
+	position: sticky;
+	bottom: 0;
+	width: 100%;
 }
 </style>

@@ -37,8 +37,15 @@
 		{
 			"path": "pages/knowledge-base/index",
 			"style": {
-				"navigationBarTitleText": "知识库"
-				// "navigationStyle": "custom"
+				"navigationBarTitleText": "知识库",
+				"usingComponents": {
+					"sv-editor": "/ai-chat-module/components/sv-editor/index",
+					"sv-editor-toolbar": "/ai-chat-module/components/sv-editor/components/sv-editor/sv-editor-toolbar"
+				},
+				"componentPlaceholder": {
+					"sv-editor": "view",
+					"sv-editor-toolbar": "view"
+				}
 			}
 		}
 	],
