@@ -675,7 +675,11 @@ export class ConsultSessionStore {
 						}
 					},
 					fail: (err: any) => {
-						console.error("[ConsultStream] wx.request fail:", err);
+						// 检测是否是用户主动中断
+						const isAbort = this.isAborted || err?.errMsg?.includes('abort');
+						if (!isAbort) {
+							console.error("[ConsultStream] wx.request fail:", err);
+						}
 						reject(err);
 					}
 				} as any);
@@ -707,6 +711,14 @@ export class ConsultSessionStore {
 			await this.saveCurrentSessionSnapshot();
 			// 根据 AI 文本中的推荐标记触发推荐律师逻辑
 			await this.fetchRecommendLawyers(aiMsg);
+		} catch (err: any) {
+			console.error("[ConsultSession] 查询失败", err);
+			// 只在非中断错误时显示错误消息
+			const isAbort = this.isAborted || err?.errMsg?.includes('abort');
+			if (!isAbort && requestId === this.currentRequestId) {
+				aiMsg.content = "咨询失败，请稍后重试";
+				this.streamStatus.value = null;
+			}
 		} finally {
 			// 只有当前请求才能修改 loading 状态
 			if (requestId === this.currentRequestId) {

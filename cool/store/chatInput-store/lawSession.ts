@@ -224,9 +224,11 @@ export class LawSessionStore {
 
 			this.streamStatus.value = null;
 			await this.saveCurrentSessionSnapshot();
-		} catch (err) {
+		} catch (err: any) {
 			console.error("[LawSession] 查询失败", err);
-			if (requestId === this.currentRequestId) {
+			// 只在非中断错误时显示错误消息
+			const isAbort = this.isAborted || err?.errMsg?.includes('abort');
+			if (!isAbort && requestId === this.currentRequestId) {
 				aiMsg.content = "查询失败，请稍后重试";
 				this.streamStatus.value = null;
 			}
@@ -506,7 +508,11 @@ export class LawSessionStore {
 					}
 				},
 				fail: (err: any) => {
-					console.error("[LawSession] 法宝请求失败:", err);
+					// 检测是否是用户主动中断
+					const isAbort = this.isAborted || err?.errMsg?.includes('abort');
+					if (!isAbort) {
+						console.error("[LawSession] 法宝请求失败:", err);
+					}
 					reject(err);
 				}
 			} as any);
