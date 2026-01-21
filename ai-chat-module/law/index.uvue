@@ -60,6 +60,7 @@ const getFabaoStages = (refs: LawMessageReferences | undefined): FabaoStageItem[
 
 const inputValue = ref("");
 const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
+const keyboardHeight = ref(0);
 
 const sessionId = computed(() => lawSessionStore.sessionId.value || "");
 const messages = lawSessionStore.messages;
@@ -172,6 +173,10 @@ const handleStop = () => {
 	lawSessionStore.stopStreaming();
 };
 
+const handleKeyboardHeightChange = (height: number) => {
+	keyboardHeight.value = height;
+};
+
 const handleSend = async (data: SendData) => {
 	log.group("law detail send");
 	log.debug("payload ==> ", data);
@@ -238,6 +243,7 @@ const handleSend = async (data: SendData) => {
 				:loading="isGenerating"
 				:status-text="streamStatus || ''"
 				:show-empty="!hasValidLaunch"
+				:keyboard-height="keyboardHeight"
 				empty-text="暂未检测到会话启动参数，请从首页发起新的查询。"
 			>
 				<template #messages>
@@ -289,6 +295,7 @@ const handleSend = async (data: SendData) => {
 						@stop="handleStop"
 						@tool-change="handleToolsChange"
 						@input-mode-change="handleInputModeChange"
+						@keyboard-height-change="handleKeyboardHeightChange"
 					>
 						<!-- 模型信息（锁定状态） -->
 						<template #tools-prepend>

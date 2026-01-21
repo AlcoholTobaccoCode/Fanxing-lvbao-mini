@@ -28,6 +28,7 @@ const { user } = useStore();
 
 const inputValue = ref("");
 const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
+const keyboardHeight = ref(0);
 
 const sessionId = computed(() => consultSessionStore.sessionId.value || "");
 const messages = consultSessionStore.messages;
@@ -160,6 +161,10 @@ const handleStop = () => {
 	consultSessionStore.stopStreaming();
 };
 
+const handleKeyboardHeightChange = (height: number) => {
+	keyboardHeight.value = height;
+};
+
 const handleSend = async (data: SendData) => {
 	log.group("consult detail send");
 	log.debug("payload ==> ", data);
@@ -245,7 +250,6 @@ const handleRefTap = (
 	item: any
 ) => {
 	if (!e.json) return;
-	debugger;
 	if (e.type === "lawItem") {
 		// 优先从全局缓存获取，其次从消息引用数据
 		let preloadData: LawDetailResponse | undefined = consultSessionStore.getLawDetailFromCache(
@@ -307,6 +311,7 @@ const handleRefTap = (
 					:loading="isGenerating"
 					:status-text="streamStatus || ''"
 					:show-empty="!hasValidLaunch"
+					:keyboard-height="keyboardHeight"
 					empty-text="暂未检测到会话启动参数，请从首页发起新的咨询。"
 				>
 					<template #messages>
@@ -372,6 +377,7 @@ const handleRefTap = (
 							@stop="handleStop"
 							@tool-change="handleToolsChange"
 							@input-mode-change="handleInputModeChange"
+							@keyboard-height-change="handleKeyboardHeightChange"
 						/>
 					</template>
 				</chat-layout>

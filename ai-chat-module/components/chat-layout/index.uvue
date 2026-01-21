@@ -14,6 +14,8 @@ const props = defineProps<{
 	showEmpty?: boolean;
 	// 空状态文案
 	emptyText?: string;
+	// 键盘高度
+	keyboardHeight?: number;
 }>();
 
 // 滚动控制
@@ -76,6 +78,7 @@ watch(
 		}
 	}
 );
+
 </script>
 
 <template>
@@ -112,13 +115,13 @@ watch(
 					</view>
 				</view>
 
-				<!-- 底部占位 -->
-				<view class="chat-anchor"></view>
 			</scroll-view>
 		</view>
 
-		<!-- 输入框插槽 -->
+	<!-- 输入框容器 - 使用 paddingBottom 补偿键盘高度 -->
+	<view class="chat-layout__input-wrapper" :style="{ paddingBottom: (keyboardHeight ?? 0) > 0 ? (keyboardHeight ?? 0) + 'px' : '' }">
 		<slot name="input"></slot>
+	</view>
 	</view>
 </template>
 
@@ -148,9 +151,6 @@ watch(
 	@apply w-full h-full;
 }
 
-.chat-anchor {
-	height: 1px;
-}
 
 // 状态显示
 .chat-layout__status {
@@ -218,3 +218,4 @@ watch(
 	}
 }
 </style>
+
