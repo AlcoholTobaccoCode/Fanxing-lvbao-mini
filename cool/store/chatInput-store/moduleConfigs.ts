@@ -8,7 +8,7 @@ export const CHAT_MODULE_CONFIGS: Record<ChatModuleKey, ChatModuleConfig> = {
 		enableVoice: true,
 		enableFileUpload: false,
 		enableDeepThink: true,
-		enableKnowledge: true,
+		enableKnowledge: false,
 		enableNetwork: true,
 		placeholder: "请简要描述您的法律问题…"
 	},
@@ -19,7 +19,7 @@ export const CHAT_MODULE_CONFIGS: Record<ChatModuleKey, ChatModuleConfig> = {
 		enableVoice: true,
 		enableFileUpload: false,
 		enableDeepThink: false,
-		enableKnowledge: true,
+		enableKnowledge: false,
 		enableNetwork: false,
 		placeholder: "输入法规名称或关键词进行查询…"
 	},
