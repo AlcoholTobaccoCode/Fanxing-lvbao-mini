@@ -8,6 +8,7 @@ import {
 	RenameKnowledge,
 	DeleteKnowledge,
 	UpdateKnowledgeNote,
+	GetKnowledgeDetail,
 	type KnowledgeObject,
 	type KnowledgeObjectType,
 	type CreateKnowledgePayload,
@@ -72,7 +73,7 @@ const MAX_TITLE_LENGTH = 24;
 // 笔记编辑相关
 const noteTitle = ref("");
 const noteContent = ref("");
-const noteEditorMode = ref<"edit" | "preview">("edit");
+const noteEditorMode = ref<"edit" | "preview">("preview");
 const isEditingNote = ref(false);
 const currentEditNoteId = ref<number | null>(null);
 const noteEditorCtx = ref<any>(null);
@@ -280,17 +281,49 @@ const editNote = (item: KnowledgeObject) => {
 };
 
 // 编辑器准备就绪
-const handleEditorReady = (ctx: any) => {
-	log.info("编辑器准备就绪 - 上下文:", ctx);
-	log.info("编辑器准备就绪 - 当前模式:", noteEditorMode.value);
-	log.info("编辑器准备就绪 - 笔记内容:", noteContent.value);
-
+const handleEditorReady = async (ctx: any) => {
 	noteEditorCtx.value = ctx;
-	// 如果有内容，初始化编辑器
-	if (noteContent.value) {
-		log.info("编辑器准备就绪 - 开始初始化内容");
+
+	// 如果是编辑模式，调用详情接口获取完整内容
+	if (isEditingNote.value && currentEditNoteId.value) {
+		try {
+			// 显示 loading
+			uni.showLoading({ title: "加载中...", mask: true });
+
+			// 调用详情接口获取完整内容
+			const fullItem = await GetKnowledgeDetail(currentEditNoteId.value);
+
+			if (fullItem && fullItem.textContent) {
+				log.info("编辑器准备就绪 - 获取完整内容成功，长度:", fullItem.textContent.length);
+				ctx.initHtml(fullItem.textContent);
+				// 同时更新 noteContent，保持状态一致
+				noteContent.value = fullItem.textContent;
+			} else {
+				log.warn("编辑器准备就绪 - 详情接口返回内容为空");
+				// 降级：使用列表数据
+				if (noteContent.value) {
+					ctx.initHtml(noteContent.value);
+				}
+			}
+		} catch (error) {
+			log.error("编辑器准备就绪 - 获取完整内容失败:", error);
+			// 降级：使用列表数据
+			if (noteContent.value) {
+				log.info("编辑器准备就绪 - 降级使用列表数据");
+				ctx.initHtml(noteContent.value);
+			} else {
+				ui.showToast({ message: "加载笔记内容失败", type: "error" });
+			}
+		} finally {
+			// 隐藏 loading
+			uni.hideLoading();
+		}
+	} else if (noteContent.value) {
+		// 新建模式：使用 noteContent
+		log.info("编辑器准备就绪 - 使用 noteContent 初始化");
 		ctx.initHtml(noteContent.value);
 	}
+
 	// 设置只读状态
 	ctx.setReadOnly(noteEditorMode.value === "preview");
 	log.info("编辑器准备就绪 - 设置只读状态:", noteEditorMode.value === "preview");
@@ -315,15 +348,10 @@ const saveNote = async () => {
 	try {
 		// 获取编辑器内容（HTML格式）
 		let htmlContent = noteContent.value;
-		log.info("保存笔记 - 初始内容:", htmlContent);
-		log.info("保存笔记 - 编辑器上下文:", noteEditorCtx.value);
 
 		if (noteEditorCtx.value && noteEditorCtx.value.getLastContent) {
-			log.info("保存笔记 - 开始获取编辑器内容");
 			const content = await noteEditorCtx.value.getLastContent();
-			log.info("保存笔记 - 获取到的内容:", content);
 			htmlContent = content.html;
-			log.info("保存笔记 - HTML内容:", htmlContent);
 		} else {
 			log.warn("保存笔记 - 编辑器上下文不可用或没有 getLastContent 方法");
 		}
@@ -367,7 +395,7 @@ const cancelNoteEdit = () => {
 	showNoteEditorPopup.value = false;
 	noteTitle.value = "";
 	noteContent.value = "";
-	noteEditorMode.value = "edit";
+	noteEditorMode.value = "preview";
 	isEditingNote.value = false;
 	currentEditNoteId.value = null;
 	noteEditorCtx.value = null;
@@ -486,8 +514,8 @@ const openDetail = async (item: KnowledgeObject) => {
 	// 2. 如果是笔记类型，打开编辑器弹窗(预览模式)
 	if (item.type === 3) {
 		log.info("打开笔记编辑器弹窗(预览模式)");
-		noteEditorMode.value = "preview";  // 先设置模式
-		editNote(item);  // 再打开编辑器
+		noteEditorMode.value = "preview"; // 先设置模式
+		editNote(item); // 再打开编辑器
 		return;
 	}
 
