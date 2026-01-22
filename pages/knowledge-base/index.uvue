@@ -424,6 +424,7 @@ const deleteItem = async (item: KnowledgeObject) => {
 // 选择文件（支持所有文件类型，包括图片）
 const chooseFile = async (): Promise<{ tempFilePath: string; name: string } | null> => {
 	return new Promise((resolve) => {
+		// #ifdef MP-WEIXIN
 		// @ts-ignore
 		uni.chooseMessageFile({
 			count: 1,
@@ -439,6 +440,15 @@ const chooseFile = async (): Promise<{ tempFilePath: string; name: string } | nu
 				resolve(null);
 			}
 		});
+		// #endif
+
+		// #ifndef MP-WEIXIN
+		ui.showToast({
+			message: "此功能仅在微信小程序中可用",
+			type: "error"
+		});
+		resolve(null);
+		// #endif
 	});
 };
 
@@ -480,6 +490,49 @@ const createItem = async (type: string) => {
 			await CreateKnowledge(payload);
 			ui.showToast({ message: "创建成功", type: "success" });
 			loadData();
+		} else if (type === "record") {
+			// #ifdef MP-WEIXIN
+			// 选择文件
+			const chooseResult = await chooseFile();
+			if (!chooseResult) {
+				return; // 用户取消选择
+			}
+
+			// 显示上传中提示
+			uni.showLoading({ title: "上传中..." });
+
+			// 上传到 OSS
+			const uploadResult = await uploadToOss({
+				filePath: chooseResult.tempFilePath,
+				dirPrefix: "knowledge-base"
+			});
+
+			uni.hideLoading();
+
+			// 根据 MIME 类型判断是图片还是文件
+			const isImage = uploadResult.ext.mimeType.startsWith("image/");
+			const finalType = isImage ? 2 : 1; // 2=图片, 1=文件
+
+			// 构建请求参数
+			const payload: CreateKnowledgePayload = {
+				type: finalType,
+				title: chooseResult.name,
+				filename: uploadResult.key.split("/").pop() || chooseResult.name,
+				ossUrl: uploadResult.ext.oss_url,
+				textContent: null
+			};
+
+			await CreateKnowledge(payload);
+			ui.showToast({ message: "创建成功", type: "success" });
+			loadData();
+			// #endif
+
+			// #ifndef MP-WEIXIN
+			ui.showToast({
+				message: "此功能仅在微信小程序中可用",
+				type: "error"
+			});
+			// #endif
 		} else if (type === "note") {
 			// 笔记类型打开编辑弹窗
 			openNoteEditor();

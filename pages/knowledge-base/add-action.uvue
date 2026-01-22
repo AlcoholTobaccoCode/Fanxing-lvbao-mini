@@ -13,32 +13,41 @@ const floatMenuY = computed(() => {
 });
 
 // 知识库新增菜单项
-const addMenuItems = computed<BtnListItem[]>(() => [
-	{
-		icon: "file-text-line",
-		text: "文件",
-		menuBgColor: "#3498db",
-		cb: () => {
-			emits("create", "file");
+const addMenuItems = computed<BtnListItem[]>(() => {
+	const items: BtnListItem[] = [
+		{
+			icon: "file-text-line",
+			text: "文件",
+			menuBgColor: "#3498db",
+			cb: () => {
+				emits("create", "file");
+			}
 		}
-	},
-	{
+	];
+
+	// #ifdef MP-WEIXIN
+	// 仅在微信小程序中显示"记录"选项
+	items.push({
 		icon: "wechat-fill",
 		text: "记录",
 		menuBgColor: "#05dd6c",
 		cb: () => {
 			emits("create", "record");
 		}
-	},
-	{
+	});
+	// #endif
+
+	items.push({
 		icon: "sticky-note-line",
 		text: "笔记",
 		menuBgColor: "#f39c12",
 		cb: () => {
 			emits("create", "note");
 		}
-	}
-]);
+	});
+
+	return items;
+});
 
 const onMenuClick = (item: BtnListItem) => {
 	console.log("点击了菜单项:", item);
