@@ -53,9 +53,32 @@ const showJumpToLatest = ref(false);
 // scroll-view 可视高度（px），用于计算与底部的距离
 const scrollViewHeight = ref(0);
 
+// 防抖标记已读相关变量
+let markReadTimer: any = null;
+const pendingMarkReadTimestamp = ref<number | null>(null);
+
 // 滚动到底部：每次把 scrollTop 增加一大段，scroll-view 会自动滚到底
 const scrollToBottom = () => {
 	scrollTop.value += 1000;
+};
+
+// 防抖标记已读函数
+const debouncedMarkAsRead = (timestamp: number) => {
+	pendingMarkReadTimestamp.value = timestamp;
+
+	if (markReadTimer) {
+		clearTimeout(markReadTimer);
+	}
+
+	markReadTimer = setTimeout(() => {
+		if (pendingMarkReadTimestamp.value) {
+			markMessagesAsRead({
+				peerId: targetId.value,
+				beforeTimestamp: pendingMarkReadTimestamp.value
+			});
+			pendingMarkReadTimestamp.value = null;
+		}
+	}, 500); // 500ms 防抖
 };
 
 const loadHistory = async (reset: boolean) => {
@@ -344,6 +367,9 @@ const onTextMessageHandler = (msg: OnTextMsgResult) => {
 		if (!showJumpToLatest.value) {
 			scrollToBottom();
 		}
+
+		// 立即标记该消息为已读（使用防抖优化）
+		debouncedMarkAsRead(msg.time);
 	}
 };
 
@@ -398,6 +424,13 @@ onBeforeUnmount(() => {
 	// 传入具体的 handler，只移除当前组件注册的监听器
 	imBus.off("im:onTextMessage", onTextMessageHandler);
 	imBus.off("im:onSendMsg", onSendMsgHandler);
+
+	// 清理防抖定时器
+	if (markReadTimer) {
+		clearTimeout(markReadTimer);
+		markReadTimer = null;
+	}
+
 	if (audioCtx) {
 		audioCtx.stop();
 		audioCtx.destroy();
