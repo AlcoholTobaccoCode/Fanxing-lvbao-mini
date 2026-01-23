@@ -375,10 +375,17 @@ watch(
 							:class="{ 'chat-intent-chip--active': item.enable }"
 							@tap.stop="handleToolTap(item)"
 						>
-							<cl-icon :name="item.icon" :pt="{ className: 'mr-1' }"></cl-icon>
-							<cl-text size="13px" class="chat-intent-chip__text">{{
-								item.text
-							}}</cl-text>
+							<cl-icon
+								:name="item.icon"
+								:pt="{ className: 'mr-1' }"
+								:color="item.enable ? 'text-primary-700' : ''"
+							></cl-icon>
+							<cl-text
+								size="13px"
+								class="chat-intent-chip__text"
+								:color="item.enable ? 'text-primary-700' : ''"
+								>{{ item.text }}</cl-text
+							>
 						</view>
 					</view>
 				</scroll-view>

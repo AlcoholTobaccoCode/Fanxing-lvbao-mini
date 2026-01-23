@@ -98,16 +98,8 @@ const handleClick = () => {
 	<view class="consult-starter">
 		<!-- 标题区域 -->
 		<view class="header-section">
-			<view class="fade-up delay-1">
-				<cl-text size="28px" :pt="{ className: 'title-line' }">Hi,</cl-text>
-			</view>
 			<view class="fade-up delay-2">
-				<cl-text size="28px" :pt="{ className: 'title-line' }">欢迎使用</cl-text>
-			</view>
-			<view class="title-brand fade-up delay-3">
-				<cl-text size="28px" :pt="{ className: 'brand-text text-primary-500 font-bold' }">
-					{{ config.name }} AI
-				</cl-text>
+				<cl-text size="28px" :pt="{ className: 'title-line' }">欢迎回来</cl-text>
 			</view>
 			<view class="fade-up delay-4">
 				<cl-text :pt="{ className: 'text-sm text-surface-500 my-2' }">
