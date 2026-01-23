@@ -21,6 +21,7 @@ export const dev = () => {
 
 	const fileUploadUrl = "https://voicecall.fanxingzhihui.com/";
 	// const fileUploadUrl = "http://localhost:3001/";
+	// const fileUploadUrl = "http://192.168.3.13:3001/";
 
 	return {
 		host,

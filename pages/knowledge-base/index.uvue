@@ -1116,6 +1116,7 @@ $content-top: 120px;
 
 .list-item {
 	box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 6px;
+	border-right: 2px solid #3498db;
 }
 
 // 列表项样式

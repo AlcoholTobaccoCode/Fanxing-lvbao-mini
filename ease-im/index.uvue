@@ -29,7 +29,7 @@ const pageTitle = computed(() => {
 		back-top
 		:chat-list-btn="false"
 		:title-action="false"
-		:hide-float-menu="tabVal === 0 ? false : true"
+		:hide-float-menu="true"
 		openIconPicker
 		titlePlaceholder=""
 	>
