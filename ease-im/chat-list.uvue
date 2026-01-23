@@ -285,6 +285,7 @@ onBeforeUnmount(() => {
 <style lang="scss" scoped>
 .chat-list-root {
 	@apply flex-1 w-full h-full overflow-visible py-2 box-border;
+	min-height: 500px;
 }
 
 .easeim-chat-item {

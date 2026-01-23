@@ -285,16 +285,17 @@ const showUnReadBadge = computed(() => imUnReadCount.value > 0 && props.showImBa
 									:style="{ color: item.textColor || textColor }"
 									>{{ item.text }}</text
 								>
-								<cl-badge
-									v-if="handleShowBadge(item)"
-									type="error"
-									:value="item.badgeVal"
-									position
-									:pt="{
-										className: '!top-[4px] !right-[160px] p-2'
-									}"
-								>
-								</cl-badge>
+								<div class="unread-badge">
+									<cl-badge
+										v-if="handleShowBadge(item)"
+										type="error"
+										:value="item.badgeVal"
+										:pt="{
+											className: 'p-2'
+										}"
+									>
+									</cl-badge>
+								</div>
 							</view>
 						</view>
 					</view>
@@ -447,5 +448,12 @@ const showUnReadBadge = computed(() => imUnReadCount.value > 0 && props.showImBa
 	text-overflow: ellipsis;
 	padding: 0 4px;
 	box-sizing: border-box;
+}
+
+.unread-badge {
+	position: absolute;
+	top: -10px;
+	right: 0px;
+	z-index: 200;
 }
 </style>
