@@ -47,6 +47,12 @@
 					"sv-editor-toolbar": "view"
 				}
 			}
+		},
+		{
+			"path": "pages/file-upload-webview/index",
+			"style": {
+				"navigationBarTitleText": "文件上传"
+			}
 		}
 	],
 	"subPackages": [

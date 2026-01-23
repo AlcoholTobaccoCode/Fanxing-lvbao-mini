@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import {
@@ -14,7 +14,7 @@ import {
 	type CreateKnowledgePayload,
 	type ListKnowledgeQuery
 } from "@/api/knowledge";
-import { OSS_BUCKET, uploadToOss } from "@/utils/aliyun/oss";
+import { uploadToOss } from "@/utils/aliyun/oss";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import AddActionMenu from "./add-action.uvue";
@@ -53,6 +53,13 @@ const knowledgeItems = ref<KnowledgeObject[]>([]);
 const currentFilter = ref("all");
 const searchKeyword = ref("");
 const loading = ref(false);
+
+// 分页状态
+const currentPage = ref(1);
+const pageSize = ref(20);
+const hasMore = ref(true);
+const refreshing = ref(false);
+const loadingMore = ref(false);
 
 //#endregion
 
@@ -188,11 +195,25 @@ const getOssUrl = (item: KnowledgeObject): string => {
 //#region CRUD
 
 // 加载数据
-const loadData = async () => {
-	loading.value = true;
+const loadData = async (isLoadMore: boolean = false) => {
+	// 如果是加载更多且没有更多数据,直接返回
+	if (isLoadMore && !hasMore.value) {
+		return;
+	}
+
+	if (isLoadMore) {
+		loadingMore.value = true;
+	} else {
+		loading.value = true;
+		currentPage.value = 1; // 重置页码
+	}
+
 	try {
 		// 构建查询参数
-		const params: ListKnowledgeQuery = {};
+		const params: ListKnowledgeQuery = {
+			page: isLoadMore ? currentPage.value : 1,
+			page_size: pageSize.value
+		};
 
 		// 类型筛选
 		if (currentFilter.value !== "all") {
@@ -209,13 +230,45 @@ const loadData = async () => {
 
 		const response = await ListKnowledge(params);
 		log.info("加载数据 - 响应数据:", response);
-		knowledgeItems.value = response.items;
+
+		// 更新数据
+		if (isLoadMore) {
+			// 加载更多:追加数据
+			knowledgeItems.value = [...knowledgeItems.value, ...response.items];
+		} else {
+			// 首次加载或刷新:替换数据
+			knowledgeItems.value = response.items;
+		}
+
+		// 更新分页状态
+		hasMore.value = response.hasMore;
+		currentPage.value = response.page;
 	} catch (error: any) {
 		ui.showToast({ message: error?.message || "加载失败", type: "error" });
 		log.error("加载知识库数据失败:", error);
 	} finally {
 		loading.value = false;
+		loadingMore.value = false;
 	}
+};
+
+// 下拉刷新
+const onRefresh = async () => {
+	refreshing.value = true;
+	try {
+		await loadData(false);
+	} finally {
+		refreshing.value = false;
+	}
+};
+
+// 上拉加载更多
+const onLoadMore = async () => {
+	if (!hasMore.value || loadingMore.value) {
+		return;
+	}
+	currentPage.value += 1;
+	await loadData(true);
 };
 
 // 重命名项目
@@ -421,20 +474,53 @@ const deleteItem = async (item: KnowledgeObject) => {
 	});
 };
 
-// 选择文件（支持所有文件类型，包括图片）
-const chooseFile = async (): Promise<{ tempFilePath: string; name: string } | null> => {
+// 选择本地文件（用于"文件"按钮）
+const chooseLocalFile = async (): Promise<Array<{ tempFilePath: string; name: string }> | null> => {
+	// #ifdef MP-WEIXIN
+	// 微信小程序：跳转到 WebView 上传页面
+	uni.navigateTo({
+		url: "/pages/file-upload-webview/index"
+	});
+	return null; // 页面会通过事件总线返回结果
+	// #endif
+
+	// #ifndef MP-WEIXIN
+	// 其他平台：使用 uni.chooseFile() API
+	return new Promise((resolve) => {
+		uni.chooseFile({
+			count: 9,
+			type: "all", // 支持所有文件类型
+			success: (res) => {
+				// @ts-ignore
+				const files = res.tempFiles.map((file: any) => ({
+					tempFilePath: file.path,
+					name: file.name
+				}));
+				resolve(files);
+			},
+			fail: () => resolve(null)
+		});
+	});
+	// #endif
+};
+
+// 从聊天记录选择文件（用于"记录"按钮，仅微信小程序）
+const chooseMessageFile = async (): Promise<Array<{
+	tempFilePath: string;
+	name: string;
+}> | null> => {
 	return new Promise((resolve) => {
 		// #ifdef MP-WEIXIN
 		// @ts-ignore
 		uni.chooseMessageFile({
-			count: 1,
+			count: 9,
 			type: "all", // 支持所有文件类型
 			success: (res) => {
-				const file = res.tempFiles[0];
-				resolve({
+				const files = res.tempFiles.map((file: any) => ({
 					tempFilePath: file.path,
 					name: file.name
-				});
+				}));
+				resolve(files);
 			},
 			fail: () => {
 				resolve(null);
@@ -443,13 +529,78 @@ const chooseFile = async (): Promise<{ tempFilePath: string; name: string } | nu
 		// #endif
 
 		// #ifndef MP-WEIXIN
-		ui.showToast({
-			message: "此功能仅在微信小程序中可用",
-			type: "error"
-		});
 		resolve(null);
 		// #endif
 	});
+};
+
+// #ifdef MP-WEIXIN
+// 处理 WebView 上传成功（通过事件总线）
+const handleWebviewUploadSuccess = async (
+	files: Array<{ name: string; ossUrl: string; type: KnowledgeObjectType }>
+) => {
+	// 创建知识库条目
+	for (const file of files) {
+		await CreateKnowledge({
+			type: file.type,
+			title: file.name,
+			filename: file.name,
+			ossUrl: file.ossUrl,
+			textContent: null
+		});
+	}
+
+	// 刷新列表
+	await loadData();
+	ui.showToast({ message: `成功上传 ${files.length} 个文件` });
+};
+// #endif
+
+// 批量上传文件
+const uploadFiles = async (files: Array<{ tempFilePath: string; name: string }>) => {
+	let successCount = 0;
+	let failCount = 0;
+
+	uni.showLoading({ title: `上传中 0/${files.length}` });
+
+	for (let i = 0; i < files.length; i++) {
+		const file = files[i];
+		try {
+			uni.showLoading({ title: `上传中 ${i + 1}/${files.length}` });
+
+			const uploadResult = await uploadToOss({
+				filePath: file.tempFilePath,
+				dirPrefix: "knowledge-base"
+			});
+
+			const isImage = uploadResult.ext.mimeType.startsWith("image/");
+			const finalType = isImage ? 2 : 1;
+
+			const payload: CreateKnowledgePayload = {
+				type: finalType,
+				title: file.name,
+				filename: uploadResult.key.split("/").pop() || file.name,
+				ossUrl: uploadResult.ext.oss_url,
+				textContent: null
+			};
+
+			await CreateKnowledge(payload);
+			successCount++;
+		} catch (error: any) {
+			log.error(`文件上传失败: ${file.name}`, error);
+			failCount++;
+		}
+	}
+
+	uni.hideLoading();
+
+	if (failCount === 0) {
+		ui.showToast({ message: `成功上传 ${successCount} 个文件`, type: "success" });
+	} else {
+		ui.showToast({ message: `成功 ${successCount} 个，失败 ${failCount} 个`, type: "error" });
+	}
+
+	loadData();
 };
 
 // 创建新项目
@@ -457,74 +608,24 @@ const createItem = async (type: string) => {
 	try {
 		// 文件类型需要先上传
 		if (type === "file") {
-			// 选择文件（支持所有类型，包括图片）
-			const chooseResult = await chooseFile();
-			if (!chooseResult) {
+			// 从本地选择文件
+			const chooseResult = await chooseLocalFile();
+			if (!chooseResult || chooseResult.length === 0) {
 				return; // 用户取消选择
 			}
 
-			// 显示上传中提示
-			uni.showLoading({ title: "上传中..." });
-
-			// 上传到 OSS
-			const uploadResult = await uploadToOss({
-				filePath: chooseResult.tempFilePath,
-				dirPrefix: "knowledge-base"
-			});
-
-			uni.hideLoading();
-
-			// 根据 MIME 类型判断是图片还是文件
-			const isImage = uploadResult.ext.mimeType.startsWith("image/");
-			const finalType = isImage ? 2 : 1; // 2=图片, 1=文件
-
-			// 构建请求参数
-			const payload: CreateKnowledgePayload = {
-				type: finalType,
-				title: chooseResult.name,
-				filename: uploadResult.key.split("/").pop() || chooseResult.name,
-				ossUrl: uploadResult.ext.oss_url,
-				textContent: null
-			};
-
-			await CreateKnowledge(payload);
-			ui.showToast({ message: "创建成功", type: "success" });
-			loadData();
+			// 批量上传文件
+			await uploadFiles(chooseResult);
 		} else if (type === "record") {
 			// #ifdef MP-WEIXIN
-			// 选择文件
-			const chooseResult = await chooseFile();
-			if (!chooseResult) {
+			// 从聊天记录选择文件
+			const chooseResult = await chooseMessageFile();
+			if (!chooseResult || chooseResult.length === 0) {
 				return; // 用户取消选择
 			}
 
-			// 显示上传中提示
-			uni.showLoading({ title: "上传中..." });
-
-			// 上传到 OSS
-			const uploadResult = await uploadToOss({
-				filePath: chooseResult.tempFilePath,
-				dirPrefix: "knowledge-base"
-			});
-
-			uni.hideLoading();
-
-			// 根据 MIME 类型判断是图片还是文件
-			const isImage = uploadResult.ext.mimeType.startsWith("image/");
-			const finalType = isImage ? 2 : 1; // 2=图片, 1=文件
-
-			// 构建请求参数
-			const payload: CreateKnowledgePayload = {
-				type: finalType,
-				title: chooseResult.name,
-				filename: uploadResult.key.split("/").pop() || chooseResult.name,
-				ossUrl: uploadResult.ext.oss_url,
-				textContent: null
-			};
-
-			await CreateKnowledge(payload);
-			ui.showToast({ message: "创建成功", type: "success" });
-			loadData();
+			// 批量上传文件
+			await uploadFiles(chooseResult);
 			// #endif
 
 			// #ifndef MP-WEIXIN
@@ -622,7 +723,19 @@ const openDetail = async (item: KnowledgeObject) => {
 
 onMounted(() => {
 	loadData();
+
+	// #ifdef MP-WEIXIN
+	// 监听文件上传成功事件
+	uni.$on("fileUploadSuccess", handleWebviewUploadSuccess);
+	// #endif
 });
+
+// #ifdef MP-WEIXIN
+onUnmounted(() => {
+	// 移除事件监听
+	uni.$off("fileUploadSuccess", handleWebviewUploadSuccess);
+});
+// #endif
 </script>
 
 <template>
@@ -682,7 +795,15 @@ onMounted(() => {
 				</view>
 
 				<!-- 内容区域 -->
-				<view class="content-area">
+				<scroll-view
+					class="content-area"
+					scroll-y
+					refresher-enabled
+					:refresher-triggered="refreshing"
+					@refresherrefresh="onRefresh"
+					@scrolltolower="onLoadMore"
+					:lower-threshold="100"
+				>
 					<!-- 空状态 -->
 					<view v-if="knowledgeItems.length === 0 && !loading" class="empty-state">
 						<cl-icon name="inbox-line" :size="120" color="#d0d0d0" />
@@ -757,7 +878,13 @@ onMounted(() => {
 							</template>
 						</cl-list-item>
 					</cl-list>
-				</view>
+
+					<!-- 加载更多提示 -->
+					<view v-if="knowledgeItems.length > 0" class="load-more-tip">
+						<cl-text v-if="loadingMore" color="#999" size="14">加载中...</cl-text>
+						<cl-text v-else-if="!hasMore" color="#999" size="14">没有更多了</cl-text>
+					</view>
+				</scroll-view>
 			</view>
 
 			<!-- 知识库新增浮动菜单 -->
@@ -970,6 +1097,7 @@ $content-top: 120px;
 // 内容区域样式
 .content-area {
 	padding: 16px 10px;
+	height: calc(100vh - 122px); // 减去导航栏和筛选栏的高度
 }
 
 // 空状态样式
@@ -978,6 +1106,12 @@ $content-top: 120px;
 	@apply flex-col;
 	padding: 80px 20px;
 	gap: 16px;
+}
+
+// 加载更多提示样式
+.load-more-tip {
+	@include flex-center;
+	padding: 20px 0;
 }
 
 .list-item {

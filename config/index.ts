@@ -43,6 +43,7 @@ type Config = {
 	wx: WxConfig; // 微信配置
 	hxImDebug: boolean; // 是否开启环信 debug
 	voiceCallUrl: string; // 阿里云 ai 实时通话
+	fileUploadUrl: string; // 文件上传 WebView 地址
 };
 
 // 根据环境导出最终配置

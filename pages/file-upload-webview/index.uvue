@@ -1,0 +1,185 @@
+<script lang="ts" setup>
+import { computed, ref, onMounted } from "vue";
+import { isDev, config } from "@/config";
+import { useStore } from "@/cool";
+import { useUi } from "@/uni_modules/cool-ui";
+import { Logger } from "@/cool/utils/log";
+import { PermissionScope, requestPermission } from "@/utils/permission";
+
+const log = new Logger("FileUploadWebviewPage");
+const ui = useUi();
+
+const { user } = useStore();
+
+// 相册/文件权限
+const hasAlbumPermission = ref<boolean>(false);
+const getPerEnd = ref<boolean>(false);
+
+// 是否显示 webview
+const isShowWebview = ref(false);
+
+// 提取 Bearer Token 中的实际 token
+const userToken = computed(() => {
+	const token = user?.token?.split(" ")[1];
+	return token;
+});
+
+const webViewUrl = ref("");
+
+// URL 参数拼接
+const urlParamsSchem = (data: Record<string, any>) => {
+	return Object.entries(data)
+		.map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+		.join("&");
+};
+
+// 显示 WebView
+const showWebview = () => {
+	isShowWebview.value = true;
+	const timestamp = new Date().getTime();
+
+	const params = {
+		page: "upload",
+		isDev: isDev ? 1 : 0,
+		token: userToken.value,
+		refreshToken: user?.refreshToken || "",
+		platform: "mp",
+		formPage: "/pages/knowledge-base/index",
+		timestamp
+	};
+
+	// 根据环境选择 URL
+	const baseUrl = config.fileUploadUrl || config.voiceCallUrl;
+	webViewUrl.value = `${baseUrl}?${urlParamsSchem(params)}`;
+
+	log.info("WebView URL:", webViewUrl.value);
+};
+
+// 检查相册权限
+const checkAlbumPermission = async () => {
+	const result = await requestPermission({
+		scope: PermissionScope.ALBUM,
+		customDescription: "申请获取选中的文件，用于作为表单附件上传",
+		logger: log,
+		ui
+	});
+	hasAlbumPermission.value = result.success;
+	getPerEnd.value = true;
+	log.info("相册权限测试结果:", hasAlbumPermission.value);
+	if (!hasAlbumPermission.value) {
+		ui.showToast({ message: "未获得文件访问权限，无法使用文件上传功能" });
+		// 返回上一页
+		uni.navigateBack();
+		return;
+	}
+};
+
+// 处理 WebView 消息
+const handleMessage = (e: any) => {
+	log.info("收到 WebView 消息:", e);
+
+	const data = e.detail.data[0];
+	if (!data) return;
+
+	log.info("解析后的消息数据:", data);
+
+	if (data.type === "fileUpload" && data.success) {
+		// 转换为知识库所需格式
+		const files = data.files.map((file: any) => {
+			// 判断是否为图片
+			const isImage = file.mimeType && file.mimeType.startsWith("image/");
+
+			return {
+				name: file.name,
+				ossUrl: file.url,
+				type: isImage ? 2 : 1 // 2=图片, 1=文档
+			};
+		});
+
+		log.info("转换后的文件列表:", files);
+
+		// 触发全局事件
+		uni.$emit("fileUploadSuccess", files);
+
+		// 返回上一页
+		// uni.navigateBack();
+	} else if (data.type === "cancel") {
+		log.info("用户取消上传");
+		// 返回上一页
+		// uni.navigateBack();
+	}
+};
+
+// 检查并显示 WebView
+const checkAndShowWebview = async () => {
+	await checkAlbumPermission();
+
+	if (!hasAlbumPermission.value) {
+		return;
+	}
+
+	if (!userToken.value) {
+		ui.showToast({ message: "请先登录" });
+		// 返回上一页
+		uni.navigateBack();
+		return;
+	}
+
+	showWebview();
+};
+
+// 页面加载时执行
+onMounted(() => {
+	checkAndShowWebview();
+});
+</script>
+
+<template>
+	<view class="webview-wrapper">
+		<view class="w-full h-full">
+			<view class="loading-view" v-if="!getPerEnd">
+				<cl-loading :size="42" color="blue"></cl-loading>
+				<cl-text color="info" class="mt-2">加载中...</cl-text>
+			</view>
+			<template v-if="!hasAlbumPermission && getPerEnd">
+				<view class="permission-box">
+					<cl-text color="warn">未获得文件访问权限，无法使用文件上传功能</cl-text>
+					<cl-button @click="checkAndShowWebview()">去授权</cl-button>
+				</view>
+			</template>
+			<template v-else>
+				<web-view
+					v-if="isShowWebview"
+					:src="webViewUrl"
+					class="webview-container"
+					@message="handleMessage"
+				/>
+			</template>
+		</view>
+	</view>
+</template>
+
+<style scoped>
+.webview-wrapper {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	z-index: 9999;
+	background-color: #fff;
+}
+
+.loading-view {
+	@apply w-full h-full flex flex-col items-center justify-center;
+}
+
+.permission-box {
+	@apply w-full h-full flex flex-col items-center justify-center gap-4 transition-all;
+}
+
+.webview-container {
+	width: 100%;
+	height: 100%;
+}
+</style>

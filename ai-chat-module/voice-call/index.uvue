@@ -59,6 +59,7 @@ const showWebview = () => {
 
 	const params = {
 		token: userToken.value,
+		refreshToken: user?.refreshToken || "",
 		agentType: agentType.value,
 		isDev: isDev ? 1 : 0,
 		platform: "mp",
