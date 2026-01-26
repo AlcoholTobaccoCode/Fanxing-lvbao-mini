@@ -47,6 +47,8 @@ const PAGE_SIZE = 20;
 const showFullTime = ref(false);
 // 列表滚动位置（px），用于控制滚动到底部
 const scrollTop = ref(0);
+// 键盘高度
+const keyboardHeight = ref(0);
 const hasInitialScrollDone = ref(false);
 // 是否显示“跳转最新消息”按钮
 const showJumpToLatest = ref(false);
@@ -254,6 +256,11 @@ const shouldShowTime = (index: number) => {
 };
 
 //#endregion
+
+// 键盘高度变化处理
+const handleKeyboardHeightChange = (height: number) => {
+	keyboardHeight.value = height;
+};
 
 //#region 对话逻辑
 const inputModel = ref("");
@@ -596,7 +603,18 @@ const handleToUserHome = () => {};
 						跳转最新消息
 					</cl-button>
 				</view> -->
-				<chat-input v-model:model-value="inputModel" @send="handleSend" />
+				<view
+					class="chat-input-wrapper"
+					:style="{
+						paddingBottom: keyboardHeight > 0 ? keyboardHeight + 'px' : ''
+					}"
+				>
+					<chat-input
+						v-model:model-value="inputModel"
+						@send="handleSend"
+						@keyboard-height-change="handleKeyboardHeightChange"
+					/>
+				</view>
 				<!-- 底部扩展交互区域：根据业务需要控制 extraPanelVisible 展示/隐藏 -->
 				<!-- <view
 					v-if="extraPanelVisible"
@@ -694,5 +712,9 @@ const handleToUserHome = () => {};
 	100% {
 		background-color: rgba(16, 185, 129, 1);
 	}
+}
+
+.chat-input-wrapper {
+	transition: padding-bottom 0.15s ease-out;
 }
 </style>

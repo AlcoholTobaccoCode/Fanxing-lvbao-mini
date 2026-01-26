@@ -66,6 +66,7 @@ const emit = defineEmits<{
 	// 顶部工具选中变化
 	(e: "tool-change", value: Tools): void;
 	(e: "tool-toggle", value: ToolItem): void;
+	(e: "keyboard-height-change", height: number): void;
 }>();
 
 //#region 语音录制相关
@@ -138,6 +139,18 @@ const handleVoiceRecordFinish = async (result: VoiceResult) => {
 };
 
 //#endregion
+
+// 键盘高度变化处理
+const handleKeyboardHeightChange = (e: any) => {
+	const height = e?.detail?.height ?? 0;
+	emit("keyboard-height-change", height);
+};
+
+const handleInputBlur = () => {
+	setTimeout(() => {
+		handleKeyboardHeightChange({ detail: { height: 0 } });
+	}, 200);
+};
 
 //#region 交互
 // 更多功能弹层显隐
@@ -238,9 +251,11 @@ const handleSend = () => {
 						v-model="modelValueModal"
 						clearable
 						auto-height
+						fixed
 						:border="false"
 						:maxlength="20000"
-						:cursorSpacing="20"
+						:cursorSpacing="100"
+						:adjustPosition="false"
 						:showWordLimit="false"
 						:showConfirmBar="false"
 						:disabled="disabled"
@@ -248,7 +263,9 @@ const handleSend = () => {
 						placeholder-class="input-placeholder"
 						adjustKeyboardTo="bottom"
 						@confirm="handleSend"
+						@blur="handleInputBlur"
 						@linechange="handleLineChange"
+						@keyboardheightchange="handleKeyboardHeightChange"
 					></cl-textarea>
 				</scroll-view>
 				<view v-else class="chat-main__voice">
