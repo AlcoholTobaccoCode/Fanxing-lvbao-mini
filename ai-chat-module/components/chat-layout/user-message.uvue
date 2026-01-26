@@ -65,5 +65,6 @@ defineProps<Props>();
 .voice-text {
 	@apply text-sm pl-4 py-2 bg-white rounded-md mt-2;
 	color: #374151;
+	user-select: text;
 }
 </style>
