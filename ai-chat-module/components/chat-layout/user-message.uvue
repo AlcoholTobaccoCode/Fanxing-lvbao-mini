@@ -59,6 +59,7 @@ defineProps<Props>();
 
 .user-bubble--text {
 	@apply p-2 pl-3 text-lg;
+	user-select: text;
 }
 
 .voice-text {
