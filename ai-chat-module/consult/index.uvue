@@ -1,3 +1,6 @@
+<!--
+@description: 咨询聊天页面
+-->
 <script lang="ts" setup>
 import { computed, ref, watch } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";

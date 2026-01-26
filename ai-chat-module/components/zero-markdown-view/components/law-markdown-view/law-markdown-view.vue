@@ -38,7 +38,7 @@ export default {
 		},
 		codeBgColor: {
 			type: String,
-			default: "#2d2d2d"
+			default: "#f3f4f6"
 		}
 	},
 	emits: ["ref-tap", "link-tap"],
@@ -80,7 +80,7 @@ export default {
 				ul: `margin: 10px 0; ${fs(16)} color: #555;`,
 				li: `margin: 5px 0; ${fs(16)} color: #555;`,
 				strong: `font-weight: bold; color: ${c};`,
-				pre: `border-radius: 5px; background: ${bg}; ${fs(12)}`
+				pre: `border-radius: 5px; background: ${bg}; border: 1px solid #e5e7eb; color: #060912; padding: 12px; ${fs(14)}`
 			};
 		}
 	},

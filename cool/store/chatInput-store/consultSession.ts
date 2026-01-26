@@ -676,7 +676,7 @@ export class ConsultSessionStore {
 					},
 					fail: (err: any) => {
 						// 检测是否是用户主动中断
-						const isAbort = this.isAborted || err?.errMsg?.includes('abort');
+						const isAbort = this.isAborted || err?.errMsg?.includes("abort");
 						if (!isAbort) {
 							console.error("[ConsultStream] wx.request fail:", err);
 						}
@@ -714,7 +714,7 @@ export class ConsultSessionStore {
 		} catch (err: any) {
 			console.error("[ConsultSession] 查询失败", err);
 			// 只在非中断错误时显示错误消息
-			const isAbort = this.isAborted || err?.errMsg?.includes('abort');
+			const isAbort = this.isAborted || err?.errMsg?.includes("abort");
 			if (!isAbort && requestId === this.currentRequestId) {
 				aiMsg.content = "咨询失败，请稍后重试";
 				this.streamStatus.value = null;
