@@ -12,6 +12,7 @@ import { navigateToHistorySession } from "@/cool/store/chatInput-store/historyNa
 const tabValue = ref("ai");
 const tabs = ref<ClTabsItem[]>([
 	{ label: "AI对话", value: "ai" }
+	// { label: "我的", value: " my" }
 	// { label: "律师对话", value: "lawyer" }
 ]);
 //#endregion
@@ -52,7 +53,7 @@ defineExpose({
 	<view class="app-setting-list">
 		<!-- 顶部标签栏：AI 对话 / 律师对话 + 编辑 -->
 		<view class="app-setting-tabs">
-			<view class="app-setting-tabs__left">
+			<view class="app-setting-tabs__left" v-if="userId">
 				<cl-tabs v-model="tabValue" :list="tabs" :pt="{ className: '!px-0' }"></cl-tabs>
 			</view>
 			<view class="app-setting-tabs__right">

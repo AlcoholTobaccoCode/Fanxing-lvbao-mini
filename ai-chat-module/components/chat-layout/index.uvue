@@ -3,7 +3,7 @@
 @usage: 用于咨询、法规、案例等所有聊天详情页
 -->
 <script lang="ts" setup>
-import { ref, nextTick, watch } from "vue";
+import { ref, nextTick, watch, onMounted, getCurrentInstance } from "vue";
 
 const props = defineProps<{
 	// 是否正在生成中
@@ -20,42 +20,79 @@ const props = defineProps<{
 
 // 滚动控制
 const scrollTop = ref(0);
-const autoScroll = ref(true);
-const lastScrollTop = ref(0);
-// 上滑检测阈值（像素），避免微小抖动触发
-const SCROLL_UP_THRESHOLD = 10;
+// 用户是否主动上滑（核心状态）
+const isUserScrolledUp = ref(false);
+// scroll-view 可视区域高度
+const scrollViewHeight = ref(0);
+// 是否已完成初始化（保护期内不判断位置）
+const isInitialized = ref(false);
+
+// 获取 scroll-view 高度
+const instance = getCurrentInstance();
+const updateScrollViewHeight = () => {
+	uni.createSelectorQuery()
+		.in(instance)
+		.select(".chat-layout__scroll")
+		.boundingClientRect((rect: any) => {
+			if (rect && rect.height > 0) {
+				scrollViewHeight.value = rect.height;
+			}
+		})
+		.exec();
+};
+
+onMounted(() => {
+	// 立即尝试获取高度
+	updateScrollViewHeight();
+	// 延迟再获取一次，确保渲染完成
+	setTimeout(() => {
+		updateScrollViewHeight();
+		// 初始化完成后，延迟开启位置判断（给自动滚动留时间）
+		setTimeout(() => {
+			isInitialized.value = true;
+		}, 300);
+	}, 100);
+});
+
+// 判断是否在底部附近（5% 容差）
+const isNearBottom = (scrollTop: number, scrollHeight: number): boolean => {
+	const distanceToBottom = scrollHeight - scrollTop - scrollViewHeight.value;
+	return distanceToBottom < scrollViewHeight.value * 0.05;
+};
 
 // 滚动到底部
-const scrollToBottom = (force = false) => {
-	if (!autoScroll.value && !force) return;
+const scrollToBottom = () => {
+	if (isUserScrolledUp.value) return;
 	nextTick(() => {
-		// 使用一个足够大的值确保滚动到底部
 		scrollTop.value = scrollTop.value === 99999 ? 99998 : 99999;
 	});
 };
 
-// 处理滚动事件
+// 处理滚动事件 - 基于位置判断
 const handleScroll = (e: any) => {
-	const top = e?.detail?.scrollTop ?? 0;
-	const diff = lastScrollTop.value - top;
+	// 初始化完成前不判断位置
+	if (!isInitialized.value) return;
+	// 高度未获取到时不判断
+	if (scrollViewHeight.value <= 0) return;
 
-	// 只有明显上滑（超过阈值）才关闭自动滚动
-	if (diff > SCROLL_UP_THRESHOLD && props.loading) {
-		autoScroll.value = false;
+	const currentScrollTop = e.detail?.scrollTop ?? 0;
+	const scrollHeight = e.detail?.scrollHeight ?? 0;
+
+	const atBottom = isNearBottom(currentScrollTop, scrollHeight);
+
+	if (atBottom) {
+		isUserScrolledUp.value = false;
+	} else {
+		isUserScrolledUp.value = true;
 	}
-
-	lastScrollTop.value = top;
-};
-
-// 滚动到底部时，恢复自动滚动
-const handleScrollToLower = () => {
-	autoScroll.value = true;
 };
 
 // 重置自动滚动（开启新一轮对话时调用）
 const resetAutoScroll = () => {
-	autoScroll.value = true;
-	scrollToBottom(true);
+	isUserScrolledUp.value = false;
+	nextTick(() => {
+		scrollTop.value = scrollTop.value === 99999 ? 99998 : 99999;
+	});
 };
 
 // 暴露方法给父组件
@@ -67,18 +104,12 @@ defineExpose({
 // 监听 loading 状态
 watch(
 	() => props.loading,
-	(val, oldVal) => {
+	(val) => {
 		if (val) {
-			// 开始加载时，重置并滚动到底部
-			autoScroll.value = true;
-			scrollToBottom(true);
-		} else if (oldVal === true && val === false) {
-			// 当前轮回答结束，重置滚动标识
-			autoScroll.value = true;
+			scrollToBottom();
 		}
 	}
 );
-
 </script>
 
 <template>
@@ -97,7 +128,6 @@ watch(
 				:scroll-top="scrollTop"
 				:scroll-with-animation="true"
 				@scroll="handleScroll"
-				@scrolltolower="handleScrollToLower"
 			>
 				<!-- 消息列表插槽 -->
 				<slot name="messages"></slot>
@@ -114,17 +144,18 @@ watch(
 						<view class="status-dot status-dot--3"></view>
 					</view>
 				</view>
-
 			</scroll-view>
 		</view>
 
-	<!-- 输入框容器 - 使用 paddingBottom 补偿键盘高度 -->
-	<view
-		class="chat-layout__input-wrapper"
-		:style="{ paddingBottom: (keyboardHeight ?? 0) > 0 ? (keyboardHeight ?? 0) + 'px' : '' }"
-	>
-		<slot name="input"></slot>
-	</view>
+		<!-- 输入框容器 - 使用 paddingBottom 补偿键盘高度 -->
+		<view
+			class="chat-layout__input-wrapper"
+			:style="{
+				paddingBottom: (keyboardHeight ?? 0) > 0 ? (keyboardHeight ?? 0) + 'px' : ''
+			}"
+		>
+			<slot name="input"></slot>
+		</view>
 	</view>
 </template>
 
@@ -227,4 +258,3 @@ watch(
 	}
 }
 </style>
-
