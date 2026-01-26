@@ -142,7 +142,7 @@ $gradient-end: #86fde8;
 $transition-duration: 1000ms;
 
 .consult-starter {
-	@apply flex flex-col px-6;
+	@apply h-full flex flex-col justify-center px-6;
 }
 
 .header-section {
