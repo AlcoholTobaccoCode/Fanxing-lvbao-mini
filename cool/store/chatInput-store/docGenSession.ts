@@ -156,6 +156,7 @@ export class DocGenSessionStore {
 			voice: m.voiceUrl,
 			voiceLength: m.voiceLength,
 			responseType: m.responseType,
+			response_type: m.responseType,
 			hasDocument: m.hasDocument
 		}));
 
@@ -246,7 +247,7 @@ export class DocGenSessionStore {
 		} catch (err: any) {
 			console.error("[DocGenSession] 生成失败", err);
 			// 只在非中断错误时显示错误消息
-			const isAbort = this.isAborted || err?.errMsg?.includes('abort');
+			const isAbort = this.isAborted || err?.errMsg?.includes("abort");
 			if (!isAbort && requestId === this.currentRequestId) {
 				aiMsg.content = "生成失败，请稍后重试";
 				aiMsg.stages = [{ stage: "completed", status: "completed", message: "生成失败" }];
@@ -462,7 +463,7 @@ export class DocGenSessionStore {
 				},
 				fail: (err: any) => {
 					// 检测是否是用户主动中断
-					const isAbort = this.isAborted || err?.errMsg?.includes('abort');
+					const isAbort = this.isAborted || err?.errMsg?.includes("abort");
 					if (!isAbort) {
 						console.error("[DocGenSession] 请求失败:", err);
 					}

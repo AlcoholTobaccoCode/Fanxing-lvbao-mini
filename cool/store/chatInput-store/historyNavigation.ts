@@ -237,8 +237,8 @@ async function restoreDocGenSession(
 		const role = msg.role ?? (msg.sender === "user" ? "user" : "system");
 
 		// 使用保存的 responseType 和 hasDocument，或根据 responseType 推断
-		const responseType = msg.responseType as DocResponseType | undefined;
-		const hasDocument = msg.hasDocument ?? (responseType === "DOC");
+		const responseType = (msg.responseType ?? msg.response_type) as DocResponseType | undefined;
+		const hasDocument = msg.hasDocument ?? responseType === "DOC";
 
 		return {
 			role: role as "user" | "system",
