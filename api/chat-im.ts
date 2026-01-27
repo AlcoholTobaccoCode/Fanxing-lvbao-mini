@@ -9,6 +9,14 @@ export interface SaveChatMessagePayload {
 	senderRole: string;
 	msgType: string;
 	content: string;
+	// 富媒体字段（audio/image/video/file 类型需要）
+	fileUrl?: string;
+	fileName?: string;
+	duration?: number; // 音视频时长（秒）
+	size?: number; // 文件大小（byte）
+	width?: number; // 图片/视频宽度
+	height?: number; // 图片/视频高度
+	ext?: Record<string, any>;
 }
 
 export interface SaveChatMessageResponse {

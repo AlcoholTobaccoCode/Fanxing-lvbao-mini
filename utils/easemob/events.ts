@@ -86,22 +86,55 @@ export const sdkEvents = {
 		console.info("[IM] 发送消息成功 res =====> ", res);
 		imBus.emit("im:onSendMsg", res);
 		const msg = res.message || {};
-		// TODO - 多媒体 消息区分
+		const body = msg.body || {};
+		const msgType = msg.type || body.type || "txt";
+
+		// 基础字段
 		const payload: SaveChatMessagePayload = {
 			message_id: msg.id,
 			senderId: msg.from,
 			receiverId: msg.to,
 			senderRole: "user",
-			msgType: msg.type,
-			content: msg.msg
+			msgType: msgType,
+			content: ""
 		};
-		log.info("onTextMessage Save payload", payload);
+
+		// 根据消息类型填充字段
+		if (msgType === "txt") {
+			payload.content = msg.msg || body.msg || "";
+		} else {
+			// 富媒体消息：audio/image/video/file
+			payload.fileUrl = msg.url || body.url || "";
+			payload.fileName = msg.filename || body.filename || "";
+			payload.content = "";
+
+			// 音视频时长
+			if (msgType === "audio" || msgType === "video") {
+				payload.duration = msg.length || body.length || 0;
+			}
+
+			// 图片/视频尺寸
+			if (msgType === "image" || msgType === "video") {
+				payload.width = msg.width || body.width;
+				payload.height = msg.height || body.height;
+			}
+
+			// 文件大小
+			payload.size = msg.file_length || body.file_length;
+		}
+
+		// ext 扩展字段
+		if (msg.ext || body.ext) {
+			payload.ext = msg.ext || body.ext;
+		}
+
+		log.info("onSendMsg Save payload", payload);
 		SaveChatMessage(payload)
 			.then(() => {
-				log.info("onTextMessage Save Success");
+				log.info("SaveChatMessage Success");
 			})
 			.catch((e) => {
-				log.info("onTextMessage Save Error:", JSON.stringify(e));
+				log.info("SaveChatMessage Error:", JSON.stringify(e));
 			});
 	},
 	// 发送消息失败

@@ -127,11 +127,14 @@ const getLastMessagePreview = (item: EasemobConversationItem) => {
 	if (type === "txt") {
 		return m.msg || "";
 	}
+	if (type === "audio") {
+		return `[语音] ${m.length}"`;
+	}
 	if (type === "img" || type === "image") {
-		return "[图片消息]";
+		return "[图片]";
 	}
 	if (type === "file") {
-		return "[文件消息]";
+		return "[文件]";
 	}
 	return "[新消息]";
 };
