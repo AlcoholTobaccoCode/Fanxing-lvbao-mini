@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { onShow } from "@dcloudio/uni-app";
 import { type BtnListItem } from "@/components/float-Menu/types";
 import { requestMultiplePermissions, PermissionScope } from "@/utils/permission";
 import { router, useStore, unReadCount as imUnReadCount } from "@/cool";
@@ -9,6 +10,14 @@ import FloatPopupMenu from "./index.vue";
 import RemixIcon from "@/test/icon-all/remixicon.uvue";
 
 const { user } = useStore();
+
+// 路由刷新触发器：用于强制 computed 重新计算
+const routeTrigger = ref(0);
+
+// 页面显示时强制刷新菜单项
+onShow(() => {
+	routeTrigger.value++;
+});
 
 const emits = defineEmits(["use-login"]);
 
@@ -136,6 +145,9 @@ const baseMenuItems = computed<BtnListItem[]>(() => [
 
 // 动态菜单项：根据当前页面过滤菜单
 const customMenuItems = computed<BtnListItem[]>(() => {
+	// 依赖 routeTrigger 强制重新计算（解决页面返回时路由未及时更新的问题）
+	void routeTrigger.value;
+
 	const currentPath = router.path();
 	const isHomePage = router.isHomePage();
 
