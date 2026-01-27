@@ -66,6 +66,8 @@ const scrollIntoViewId = ref("");
 const scrollViewHeight = ref(0);
 // 高亮消息索引（用于跳转时的高亮动画）
 const highlightIndex = ref<number | null>(null);
+// 加载更多前的 scrollHeight，用于保持滚动位置
+const lastScrollHeight = ref(0);
 
 // 防抖标记已读相关变量
 let markReadTimer: any = null;
@@ -162,6 +164,31 @@ const loadHistory = async (reset: boolean) => {
 		} else {
 			// 加载更多：将合并后的消息与现有列表去重合并
 			historyMessages.value = mergeNewMessages(historyMessages.value, mergedMessages, "asc");
+
+			// 使用 scrollHeight 差值法保持滚动位置
+			nextTick(() => {
+				setTimeout(() => {
+					const instance = getCurrentInstance();
+					if (instance) {
+						uni.createSelectorQuery()
+							.in(instance)
+							.select("#chat-detail-scroll")
+							.scrollOffset((res: any) => {
+								const newScrollHeight = res?.scrollHeight || 0;
+								const heightDiff = newScrollHeight - lastScrollHeight.value;
+								console.info("[IM] 新 scrollHeight:", newScrollHeight, "差值:", heightDiff);
+								if (heightDiff > 0) {
+									// 先重置为 0，再设置目标值，确保 scroll-view 响应
+									scrollTop.value = 0;
+									nextTick(() => {
+										scrollTop.value = heightDiff;
+									});
+								}
+							})
+							.exec();
+					}
+				}, 50); // 给 scroll-view 布局时间
+			});
 		}
 
 		cursor.value = (res && (res.cursor as any)) ?? null;
@@ -185,7 +212,22 @@ const handleScrollToUpper = async () => {
 	}
 
 	pullMoreMsg = setTimeout(async () => {
-		loadHistory(false);
+		// 在加载前同步获取 scrollHeight
+		const instance = getCurrentInstance();
+		if (instance) {
+			uni.createSelectorQuery()
+				.in(instance)
+				.select("#chat-detail-scroll")
+				.scrollOffset((res: any) => {
+					lastScrollHeight.value = res?.scrollHeight || 0;
+					console.info("[IM] 记录加载前 scrollHeight:", lastScrollHeight.value);
+					// 在回调中触发加载，确保 scrollHeight 已记录
+					loadHistory(false);
+				})
+				.exec();
+		} else {
+			loadHistory(false);
+		}
 	}, 400);
 };
 
@@ -328,7 +370,7 @@ const handleSend = async (data: SendData) => {
 				to: targetId.value,
 				chatType: "singleChat",
 				url: v.onlineUrl,
-				filename: v.tempFilePath,
+				filename: v.onlineUrl?.split("/").pop() || "",
 				fileSize: undefined,
 				length: Math.ceil((v.duration || 0) / 1000),
 				ext: {
@@ -610,7 +652,7 @@ const handleToUserHome = () => {};
 								<view
 									class="chat-message"
 									:style="{
-										maxWidth: '90%',
+										maxWidth: '88%',
 										backgroundColor: m.from === targetId ? '#fff' : '#95ec69',
 										color: '#000'
 									}"
