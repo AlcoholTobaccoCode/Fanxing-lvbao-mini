@@ -58,6 +58,10 @@ const hasInitialScrollDone = ref(false);
 const showJumpToLatest = ref(false);
 // 未读的最新消息数
 const unreadMsgNum = ref(0);
+// 第一条未读消息在 historyMessages 中的索引
+const firstUnreadIndex = ref<number | null>(null);
+// scroll-into-view 目标 id
+const scrollIntoViewId = ref("");
 // scroll-view 可视高度（px），用于计算与底部的距离
 const scrollViewHeight = ref(0);
 
@@ -403,8 +407,12 @@ const onTextMessageHandler = (msg: OnTextMsgResult) => {
 		if (targetId.value === msg.to) {
 			scrollToBottom();
 		}
-		// 如果是当前用户接收的消息, 且离开底部超过一定距离, 未读消息数+1
+		// 如果是当前用户接收的消息, 且离开底部超过一定距离, 记录未读消息
 		if (targetId.value === msg.from && showJumpToLatest.value) {
+			// 记录第一条未读消息的索引（只在第一次设置）
+			if (firstUnreadIndex.value === null) {
+				firstUnreadIndex.value = historyMessages.value.length - 1; // 刚 push 的位置
+			}
 			unreadMsgNum.value++;
 		}
 		// 立即标记该消息为已读（使用防抖优化）
@@ -478,14 +486,24 @@ onBeforeUnmount(() => {
 });
 
 watch(showJumpToLatest, (val) => {
-	if (val) {
+	if (!val) {
+		// 回到底部了，重置未读状态
+		firstUnreadIndex.value = null;
 		unreadMsgNum.value = 0;
 	}
 });
 
-// 点击“跳转最新消息”按钮
+// 点击"跳转最新消息"按钮
 const handleJumpToLatest = () => {
-	scrollToBottom();
+	if (firstUnreadIndex.value !== null) {
+		// 使用 scroll-into-view 定位到第一条未读消息
+		scrollIntoViewId.value = `msg-${firstUnreadIndex.value}`;
+	} else {
+		scrollToBottom();
+	}
+	// 重置未读状态
+	firstUnreadIndex.value = null;
+	unreadMsgNum.value = 0;
 };
 
 // 跳转用户首页
@@ -513,13 +531,15 @@ const handleToUserHome = () => {};
 						scroll-y
 						class="chat-detail-content__scroll"
 						:scroll-top="scrollTop"
+						:scroll-into-view="scrollIntoViewId"
 						@scroll="handleScroll"
 						@scrolltoupper="handleScrollToUpper"
 					>
 						<view
 							v-for="(m, index) in historyMessages"
 							:key="m.id"
-							class="mb-4 flex flex-col items-center px-4"
+							:id="`msg-${index}`"
+							class="mb-4 flex flex-col items-center px-4 py-2"
 						>
 							<view
 								v-if="shouldShowTime(index)"
