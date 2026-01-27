@@ -11,6 +11,13 @@ const ui = useUi();
 
 const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
 
+// 列表动态高度（safeArea.height - 顶部筛选区域 - tabbar）
+const listHeight = ref('400px');
+
+// 动态控制下拉刷新
+const refresherEnabled = ref(true);
+const REFRESH_DISABLE_THRESHOLD = 10; // 滚动超过 10px 时禁用下拉刷新
+
 // 搜索关键字
 const keyword = ref("");
 
@@ -100,6 +107,16 @@ async function onPull() {
 	await refresh({ page: 1 });
 	listViewRef.value?.stopRefresh();
 }
+
+// 监听滚动，动态控制下拉刷新
+const onScroll = (e: UniScrollEvent) => {
+	const scrollTop = e.detail.scrollTop;
+	if (scrollTop > REFRESH_DISABLE_THRESHOLD && refresherEnabled.value) {
+		refresherEnabled.value = false;
+	} else if (scrollTop <= REFRESH_DISABLE_THRESHOLD && !refresherEnabled.value) {
+		refresherEnabled.value = true;
+	}
+};
 
 // 防抖搜索函数
 const debouncedSearch = debounce(() => {
@@ -273,6 +290,12 @@ const handleConsult = (lawyer: any) => {
 };
 
 onReady(() => {
+	// 计算列表高度 = safeArea.height - 顶部筛选区域(约120px) - tabbar(60px)
+	const windowInfo = uni.getWindowInfo();
+	const filterHeight = 120; // 搜索框 + 筛选栏
+	const tabbarHeight = 60;
+	listHeight.value = `${windowInfo.safeArea.height - filterHeight - tabbarHeight}px`;
+
 	ui.showLoading(t("加载中"));
 	refresh({});
 });
@@ -280,53 +303,55 @@ onReady(() => {
 
 <template>
 	<view class="lawyer-list-root">
-		<!-- 搜索框 -->
-		<view class="lawyer-list__search">
-			<cl-input
-				v-model="keyword"
-				clearable
-				placeholder="搜索律师姓名..."
-				:pt="{
-					className: '!bg-white !rounded-xl !shadow-sm !border !border-gray-100',
-					input: {
-						className: '!text-base !text-gray-900 !placeholder-gray-400'
-					}
-				}"
-				@input="handleInput"
-				@confirm="handleSearch"
-				@clear="handleInput"
-			>
-				<template #prepend>
-					<cl-icon name="search-line" :size="40" color="#9CA3AF"></cl-icon>
-				</template>
-			</cl-input>
-		</view>
-
-		<!-- 筛选栏容器 -->
-		<view class="lawyer-list__filter-section">
-			<view class="filter-dimension-btn" @tap="toggleSortOrder">
-				<text class="filter-dimension-btn__label">{{
-					dimensionLabels[sortDimension]
-				}}</text>
-				<cl-icon
-					v-if="sortOrder === 'desc'"
-					name="arrow-down-s-fill"
-					:size="28"
-					color="#3B82F6"
-				></cl-icon>
-				<cl-icon
-					v-if="sortOrder === 'asc'"
-					name="arrow-up-s-fill"
-					:size="28"
-					color="#3B82F6"
-				></cl-icon>
+		<cl-sticky>
+			<!-- 搜索框 -->
+			<view class="lawyer-list__search">
+				<cl-input
+					v-model="keyword"
+					clearable
+					placeholder="搜索律师姓名..."
+					:pt="{
+						className: '!bg-white !rounded-xl !shadow-sm !border !border-gray-100',
+						input: {
+							className: '!text-base !text-gray-900 !placeholder-gray-400'
+						}
+					}"
+					@input="handleInput"
+					@confirm="handleSearch"
+					@clear="handleInput"
+				>
+					<template #prepend>
+						<cl-icon name="search-line" :size="40" color="#9CA3AF"></cl-icon>
+					</template>
+				</cl-input>
 			</view>
 
-			<view class="filter-action-btn" @tap="openFilterPanel">
-				<cl-icon name="filter-3-line" :size="28" color="#3B82F6"></cl-icon>
-				<text class="filter-action-btn__label">筛选</text>
+			<!-- 筛选栏容器 -->
+			<view class="lawyer-list__filter-section">
+				<view class="filter-dimension-btn" @tap="toggleSortOrder">
+					<text class="filter-dimension-btn__label">{{
+						dimensionLabels[sortDimension]
+					}}</text>
+					<cl-icon
+						v-if="sortOrder === 'desc'"
+						name="arrow-down-s-fill"
+						:size="28"
+						color="#3B82F6"
+					></cl-icon>
+					<cl-icon
+						v-if="sortOrder === 'asc'"
+						name="arrow-up-s-fill"
+						:size="28"
+						color="#3B82F6"
+					></cl-icon>
+				</view>
+
+				<view class="filter-action-btn" @tap="openFilterPanel">
+					<cl-icon name="filter-3-line" :size="28" color="#3B82F6"></cl-icon>
+					<text class="filter-action-btn__label">筛选</text>
+				</view>
 			</view>
-		</view>
+		</cl-sticky>
 
 		<!-- 筛选弹窗 -->
 		<cl-popup
@@ -415,14 +440,16 @@ onReady(() => {
 			ref="listViewRef"
 			:data="listView"
 			:virtual="false"
+			:style="{ height: listHeight }"
 			:pt="{
 				refresher: {
 					className: 'pt-3'
 				}
 			}"
-			:refresher-enabled="true"
+			:refresher-enabled="refresherEnabled"
 			@pull="onPull"
 			@bottom="loadMore"
+			@scroll="onScroll"
 		>
 			<template #item="{ value }">
 				<lawyer-item :value="value" @consult="handleConsult"></lawyer-item>
@@ -439,8 +466,7 @@ onReady(() => {
 
 <style lang="scss" scoped>
 .lawyer-list-root {
-	@apply flex-1 w-full h-full overflow-visible box-border flex flex-col;
-	min-height: 500px;
+	@apply flex-1 w-full overflow-hidden box-border flex flex-col;
 }
 
 .lawyer-list__search {
