@@ -64,6 +64,8 @@ const firstUnreadIndex = ref<number | null>(null);
 const scrollIntoViewId = ref("");
 // scroll-view 可视高度（px），用于计算与底部的距离
 const scrollViewHeight = ref(0);
+// 高亮消息索引（用于跳转时的高亮动画）
+const highlightIndex = ref<number | null>(null);
 
 // 防抖标记已读相关变量
 let markReadTimer: any = null;
@@ -498,6 +500,12 @@ const handleJumpToLatest = () => {
 	if (firstUnreadIndex.value !== null) {
 		// 使用 scroll-into-view 定位到第一条未读消息
 		scrollIntoViewId.value = `msg-${firstUnreadIndex.value}`;
+		// 触发高亮动画
+		highlightIndex.value = firstUnreadIndex.value;
+		// 动画结束后清除高亮状态
+		setTimeout(() => {
+			highlightIndex.value = null;
+		}, 1500);
 	} else {
 		scrollToBottom();
 	}
@@ -540,6 +548,7 @@ const handleToUserHome = () => {};
 							:key="m.id"
 							:id="`msg-${index}`"
 							class="mb-4 flex flex-col items-center px-4 py-2"
+							:class="{ 'msg-highlight': highlightIndex === index }"
 						>
 							<view
 								v-if="shouldShowTime(index)"
@@ -614,7 +623,6 @@ const handleToUserHome = () => {};
 										"
 									>
 										{{ m.msg || (m.body && m.body.msg) || "" }}
-										[{{ showJumpToLatest }}]
 									</view>
 									<!-- 语音消息：点击播放 -->
 									<view
@@ -785,5 +793,21 @@ const handleToUserHome = () => {};
 
 .chat-input-wrapper {
 	transition: padding-bottom 0.15s ease-out;
+}
+
+.msg-highlight {
+	animation: highlight-fade 1.5s ease-out;
+}
+
+@keyframes highlight-fade {
+	0% {
+		background-color: transparent;
+	}
+	20% {
+		background-color: rgba(36, 163, 95, 0.3);
+	}
+	100% {
+		background-color: transparent;
+	}
 }
 </style>
