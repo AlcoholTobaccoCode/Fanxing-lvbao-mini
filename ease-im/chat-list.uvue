@@ -1,15 +1,12 @@
 <script lang="ts" setup>
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import { isDark, router, usePager } from "@/cool";
+import { isDark, router, usePager, useStore } from "@/cool";
 import { type EasemobConversationItem, getEasemobServerConversations } from "@/utils/easemob";
 import { imBus } from "@/utils/easemob/events";
 import { useChatUsernames, formatUnread } from "./hook";
 import { sleepWait } from "@/utils";
-
-/* 
-	TODO
-	- 合并环信、本地接口
-*/
+import { GetChatSessions, type ChatSessionItem } from "@/api/chat-im";
+import { mergeConversations, type UnifiedConversation } from "@/utils/easemob/merge";
 
 const listViewRef = ref<ClListViewComponentPublicInstance | null>(null);
 
@@ -20,52 +17,70 @@ const {
 	getAvatarUrl
 } = useChatUsernames();
 
+const { user } = useStore();
+
 // 使用环信服务端游标分页
 let serverCursor = "";
 let historyType = 0;
+// 本地会话缓存（首页加载时获取一次）
+let localConversationsCache: ChatSessionItem[] = [];
 
 const { refresh, list, listView, loading, loadMore } = usePager(async (params, { render }) => {
 	const page = Number(params["page"] || 1);
 	const size = Number(params["size"] || 20);
 
-	// 首次加载或下拉刷新：重置游标
+	// 首次加载或下拉刷新：重置游标和本地缓存
 	if (page === 1) {
 		serverCursor = "";
+		localConversationsCache = [];
 	}
 
-	// 如果已经没有更多游标了，并且是向后翻页，则直接返回空列表，避免重复请求首页数据
+	// 如果已经没有更多游标了，并且是向后翻页，则直接返回空列表
 	if (page > 1 && !serverCursor) {
 		const total = (page - 1) * size;
 		return render({
 			list: [],
-			pagination: {
-				page,
-				size,
-				total
-			}
+			pagination: { page, size, total }
 		});
 	}
 
-	const res = await getEasemobServerConversations({
-		pageSize: size,
-		cursor: serverCursor,
-		includeEmptyConversations: false
-	});
+	// 并行请求环信 + 本地会话（所有页面都合并）
+	let easemobConversations: EasemobConversationItem[] = [];
+	const [easemobRes, localRes] = await Promise.all([
+		getEasemobServerConversations({
+			pageSize: size,
+			cursor: serverCursor,
+			includeEmptyConversations: false
+		}),
+		GetChatSessions().catch((e) => {
+			console.error("GetChatSessions error", e);
+			return { data: { conversations: [] } };
+		})
+	]);
 
-	let conversations = (res?.data?.conversations || []) as EasemobConversationItem[];
-	serverCursor = res?.data?.cursor || "";
-	historyType = res.type;
+	easemobConversations = (easemobRes?.data?.conversations || []) as EasemobConversationItem[];
+	serverCursor = easemobRes?.data?.cursor || "";
+	historyType = easemobRes.type;
+	localConversationsCache = (localRes?.data?.conversations || []) as ChatSessionItem[];
 
-	// 这里只能估算 total，主要用于驱动 cl-list-view 的翻页行为
+	// 所有页面都合并去重
+	const currentUserId = String(user.info.value?.id || "");
+	let conversations: (EasemobConversationItem | UnifiedConversation)[] = mergeConversations(
+		easemobConversations,
+		localConversationsCache,
+		currentUserId
+	);
+
+	// 估算 total
 	const total = page * size + (serverCursor ? 1 : 0);
 
+	// 获取用户昵称头像
 	const userIds = conversations
 		.map((e) => Number(e.conversationId))
 		.filter((id) => Number.isFinite(id));
 	if (userIds.length) {
 		try {
 			const { users } = await fetchUsernames({ userIds });
-			// 创建 userId -> user 的映射
 			const userMap = new Map(users.map((user) => [user.userId, user]));
 
 			conversations.forEach((conv) => {
@@ -78,6 +93,7 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 				m.ext.sendUserInfo = {
 					...(m.ext.sendUserInfo || {}),
 					name: String(user.username),
+					lawyerName: user.lawyerName,
 					avatarUrl: user.avatarUrl
 				};
 				(conv as any).lastMessage = m;
@@ -91,11 +107,7 @@ const { refresh, list, listView, loading, loadMore } = usePager(async (params, {
 
 	render({
 		list: conversations,
-		pagination: {
-			page,
-			size,
-			total
-		}
+		pagination: { page, size, total }
 	});
 });
 

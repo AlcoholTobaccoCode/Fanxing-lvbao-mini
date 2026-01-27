@@ -111,6 +111,7 @@ export interface GetUserProfilesPayload {
 export interface UserProfiles {
 	userId: number;
 	username: string;
+	lawyerName: string;
 	avatarUrl: string;
 }
 

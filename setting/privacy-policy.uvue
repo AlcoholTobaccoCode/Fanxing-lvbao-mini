@@ -841,7 +841,7 @@
 						<view class="flex flex-row flex-wrap mb-2">
 							<cl-text :pt="{ className: 'font-bold' }"> • 办公地址： </cl-text>
 							<cl-text :pt="{ className: 'text-base leading-relaxed mb-3' }">
-								湖北省武汉市江夏区庙山产业园庙山中路3号汤逊湖民营工业园江夏德松科技开发中心六号厂房6楼西6103室(113)（入驻中电创智科技企业孵化器）
+								湖北省武汉市江夏区庙山产业园庙山中路3号汤逊湖民营工业园江夏德松科技开发中心六号厂房6楼西6103室(113)(入驻中电创智科技企业孵化器)
 							</cl-text>
 						</view>
 					</view>

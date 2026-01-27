@@ -3,7 +3,7 @@ import type { EasemobConversationItem } from "@/utils/easemob";
 import { getEasemobServerConversations } from "@/utils/easemob";
 import { imBus, type OnTextMsgResult } from "@/utils/easemob/events";
 import { MSG_RECEIVE_BG } from "@/utils";
-
+import { useStore } from "@/cool";
 /**
  * 环信 IM Store
  * 管理全局 IM 状态、未读消息数、会话列表等
@@ -53,7 +53,10 @@ export class ImStore {
 		imBus.on("im:onTextMessage", (msg: OnTextMsgResult) => {
 			console.log("[IM Store] 收到新消息，更新本地缓存", msg);
 			this.updateConversationByMessage(msg, true);
-			this.playAudio();
+			const { user } = useStore();
+			if (user.info.value?.id != +msg.from) {
+				this.playAudio();
+			}
 		});
 
 		// 监听发送消息成功 - 更新本地缓存（未读数不变）

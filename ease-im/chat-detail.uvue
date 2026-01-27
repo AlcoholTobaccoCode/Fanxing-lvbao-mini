@@ -2,7 +2,7 @@
 获取指定用户历史消息
 -->
 <script lang="ts" setup>
-import { getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { config } from "@/config";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
@@ -16,8 +16,9 @@ import type { SendData } from "@/cool/types/chat-input";
 import { imBus } from "@/utils/easemob/events";
 import { type OnTextMsgResult } from "@/utils/easemob/events";
 import { useChatUsernames } from "./hook";
-import { type UserProfiles } from "@/api/chat-im";
+import { type UserProfiles, GetChatHistory, type ChatHistoryMessage } from "@/api/chat-im";
 import { useStore } from "@/cool";
+import { mergeMessages, mergeNewMessages, type UnifiedMessage } from "@/utils/easemob/merge";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/ai-chat-module/components/chat-input/user-chat/index.uvue";
@@ -35,13 +36,16 @@ const targetId = ref<string>("");
 const fromUserInfo = ref<UserProfiles>({
 	userId: 0,
 	username: "",
-	avatarUrl: ""
+	avatarUrl: "",
+	lawyerName: ""
 });
 const loading = ref(false);
 const cursor = ref<string | number | null>(-1);
 const hasMore = ref(false);
 
-const historyMessages = ref<any[]>([]);
+const historyMessages = ref<UnifiedMessage[]>([]);
+// 本地消息缓存
+let localMessagesCache: ChatHistoryMessage[] = [];
 
 const PAGE_SIZE = 20;
 const showFullTime = ref(false);
@@ -52,6 +56,8 @@ const keyboardHeight = ref(0);
 const hasInitialScrollDone = ref(false);
 // 是否显示“跳转最新消息”按钮
 const showJumpToLatest = ref(false);
+// 未读的最新消息数
+const unreadMsgNum = ref(0);
 // scroll-view 可视高度（px），用于计算与底部的距离
 const scrollViewHeight = ref(0);
 
@@ -59,9 +65,12 @@ const scrollViewHeight = ref(0);
 let markReadTimer: any = null;
 const pendingMarkReadTimestamp = ref<number | null>(null);
 
-// 滚动到底部：每次把 scrollTop 增加一大段，scroll-view 会自动滚到底
 const scrollToBottom = () => {
-	scrollTop.value += 1000;
+	nextTick(() => {
+		setTimeout(() => {
+			scrollTop.value = 999999;
+		}, 100);
+	});
 };
 
 // 防抖标记已读函数
@@ -95,44 +104,62 @@ const loadHistory = async (reset: boolean) => {
 		if (reset) {
 			cursor.value = -1;
 			historyMessages.value = [];
+			localMessagesCache = [];
 		}
 
-		const res = await getEasemobHistoryMessages({
-			targetId: targetId.value.trim(),
-			chatType: "singleChat",
-			pageSize: PAGE_SIZE,
-			cursor: cursor.value,
-			searchDirection: "up"
-		});
+		// 所有加载都并行请求环信 + 本地历史消息
+		const [easemobRes, localRes] = await Promise.all([
+			getEasemobHistoryMessages({
+				targetId: targetId.value.trim(),
+				chatType: "singleChat",
+				pageSize: PAGE_SIZE,
+				cursor: cursor.value,
+				searchDirection: "up"
+			}),
+			GetChatHistory({
+				peerId: targetId.value.trim(),
+				fromTimestamp: 0,
+				toTimestamp: Date.now(),
+				page: 1,
+				pageSize: 50
+			}).catch((e) => {
+				console.error("GetChatHistory error", e);
+				return { data: { messages: [] } };
+			})
+		]);
+
+		const res = easemobRes;
+		const easemobMessages = ((res && (res.messages || res.entities)) || []) as any[];
+		localMessagesCache = (localRes?.data?.messages || []) as ChatHistoryMessage[];
 
 		console.info("getEasemobHistoryMessages res ===> ", res);
+		console.info("localMessagesCache ===> ", localMessagesCache);
 
-		if (res.messages?.length) {
-			// 将消息置为已读
+		// 标记已读
+		if (easemobMessages.length) {
 			markMessagesAsRead({
 				peerId: targetId.value,
-				beforeTimestamp: res.messages?.[0]?.time
+				beforeTimestamp: easemobMessages[0]?.time
 			});
 		}
 
-		const list = ((res && (res.messages || res.entities)) || []) as any[];
-		// 接口按时间逆序返回（新到旧），这里统一转为时间正序（旧到新）
-		const pageList = list.slice().reverse();
+		// 合并环信和本地消息
+		const mergedMessages = mergeMessages(easemobMessages, localMessagesCache, "asc");
+
 		if (reset) {
-			// 首次加载：直接用这一页（旧→新）
-			historyMessages.value = pageList;
-			// 首次进入页面时，自动滚动到底部
+			// 首次加载：直接使用合并后的消息
+			historyMessages.value = mergedMessages;
 			if (!hasInitialScrollDone.value) {
 				hasInitialScrollDone.value = true;
 				scrollToBottom();
 			}
 		} else {
-			// 加载更多：在当前列表前面拼接更早的一页（更旧→当前旧）
-			historyMessages.value = pageList.concat(historyMessages.value);
+			// 加载更多：将合并后的消息与现有列表去重合并
+			historyMessages.value = mergeNewMessages(historyMessages.value, mergedMessages, "asc");
 		}
 
 		cursor.value = (res && (res.cursor as any)) ?? null;
-		hasMore.value = !!cursor.value && list.length >= PAGE_SIZE;
+		hasMore.value = !!cursor.value && easemobMessages.length >= PAGE_SIZE;
 	} catch (err) {
 		console.error("[IM] 获取历史消息失败", err);
 		ui.showToast({ message: "获取历史消息失败" });
@@ -167,15 +194,15 @@ const handleScroll = (e: any) => {
 	if (!scrollHeight || !viewportHeight) return;
 
 	const distanceFromBottom = scrollHeight - (scrollTop + viewportHeight);
-	// 距离底部超过一定像素则认为用户离开了底部，这里用 50px 作为阈值
-	showJumpToLatest.value = distanceFromBottom > 50;
+	// 距离底部超过一定像素则认为用户离开了底部，这里用 200px 作为阈值
+	showJumpToLatest.value = distanceFromBottom > 200;
 };
 
 // 获取用户昵称、头像
 const getFromUserInfo = async (conversationId) => {
 	const { users } = await fetchUsernames({ userIds: [conversationId] });
 	const user = users.find((u) => u.userId === Number(conversationId));
-	fromUserInfo.value.username = user?.username || conversationId;
+	fromUserInfo.value.username = user?.lawyerName || user?.username || conversationId;
 	fromUserInfo.value.avatarUrl = user?.avatarUrl || "";
 };
 
@@ -310,10 +337,7 @@ const handleSend = async (data: SendData) => {
 		historyMessages.value.push({
 			...(res?.message || {})
 		});
-		// 如果当前没有离开底部很远，则自动滚动到底部；否则只更新按钮状态
-		if (!showJumpToLatest.value) {
-			scrollToBottom();
-		}
+		scrollToBottom();
 		inputModel.value = "";
 	} catch (error) {
 		ui.showToast({ message: `发送失败: ${JSON.stringify(error)}` });
@@ -329,7 +353,7 @@ let audioCtx: UniApp.InnerAudioContext | null = null;
 const getAudioInfo = (m: any) => {
 	const body = m.body || {};
 	return {
-		id: m.id || m.msgId,
+		id: m.id,
 		url: m.url || body.url,
 		length: m.length || body.length || 0
 	};
@@ -366,15 +390,23 @@ const onTextMessageHandler = (msg: OnTextMsgResult) => {
 	console.group("[ChatDetail] onTextMessage");
 	console.info("[ChatDetail] im:onTextMessage 收到文本消息 ===> ", msg);
 	console.groupEnd();
-	if (targetId.value === msg.from) {
+	if (
+		// 如果新消息发送者是当前会话中发送者，添加到对话列表
+		targetId.value === msg.from ||
+		// 说明是当前用户在其他端发送的消息
+		targetId.value === msg.to
+	) {
 		historyMessages.value.push({
 			...msg
 		});
-		// 如果当前没有离开底部很远，则自动滚动到底部；否则只更新按钮状态
-		if (!showJumpToLatest.value) {
+		// 如果是当前用户发送，直接回到底部
+		if (targetId.value === msg.to) {
 			scrollToBottom();
 		}
-
+		// 如果是当前用户接收的消息, 且离开底部超过一定距离, 未读消息数+1
+		if (targetId.value === msg.from && showJumpToLatest.value) {
+			unreadMsgNum.value++;
+		}
 		// 立即标记该消息为已读（使用防抖优化）
 		debouncedMarkAsRead(msg.time);
 	}
@@ -445,9 +477,14 @@ onBeforeUnmount(() => {
 	}
 });
 
+watch(showJumpToLatest, (val) => {
+	if (val) {
+		unreadMsgNum.value = 0;
+	}
+});
+
 // 点击“跳转最新消息”按钮
 const handleJumpToLatest = () => {
-	showJumpToLatest.value = false;
 	scrollToBottom();
 };
 
@@ -481,7 +518,7 @@ const handleToUserHome = () => {};
 					>
 						<view
 							v-for="(m, index) in historyMessages"
-							:key="m.id || m.msgId"
+							:key="m.id"
 							class="mb-4 flex flex-col items-center px-4"
 						>
 							<view
@@ -557,6 +594,7 @@ const handleToUserHome = () => {};
 										"
 									>
 										{{ m.msg || (m.body && m.body.msg) || "" }}
+										[{{ showJumpToLatest }}]
 									</view>
 									<!-- 语音消息：点击播放 -->
 									<view
@@ -573,7 +611,7 @@ const handleToUserHome = () => {};
 											class="audio-voice__bars flex flex-row items-end gap-[2px]"
 											:class="{
 												'audio-voice__bars--playing':
-													currentAudioId === (m.id || m.msgId)
+													currentAudioId === m.id
 											}"
 										>
 											<view
@@ -593,16 +631,20 @@ const handleToUserHome = () => {};
 						<view id="chat-bottom-a"></view>
 					</scroll-view>
 				</view>
-				<!-- <view class="jump-latest-btn" v-if="showJumpToLatest" @tap="handleJumpToLatest">
-					<cl-button
-						icon="arrow-down-s-line"
-						:pt="{
-							className: '!rounded-none !rounded-tl-lg !rounded-bl-lg !px-1 !py-2'
-						}"
-					>
-						跳转最新消息
-					</cl-button>
-				</view> -->
+				<view
+					class="jump-latest-btn"
+					v-if="showJumpToLatest && unreadMsgNum > 0"
+					@tap="handleJumpToLatest"
+				>
+					<view class="jump-latest-btn__content">
+						<cl-icon
+							size="12px"
+							color="#24a35f"
+							name="arrow-down-double-line"
+						></cl-icon>
+						<cl-text size="12px" color="#24a35f">{{ unreadMsgNum }}条新消息</cl-text>
+					</view>
+				</view>
 				<view
 					class="chat-input-wrapper"
 					:style="{
@@ -656,8 +698,15 @@ const handleToUserHome = () => {};
 }
 
 .jump-latest-btn {
-	@apply fixed right-0;
-	bottom: 100px;
+	@apply fixed right-0 bottom-[100px] z-50;
+	background-color: #fff;
+	border-top-left-radius: 20px;
+	border-bottom-left-radius: 20px;
+}
+
+.jump-latest-btn__content {
+	@apply flex flex-row items-center gap-2;
+	padding: 8px 16px;
 }
 
 .audio-voice__duration {

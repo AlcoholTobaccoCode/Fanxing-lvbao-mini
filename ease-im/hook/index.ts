@@ -26,7 +26,7 @@ export const useChatUsernames = () => {
 	const getTitle = (item: EasemobConversationItem) => {
 		const m: any = (item as any).lastMessage;
 		const extUser = m?.ext?.sendUserInfo;
-		const name = extUser?.name || item.conversationId;
+		const name = extUser?.lawyerName || extUser?.name || item.conversationId;
 		return String(name || "");
 	};
 
