@@ -75,9 +75,12 @@ const pendingMarkReadTimestamp = ref<number | null>(null);
 
 const scrollToBottom = () => {
 	nextTick(() => {
+		// 先重置为当前值-1，再设置目标值，确保 scroll-view 响应
+		const current = scrollTop.value;
+		scrollTop.value = current > 0 ? current - 1 : 0;
 		setTimeout(() => {
 			scrollTop.value = 999999;
-		}, 100);
+		}, 50);
 	});
 };
 
@@ -453,7 +456,7 @@ const onTextMessageHandler = (msg: OnTextMsgResult) => {
 			...msg
 		});
 		// 如果是当前用户发送，直接回到底部
-		if (targetId.value === msg.to) {
+		if (targetId.value === msg.to || !showJumpToLatest.value) {
 			scrollToBottom();
 		}
 		// 如果是当前用户接收的消息, 且离开底部超过一定距离, 记录未读消息
