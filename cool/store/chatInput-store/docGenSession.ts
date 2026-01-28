@@ -170,7 +170,10 @@ export class DocGenSessionStore {
 		} as Record<string, any>;
 	}
 
-	private async saveCurrentSessionSnapshot() {
+	/**
+	 * 保存当前会话快照到后端
+	 */
+	async saveCurrentSessionSnapshot() {
 		try {
 			const { user } = useStore();
 			const userId = (user as any)?.info?.value?.id as number | undefined;

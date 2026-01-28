@@ -47,9 +47,9 @@ const handleClick = () => {
 	<view class="lawyer-card" @click="handleClick">
 		<!-- 头像区域 -->
 		<view class="avatar-section">
-			<view class="avatar">
+			<view class="avatar" @click.stop>
 				<!-- <text class="avatar-text">{{ avatarText }}</text> -->
-				<cl-image mode="scaleToFill" :src="lawyer?.avatar_url || ''" preview>
+				<cl-image mode="scaleToFill" :src="lawyer?.avatar_url || ''" preview @click.stop>
 					<template #loading>
 						<cl-loading :loading="true"></cl-loading>
 					</template>

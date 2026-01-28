@@ -228,6 +228,7 @@ const handleSend = async (data: SendData) => {
 								<doc-preview-box
 									v-if="item.hasDocument"
 									:document-content="item.content"
+									:message-index="index"
 									doc-type="defense"
 								/>
 							</template>
