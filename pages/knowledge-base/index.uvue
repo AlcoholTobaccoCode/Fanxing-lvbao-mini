@@ -187,7 +187,7 @@ const formatTime = (dateStr: string) => {
 
 // 获取完整的 OSS URL
 const getOssUrl = (item: KnowledgeObject): string => {
-	return item.ossUrl || "";
+	return item.oss_url || "";
 };
 
 //#endregion

@@ -94,7 +94,6 @@ export const sdkEvents = {
 			message_id: msg.id,
 			senderId: msg.from,
 			receiverId: msg.to,
-			senderRole: "user",
 			msgType: msgType,
 			content: ""
 		};

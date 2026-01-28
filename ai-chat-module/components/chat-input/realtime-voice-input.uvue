@@ -280,6 +280,11 @@ onUnmounted(() => {
 	if (isRecording.value) {
 		stopRecording();
 	}
+	// 确保 ASR 会话被关闭（即使 isRecording 为 false）
+	if (asrSession.value) {
+		asrSession.value.close();
+		asrSession.value = null;
+	}
 });
 
 defineExpose({

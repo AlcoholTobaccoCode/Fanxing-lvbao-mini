@@ -105,6 +105,14 @@ const checkAndShowWebview = async () => {
 onLoad(() => {
 	checkAndShowWebview();
 });
+
+// 页面卸载时清理 WebView 资源
+onUnload(() => {
+	// 清空 webview URL，触发组件销毁
+	webViewUrl.value = "";
+	isShowWebview.value = false;
+	log.info("VoiceCall 页面卸载，WebView 资源已清理");
+});
 </script>
 
 <template>

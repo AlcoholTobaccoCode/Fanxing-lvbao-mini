@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { ref, computed, watch, getCurrentInstance, onMounted, nextTick } from "vue";
+import { ref, computed, watch, getCurrentInstance, onMounted, onBeforeUnmount, nextTick } from "vue";
 import type { VoiceResult } from "@/cool/types/chat-input";
 import { useUi } from "@/uni_modules/cool-ui";
 
@@ -321,6 +321,20 @@ const finishRecording = () => {
 const handleFooterClick = () => {
 	cancelFromPress();
 };
+
+// 组件卸载时清理资源
+onBeforeUnmount(() => {
+	// 停止录音（如果正在录音）
+	if (recording.value) {
+		RecordApp.Stop(
+			() => {},
+			() => {}
+		);
+		recording.value = false;
+	}
+	// 清理波形视图
+	clearWaveStore();
+});
 
 defineExpose({
 	ensureRecordPermission,

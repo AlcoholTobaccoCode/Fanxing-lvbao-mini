@@ -21,6 +21,9 @@ type LawDetailsMap = Map<string, LawDetailResponse>;
 /** 案例详情缓存 Map，以 caseNo（案号）为 key */
 type CaseDetailsMap = Map<string, CaseDetailResponse>;
 
+/** 缓存最大条目数，防止内存泄漏 */
+const MAX_CACHE_SIZE = 30;
+
 export interface ConsultMessageReferences {
 	searchList?: Array<{
 		hostName?: string;
@@ -94,6 +97,18 @@ export class ConsultSessionStore {
 	/** 案例详情缓存，以 caseNo 为 key */
 	private caseDetailsMap: CaseDetailsMap = new Map();
 
+	/**
+	 * 限制缓存大小，超出时删除最早的条目（简易 LRU）
+	 */
+	private limitCacheSize<K, V>(map: Map<K, V>, maxSize: number) {
+		if (map.size > maxSize) {
+			const keysToDelete = Array.from(map.keys()).slice(0, map.size - maxSize);
+			for (const key of keysToDelete) {
+				map.delete(key);
+			}
+		}
+	}
+
 	// 缓存操作方法
 
 	/**
@@ -152,6 +167,8 @@ export class ConsultSessionStore {
 						this.lawDetailsMap.set(detail.lawId, detail);
 						resultMap.set(detail.lawId, detail);
 					}
+					// 限制缓存大小
+					this.limitCacheSize(this.lawDetailsMap, MAX_CACHE_SIZE);
 				}
 			} catch (err) {
 				console.error("[ConsultSession] 获取法条详情失败", err);
@@ -209,6 +226,8 @@ export class ConsultSessionStore {
 							resultMap.set(caseNo, detail);
 						}
 					}
+					// 限制缓存大小
+					this.limitCacheSize(this.caseDetailsMap, MAX_CACHE_SIZE);
 				}
 			} catch (err) {
 				console.error("[ConsultSession] 获取案例详情失败", err);
@@ -248,6 +267,7 @@ export class ConsultSessionStore {
 				const detail = data[0];
 				// 更新缓存
 				this.lawDetailsMap.set(detail.lawId, detail);
+				this.limitCacheSize(this.lawDetailsMap, MAX_CACHE_SIZE);
 				return detail;
 			}
 		} catch (err) {
@@ -275,6 +295,7 @@ export class ConsultSessionStore {
 				const cNo = detail.caseDomain?.caseNo;
 				if (cNo) {
 					this.caseDetailsMap.set(cNo, detail);
+					this.limitCacheSize(this.caseDetailsMap, MAX_CACHE_SIZE);
 				}
 				return detail;
 			}

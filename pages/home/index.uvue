@@ -53,8 +53,17 @@ const lastModule = ref<ChatModuleKey | null>(null);
 // 当前模块配置
 const currentConfig = computed(() => moduleSwitchStore.currentConfig.value);
 
+// 定时器引用（用于清理）
+let presetTimers: number[] = [];
+
 onLoad(async () => {
 	// 页面加载
+});
+
+// 页面卸载时清理定时器
+onUnload(() => {
+	presetTimers.forEach((timer) => clearTimeout(timer));
+	presetTimers = [];
 });
 
 //#region 交互区域
@@ -139,12 +148,16 @@ const handleSend = async (data: SendData) => {
 const handlePresetSelect = (question: string) => {
 	console.info("handlePresetSelect => ", question);
 	inputValue.value = "";
-	setTimeout(() => {
+	const timer1 = setTimeout(() => {
 		chatInputStore.inputMode.value = "text";
-		setTimeout(() => {
+		const timer2 = setTimeout(() => {
 			inputValue.value = question;
 		}, 300);
+		//@ts-ignore
+		presetTimers.push(timer2);
 	}, 200);
+	//@ts-ignore
+	presetTimers.push(timer1);
 };
 
 // 打开新对话（来自页面按钮或头部菜单）

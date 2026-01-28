@@ -20,7 +20,7 @@ export interface KnowledgeObject {
 	title: string;
 	filename: string | null;
 	description: string | null;
-	ossUrl: string | null;
+	oss_url: string | null;
 	textContent: string | null;
 	createdAt: string;
 	updatedAt: string;

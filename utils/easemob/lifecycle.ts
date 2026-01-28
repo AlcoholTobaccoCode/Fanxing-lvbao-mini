@@ -123,3 +123,19 @@ export const handleIMAppHide = () => {
 export const resetReconnectCount = () => {
 	manualReconnectCount = 0;
 };
+
+/**
+ * 清理 IM 事件监听器
+ * 在 App 销毁或用户登出时调用
+ */
+export const cleanupIMEventListeners = () => {
+	if (!imEventsRegistered) return;
+
+	imBus.off("im:onLoginError", handleLoginError);
+	imBus.off("im:onDisconnected", handleDisconnected);
+	imBus.off("im:onReconnecting", handleReconnecting);
+	imBus.off("im:onConnected", handleConnected);
+
+	imEventsRegistered = false;
+	console.log("[IM] 事件监听器已清理");
+};

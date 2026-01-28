@@ -6,7 +6,6 @@ export interface SaveChatMessagePayload {
 	message_id: string;
 	senderId: string;
 	receiverId: string;
-	senderRole: string;
 	msgType: string;
 	content: string;
 	// 富媒体字段（audio/image/video/file 类型需要）
