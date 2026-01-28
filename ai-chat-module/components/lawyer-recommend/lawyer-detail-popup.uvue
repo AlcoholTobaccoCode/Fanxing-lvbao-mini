@@ -167,9 +167,6 @@ const handleConfirmYes = async () => {
 					<view class="avatar">
 						<!-- <text class="avatar-text">{{ avatarText }}</text> -->
 						<cl-image mode="scaleToFill" :src="lawyer?.avatar_url || ''" preview>
-							<template #loading>
-								<cl-loading :loading="true"></cl-loading>
-							</template>
 							<template #placeholder>
 								<cl-text :size="32" color="white" bold>{{ avatarText }}</cl-text>
 							</template>

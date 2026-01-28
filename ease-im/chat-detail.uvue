@@ -48,6 +48,8 @@ const historyMessages = ref<UnifiedMessage[]>([]);
 let localMessagesCache: ChatHistoryMessage[] = [];
 
 const PAGE_SIZE = 20;
+// 消息列表最大长度，防止内存泄漏
+const MAX_MESSAGES = 500;
 const showFullTime = ref(false);
 // 列表滚动位置（px），用于控制滚动到底部
 const scrollTop = ref(0);
@@ -393,6 +395,10 @@ const handleSend = async (data: SendData) => {
 		historyMessages.value.push({
 			...(res?.message || {})
 		});
+		// 裁剪消息列表，防止内存泄漏
+		if (historyMessages.value.length > MAX_MESSAGES) {
+			historyMessages.value = historyMessages.value.slice(-MAX_MESSAGES);
+		}
 		scrollToBottom();
 		inputModel.value = "";
 	} catch (error) {
@@ -455,6 +461,10 @@ const onTextMessageHandler = (msg: OnTextMsgResult) => {
 		historyMessages.value.push({
 			...msg
 		});
+		// 裁剪消息列表，防止内存泄漏
+		if (historyMessages.value.length > MAX_MESSAGES) {
+			historyMessages.value = historyMessages.value.slice(-MAX_MESSAGES);
+		}
 		// 如果是当前用户发送，直接回到底部
 		if (targetId.value === msg.to || !showJumpToLatest.value) {
 			scrollToBottom();
@@ -530,6 +540,16 @@ onBeforeUnmount(() => {
 		markReadTimer = null;
 	}
 
+	// 清理加载更多定时器
+	if (pullMoreMsg) {
+		clearTimeout(pullMoreMsg);
+		pullMoreMsg = null;
+	}
+
+	// 清理本地消息缓存
+	localMessagesCache = [];
+	historyMessages.value = [];
+
 	if (audioCtx) {
 		audioCtx.stop();
 		audioCtx.destroy();
@@ -582,7 +602,7 @@ const handleToUserHome = () => {};
 				<view class="flex-1 overflow-hidden relative">
 					<!-- 背景 Logo -->
 					<view class="chat-bg-logo">
-						<image :src="config.logo" mode="aspectFit" class="chat-bg-logo__img" />
+						<image :src="config.ico" mode="aspectFit" class="chat-bg-logo__img" />
 					</view>
 					<scroll-view
 						id="chat-detail-scroll"

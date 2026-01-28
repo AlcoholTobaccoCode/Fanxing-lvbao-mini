@@ -33,6 +33,7 @@ type Config = {
 	name: string; // 应用名称
 	version: string; // 应用版本
 	logo: string; // 应用 logo
+	ico: string; // 应用 logo ico
 	locale: string; // 应用语言
 	website: string; // 官网地址
 	host: string; // 主机地址
@@ -53,6 +54,7 @@ export const config = {
 	locale: "zh",
 	website: "https://lvbao.fanxingzhihui.com",
 	logo: "https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/logo.png",
+	ico: "https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/icon.ico",
 	showDarkButton: isMp() ? false : true,
 	isCustomTabBar: true,
 	backTop: true,

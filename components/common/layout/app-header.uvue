@@ -124,22 +124,11 @@ const handleClickLeft = () => {
 
 			<view class="flex flex-col" @tap.stop="toggleMenu">
 				<view class="flex flex-row items-center justify-center">
-					<!-- <cl-avatar
-						:size="40"
-						:src="config.logo"
-						:pt="{
-							icon: {
-								size: 15,
-								name: 'user-line'
-							}
-						}"
-					></cl-avatar> -->
 					<cl-image
 						:width="36"
 						:height="36"
-						preview
 						mode="aspectFill"
-						:src="config.logo"
+						:src="config.ico"
 						:pt="{
 							inner: {
 								className: '!rounded-md'
