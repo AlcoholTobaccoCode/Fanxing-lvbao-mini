@@ -11,6 +11,8 @@ const props = defineProps<{
 	lawyers: RecommendLawyerItem[];
 	sessionId: string;
 	loading?: boolean;
+	/** 是否来自咨询模块，用于触发对话总结确认流程 */
+	fromConsult?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -86,6 +88,7 @@ const hasMore = computed(() => {
 		<lawyer-detail-popup
 			v-model="showDetailPopup"
 			:lawyer="selectedLawyer"
+			:from-consult="fromConsult"
 			@consult="handleConsult"
 		/>
 	</view>

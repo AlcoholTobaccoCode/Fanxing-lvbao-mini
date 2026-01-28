@@ -176,7 +176,12 @@ const loadHistory = async (reset: boolean) => {
 							.scrollOffset((res: any) => {
 								const newScrollHeight = res?.scrollHeight || 0;
 								const heightDiff = newScrollHeight - lastScrollHeight.value;
-								console.info("[IM] 新 scrollHeight:", newScrollHeight, "差值:", heightDiff);
+								console.info(
+									"[IM] 新 scrollHeight:",
+									newScrollHeight,
+									"差值:",
+									heightDiff
+								);
 								if (heightDiff > 0) {
 									// 先重置为 0，再设置目标值，确保 scroll-view 响应
 									scrollTop.value = 0;
@@ -653,13 +658,32 @@ const handleToUserHome = () => {};
 									class="chat-message"
 									:style="{
 										maxWidth: '88%',
-										backgroundColor: m.from === targetId ? '#fff' : '#95ec69',
+										backgroundColor:
+											m.ext?.msgType === 'ai_summary'
+												? 'transparent'
+												: m.from === targetId
+													? '#fff'
+													: '#95ec69',
 										color: '#000'
 									}"
 								>
+									<!-- AI 总结消息 -->
+									<view
+										v-if="m.ext?.msgType === 'ai_summary'"
+										class="ai-summary-card"
+									>
+										<view class="ai-summary-card__content">
+											<text class="ai-summary-card__text">
+												{{ m.msg || (m.body && m.body.msg) || "" }}
+											</text>
+										</view>
+										<view class="ai-summary-card__tag">
+											<text class="ai-summary-card__tag-text">[AI 摘要]</text>
+										</view>
+									</view>
 									<!-- 文本消息 -->
 									<view
-										v-if="
+										v-else-if="
 											m.type !== 'audio' &&
 											(!m.body || m.body.type !== 'audio')
 										"
@@ -851,5 +875,35 @@ const handleToUserHome = () => {};
 	100% {
 		background-color: transparent;
 	}
+}
+
+.ai-summary-card {
+	@apply flex flex-col gap-2 p-3 rounded-xl;
+	background: linear-gradient(135deg, #2d7eb3 0%, #1a5a8a 100%);
+	min-width: 200px;
+	max-width: 100%;
+}
+
+.ai-summary-card__content {
+	@apply rounded-lg p-2;
+	background-color: rgba(255, 255, 255, 0.1);
+}
+
+.ai-summary-card__text {
+	@apply text-xs leading-relaxed;
+	color: rgba(255, 255, 255, 0.9);
+	// display: -webkit-box;
+	// -webkit-line-clamp: 4;
+	// -webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.ai-summary-card__tag {
+	@apply self-end px-2 py-0.5 rounded;
+	background-color: rgba(255, 255, 255, 0.2);
+}
+
+.ai-summary-card__tag-text {
+	@apply text-white text-xs;
 }
 </style>

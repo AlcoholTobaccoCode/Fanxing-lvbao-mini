@@ -124,6 +124,9 @@ const getLastMessagePreview = (item: EasemobConversationItem) => {
 	const m = (item as any).lastMessage;
 	if (!m) return "";
 	const type = m.type;
+	if (m.ext?.msgType === "ai_summary") {
+		return "[AI 摘要]";
+	}
 	if (type === "txt") {
 		return m.msg || "";
 	}

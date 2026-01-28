@@ -46,11 +46,11 @@ export interface BareModelResponse {
 //#region API 函数
 
 /** 裸模调用（非流式） */
-export const callBareModel = (data: BareModelPayload): Promise<ApiResponse<BareModelResponse>> => {
+export const CallBareModel = (data: BareModelPayload): Promise<BareModelResponse> => {
 	return request({
 		url: "/utils/bare_model",
 		method: "POST",
 		data: { ...data, stream: false }
-	}) as Promise<ApiResponse<BareModelResponse>>;
+	}) as Promise<BareModelResponse>;
 };
 //#endregion

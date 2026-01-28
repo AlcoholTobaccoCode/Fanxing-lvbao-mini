@@ -4,11 +4,17 @@
 <script lang="ts" setup>
 import type { RecommendLawyerItem } from "@/api/consult";
 import { computed, ref, watch } from "vue";
-import { router } from "@/cool";
+import { router, useStore } from "@/cool";
+import { useUi } from "@/uni_modules/cool-ui";
+import { summarizeConversation } from "@/ai-chat-module/consult/utils/summarize";
+import { consultSessionStore } from "@/cool/store";
+import { sendEasemobTextMessage } from "@/utils/easemob";
 
 const props = defineProps<{
 	modelValue: boolean;
 	lawyer: RecommendLawyerItem | null;
+	/** 是否来自咨询模块，用于触发对话总结确认流程 */
+	fromConsult?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -28,6 +34,11 @@ watch(
 watch(isVisible, (val) => {
 	emit("update:modelValue", val);
 });
+
+const ui = useUi();
+const { user } = useStore();
+
+const isSummarizing = ref(false);
 
 // 获取头像显示文字（姓名第一个字 + "律"）
 const avatarText = computed(() => {
@@ -67,19 +78,73 @@ const handleClose = () => {
 	isVisible.value = false;
 };
 
-// 点击咨询
-const handleConsult = () => {
+// 跳转到聊天页面
+const navigateToChat = () => {
 	if (!props.lawyer) return;
 	emit("consult", props.lawyer);
 	handleClose();
 
-	// 跳转到环信 IM 聊天页面
 	router.push({
 		path: "/ease-im/chat-detail",
 		query: {
 			conversationId: String(props.lawyer.user_id)
 		}
 	});
+};
+
+// 点击咨询
+const handleConsult = () => {
+	if (!props.lawyer) return;
+	// 如果来自咨询模块，显示确认弹窗
+	if (props.fromConsult) {
+		uni.showModal({
+			title: "提示",
+			content: "是否总结当前对话提供给律师？",
+			confirmText: "是",
+			cancelText: "否",
+			success: (res) => {
+				if (res.confirm) {
+					handleConfirmYes();
+				} else {
+					navigateToChat();
+				}
+			}
+		});
+		return;
+	}
+
+	// 非咨询模块，直接跳转
+	navigateToChat();
+};
+
+// 确认弹窗 - 点击「是」，总结对话并发送
+const handleConfirmYes = async () => {
+	if (!props.lawyer) return;
+
+	isSummarizing.value = true;
+
+	try {
+		const messages = consultSessionStore.messages.value;
+		const summary = await summarizeConversation(messages);
+
+		if (summary) {
+			await sendEasemobTextMessage({
+				to: String(props.lawyer.user_id),
+				chatType: "singleChat",
+				msg: summary,
+				ext: {
+					msgType: "ai_summary"
+				}
+			});
+		}
+
+		navigateToChat();
+	} catch (err) {
+		console.error("[handleConfirmYes] 总结或发送失败", err);
+		ui.showToast({ message: "发送失败，请稍后重试" });
+	} finally {
+		isSummarizing.value = false;
+	}
 };
 </script>
 
@@ -208,9 +273,10 @@ const handleConsult = () => {
 					:pt="{
 						className: '!w-full !rounded-xl !h-[48px]'
 					}"
+					:loading="isSummarizing"
 					@tap="handleConsult"
 				>
-					咨询他
+					{{ isSummarizing ? "正在总结对话..." : "咨询他" }}
 				</cl-button>
 			</view>
 		</view>

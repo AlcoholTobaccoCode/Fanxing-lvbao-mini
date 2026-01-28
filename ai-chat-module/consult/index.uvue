@@ -78,12 +78,6 @@ const handleInputModeChange = (mode: string) => {
 	chatInputStore.inputMode.value = mode as any;
 };
 
-// 推荐律师相关
-const handleLawyerClick = (lawyer: RecommendLawyerItem) => {
-	// TODO - 调用接口获取
-	log.debug("点击律师卡片", lawyer);
-};
-
 const handleMoreLawyers = () => {
 	log.debug("点击更多律师");
 	uni.navigateTo({
@@ -347,12 +341,12 @@ const handleRefTap = (
 									"
 									:lawyers="item.recommendedLawyers || []"
 									:session-id="sessionId"
+									:from-consult="true"
 									:loading="
 										isRecommendLoading &&
 										(!item.recommendedLawyers ||
 											item.recommendedLawyers.length === 0)
 									"
-									@lawyer-click="handleLawyerClick"
 									@more-click="handleMoreLawyers"
 								/>
 
