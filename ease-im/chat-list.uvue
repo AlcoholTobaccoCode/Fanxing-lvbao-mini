@@ -213,7 +213,7 @@ onBeforeUnmount(() => {
 
 <template>
 	<view class="chat-list-root">
-		<view v-if="loading && !list.length && isUsernamesLoading" class="px-3">
+		<view v-if="loading && !list.length" class="px-3">
 			<view v-for="n in 5" :key="n" class="easeim-chat-item">
 				<view class="easeim-chat-item__avatar">
 					<cl-skeleton type="image" loading></cl-skeleton>

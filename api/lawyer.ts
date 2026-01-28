@@ -67,3 +67,31 @@ export const GetLawyerList = (data: LawyerListParams): Promise<LawyerListRespons
 		data
 	});
 };
+
+/**
+ * 律师评价参数
+ */
+export interface LawyerRatingParams {
+	comment: string;
+	lawyerUserId: number;
+	score: number;
+}
+
+/**
+ * 律师评价响应
+ */
+export interface LawyerRatingResponse {
+	score: number;
+	rating_count: number;
+}
+
+/**
+ * 提交律师评价
+ */
+export const SubmitLawyerRating = (data: LawyerRatingParams): Promise<LawyerRatingResponse> => {
+	return request({
+		url: "/lawyer/rating",
+		method: "POST",
+		data
+	});
+};

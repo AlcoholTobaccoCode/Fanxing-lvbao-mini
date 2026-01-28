@@ -21,6 +21,8 @@ const props = withDefaults(
 		voiceName?: string;
 		// 返回按钮
 		backTop?: boolean;
+		// 是否关闭返回拦截 - true 时，关闭，权重最大
+		closeBackIntercept?: boolean;
 		// 标题右侧交互按钮
 		titleAction?: boolean;
 		// 顶部提示性文本
@@ -35,7 +37,8 @@ const props = withDefaults(
 		hideHeader: false,
 		titleAction: false,
 		hideFloatMenu: false,
-		showAiCall: false
+		showAiCall: false,
+		closeBackIntercept: false
 	}
 );
 
@@ -312,7 +315,7 @@ const beforePageContainerLeave = () => {
 			<LoginContent compact />
 		</cl-popup>
 
-		<view v-if="isShowPageContainer">
+		<view v-if="isShowPageContainer && !closeBackIntercept">
 			<page-container
 				:show="isShowPageContainer"
 				:overlay="false"

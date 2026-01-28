@@ -1,0 +1,184 @@
+<script lang="ts" setup>
+import { ref, computed, watch } from "vue";
+import { useUi } from "@/uni_modules/cool-ui";
+import { scoreLabels } from "@/utils/assetsConfig";
+
+const props = defineProps({
+	modelValue: {
+		type: Boolean,
+		default: false
+	},
+	lawyerUserId: {
+		type: Number,
+		default: 0
+	},
+	lawyerName: {
+		type: String,
+		default: ""
+	},
+	lawyerAvatarUrl: {
+		type: String,
+		default: ""
+	}
+});
+
+const emit = defineEmits<{
+	(e: "update:modelValue", value: boolean): void;
+	(e: "submit", data: { score: number; comment: string }): void;
+	(e: "skip"): void;
+}>();
+
+const ui = useUi();
+
+// 评分值
+const score = ref(0);
+// 备注
+const comment = ref("");
+// 提交中
+const submitting = ref(false);
+
+// 评分文字提示
+const scoreLabel = computed(() => {
+	const idx = Math.ceil(score.value);
+	return scoreLabels[idx] || scoreLabels[0];
+});
+
+// 重置状态
+const resetState = () => {
+	score.value = 0;
+	comment.value = "";
+	submitting.value = false;
+};
+
+// 监听弹窗关闭时重置状态
+watch(
+	() => props.modelValue,
+	(val) => {
+		if (!val) {
+			resetState();
+		}
+	}
+);
+
+// 关闭弹窗
+const handleClose = () => {
+	emit("update:modelValue", false);
+};
+
+// 提交评价
+const handleSubmit = () => {
+	if (score.value <= 0) {
+		ui.showToast({ message: "请选择评分" });
+		return;
+	}
+	submitting.value = true;
+	emit("submit", {
+		score: score.value,
+		comment: comment.value.trim()
+	});
+};
+
+// 跳过评价
+const handleSkip = () => {
+	emit("skip");
+};
+</script>
+
+<template>
+	<cl-popup v-model="props.modelValue" direction="center" @close="handleClose">
+		<view class="rating-popup">
+			<!-- 标题 -->
+			<view class="rating-popup__header">
+				<text class="rating-popup__title">服务评价</text>
+			</view>
+
+			<!-- 律师信息 -->
+			<view class="rating-popup__lawyer">
+				<cl-avatar
+					:size="80"
+					:src="lawyerAvatarUrl"
+					:pt="{
+						icon: {
+							size: 40,
+							name: 'user-line'
+						}
+					}"
+				/>
+				<text class="rating-popup__lawyer-name">{{ lawyerName }}</text>
+			</view>
+
+			<!-- 评分 -->
+			<view class="rating-popup__rating">
+				<cl-rate v-model="score" :count="5" :allow-half="false" :size="32" />
+				<text class="rating-popup__score-label">{{ scoreLabel }}</text>
+			</view>
+
+			<!-- 备注输入 -->
+			<view class="rating-popup__comment">
+				<cl-textarea
+					v-model="comment"
+					placeholder="请输入您的评价（选填）"
+					:maxlength="200"
+					:rows="3"
+				/>
+				<view class="flex items-center justify-end">
+					<cl-text color="gray" size="12px"> {{ comment.length }} / 200 </cl-text>
+				</view>
+			</view>
+
+			<!-- 按钮 -->
+			<view class="rating-popup__actions">
+				<cl-button type="info" :pt="{ className: 'flex-1' }" @click="handleSkip">
+					跳过
+				</cl-button>
+				<cl-button
+					type="primary"
+					:loading="submitting"
+					:pt="{ className: 'flex-1' }"
+					@click="handleSubmit"
+				>
+					提交
+				</cl-button>
+			</view>
+		</view>
+	</cl-popup>
+</template>
+
+<style lang="scss" scoped>
+.rating-popup {
+	@apply flex flex-col items-center p-6 pt-2 bg-white rounded-2xl;
+	width: 300px;
+
+	&__header {
+		@apply w-full flex justify-center mb-4;
+	}
+
+	&__title {
+		@apply text-lg font-semibold text-gray-800;
+	}
+
+	&__lawyer {
+		@apply flex flex-col items-center gap-2 mb-4;
+	}
+
+	&__lawyer-name {
+		@apply text-base text-gray-700 font-medium;
+	}
+
+	&__rating {
+		@apply flex flex-col items-center gap-2 mb-4;
+	}
+
+	&__score-label {
+		@apply text-sm text-gray-500;
+	}
+
+	&__comment {
+		@apply w-full mb-4;
+	}
+
+	&__actions {
+		@apply w-full flex flex-row gap-3;
+	}
+}
+</style>

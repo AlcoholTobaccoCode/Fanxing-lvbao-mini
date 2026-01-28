@@ -2,8 +2,16 @@
 获取指定用户历史消息
 -->
 <script lang="ts" setup>
-import { getCurrentInstance, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
-import { config } from "@/config";
+import {
+	computed,
+	getCurrentInstance,
+	nextTick,
+	onBeforeUnmount,
+	onMounted,
+	ref,
+	watch
+} from "vue";
+// import { config } from "@/config";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import {
@@ -17,16 +25,19 @@ import { imBus } from "@/utils/easemob/events";
 import { type OnTextMsgResult } from "@/utils/easemob/events";
 import { useChatUsernames } from "./hook";
 import { type UserProfiles, GetChatHistory, type ChatHistoryMessage } from "@/api/chat-im";
-import { useStore } from "@/cool";
+import { router, useStore } from "@/cool";
 import { mergeMessages, mergeNewMessages, type UnifiedMessage } from "@/utils/easemob/merge";
 
 import AppPage from "@/components/common/layout/app-page.uvue";
 import ChatInput from "@/ai-chat-module/components/chat-input/user-chat/index.uvue";
+import LawyerRatingPopup from "./components/lawyer-rating-popup.uvue";
+import { SubmitLawyerRating } from "@/api/lawyer";
+import { INACTIVITY_TIMEOUT } from "@/utils/assetsConfig";
 
 const log = new Logger("ChatDetailPage");
 const ui = useUi();
 const { user } = useStore();
-const { fetchUsernames, getTitle } = useChatUsernames();
+const { fetchUsernames } = useChatUsernames();
 
 //#region 加载历史对话
 
@@ -71,6 +82,16 @@ const highlightIndex = ref<number | null>(null);
 // 加载更多前的 scrollHeight，用于保持滚动位置
 const lastScrollHeight = ref(0);
 
+// 评价弹窗相关
+const showRatingPopup = ref(false);
+const hasShownRating = ref(false);
+const pendingBack = ref(false);
+// 记录用户是否在本次会话中发送过消息
+const hasSentMessage = ref(false);
+
+// 无操作计时器
+let inactivityTimer: ReturnType<typeof setTimeout> | null = null;
+
 // 防抖标记已读相关变量
 let markReadTimer: any = null;
 const pendingMarkReadTimestamp = ref<number | null>(null);
@@ -103,6 +124,28 @@ const debouncedMarkAsRead = (timestamp: number) => {
 			pendingMarkReadTimestamp.value = null;
 		}
 	}, 500); // 500ms 防抖
+};
+
+// 判断是否显示评价弹窗
+const shouldShowRating = computed(() => {
+	const isNormalUser = user.info.value?.loginType === 1;
+	const isLawyerChat = !!fromUserInfo.value.lawyerName;
+	// 新增条件：用户在本次会话中发送过消息
+	return isNormalUser && isLawyerChat && hasSentMessage.value && !hasShownRating.value;
+});
+
+// 重置无操作计时器
+const resetInactivityTimer = () => {
+	if (inactivityTimer) {
+		clearTimeout(inactivityTimer);
+		inactivityTimer = null;
+	}
+	if (shouldShowRating.value) {
+		inactivityTimer = setTimeout(() => {
+			showRatingPopup.value = true;
+			hasShownRating.value = true;
+		}, INACTIVITY_TIMEOUT);
+	}
 };
 
 const loadHistory = async (reset: boolean) => {
@@ -244,6 +287,7 @@ const handleScrollToUpper = async () => {
 //#endregion
 
 // 监听滚动位置，计算与底部的距离
+let scrollDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 const handleScroll = (e: any) => {
 	const detail = e?.detail || {};
 	const scrollTop = Number(detail.scrollTop || 0);
@@ -254,6 +298,12 @@ const handleScroll = (e: any) => {
 	const distanceFromBottom = scrollHeight - (scrollTop + viewportHeight);
 	// 距离底部超过一定像素则认为用户离开了底部，这里用 200px 作为阈值
 	showJumpToLatest.value = distanceFromBottom > 200;
+
+	// 防抖重置无操作计时器
+	if (scrollDebounceTimer) clearTimeout(scrollDebounceTimer);
+	scrollDebounceTimer = setTimeout(() => {
+		resetInactivityTimer();
+	}, 300);
 };
 
 // 获取用户昵称、头像
@@ -262,6 +312,7 @@ const getFromUserInfo = async (conversationId) => {
 	const user = users.find((u) => u.userId === Number(conversationId));
 	fromUserInfo.value.username = user?.lawyerName || user?.username || conversationId;
 	fromUserInfo.value.avatarUrl = user?.avatarUrl || "";
+	fromUserInfo.value.lawyerName = user?.lawyerName || "";
 };
 
 //#region 消息时间处理
@@ -399,8 +450,11 @@ const handleSend = async (data: SendData) => {
 		if (historyMessages.value.length > MAX_MESSAGES) {
 			historyMessages.value = historyMessages.value.slice(-MAX_MESSAGES);
 		}
+		// 标记用户已发送过消息
+		hasSentMessage.value = true;
 		scrollToBottom();
 		inputModel.value = "";
+		resetInactivityTimer();
 	} catch (error) {
 		ui.showToast({ message: `发送失败: ${JSON.stringify(error)}` });
 	}
@@ -479,6 +533,8 @@ const onTextMessageHandler = (msg: OnTextMsgResult) => {
 		}
 		// 立即标记该消息为已读（使用防抖优化）
 		debouncedMarkAsRead(msg.time);
+		// 重置无操作计时器
+		resetInactivityTimer();
 	}
 };
 
@@ -505,8 +561,23 @@ const handlePageLoad = async (options) => {
 	}
 };
 
+const isShowRateModal = () => {
+	if (shouldShowRating.value) {
+		showRatingPopup.value = true;
+		hasShownRating.value = true;
+		pendingBack.value = true;
+		return true; // 阻止默认返回
+	}
+	return false; // 允许返回
+};
+
 onLoad((options: any) => {
 	handlePageLoad(options);
+});
+
+// 返回拦截：显示评价弹窗
+onBackPress((): boolean => {
+	return isShowRateModal();
 });
 
 onMounted(() => {
@@ -527,6 +598,9 @@ onMounted(() => {
 
 	imBus.on("im:onTextMessage", onTextMessageHandler);
 	imBus.on("im:onSendMsg", onSendMsgHandler);
+
+	// 启动无操作计时器
+	resetInactivityTimer();
 });
 
 onBeforeUnmount(() => {
@@ -538,6 +612,18 @@ onBeforeUnmount(() => {
 	if (markReadTimer) {
 		clearTimeout(markReadTimer);
 		markReadTimer = null;
+	}
+
+	// 清理无操作计时器
+	if (inactivityTimer) {
+		clearTimeout(inactivityTimer);
+		inactivityTimer = null;
+	}
+
+	// 清理滚动防抖计时器
+	if (scrollDebounceTimer) {
+		clearTimeout(scrollDebounceTimer);
+		scrollDebounceTimer = null;
 	}
 
 	// 清理加载更多定时器
@@ -586,24 +672,68 @@ const handleJumpToLatest = () => {
 
 // 跳转用户首页
 const handleToUserHome = () => {};
+
+// 评价提交处理
+const handleRatingSubmit = async (data: { score: number; comment: string }) => {
+	try {
+		await SubmitLawyerRating({
+			lawyerUserId: fromUserInfo.value.userId,
+			score: data.score,
+			comment: data.comment
+		});
+		ui.showToast({ message: "评价成功", type: "success" });
+	} catch (error) {
+		ui.showToast({ message: "评价提交失败" });
+	} finally {
+		showRatingPopup.value = false;
+		if (pendingBack.value) {
+			pendingBack.value = false;
+			uni.navigateBack();
+		}
+	}
+};
+
+// 跳过评价处理
+const handleRatingSkip = () => {
+	showRatingPopup.value = false;
+	if (pendingBack.value) {
+		pendingBack.value = false;
+		uni.navigateBack();
+	}
+};
+
+const handlePageBack = () => {
+	if (!isShowRateModal()) {
+		const pages = getCurrentPages();
+		if (pages.length > 1) {
+			uni.navigateBack();
+		} else {
+			router.home();
+		}
+	}
+};
 </script>
 
 <template>
 	<app-page
 		:title="fromUserInfo.username"
-		back-top
-		:chat-list-btn="false"
+		:back-top="false"
+		title-placeholder=""
 		:title-action="false"
+		:chat-list-btn="false"
 		:hide-float-menu="true"
-		titlePlaceholder=""
+		:close-back-intercept="true"
 	>
+		<template #header-left>
+			<cl-icon name="arrow-left-s-line" :size="40" @tap.stop="handlePageBack"></cl-icon>
+		</template>
 		<template #content>
 			<view class="chat-detail-content">
 				<view class="flex-1 overflow-hidden relative">
 					<!-- 背景 Logo -->
-					<view class="chat-bg-logo">
+					<!-- <view class="chat-bg-logo">
 						<image :src="config.ico" mode="aspectFit" class="chat-bg-logo__img" />
-					</view>
+					</view> -->
 					<scroll-view
 						id="chat-detail-scroll"
 						scroll-y
@@ -783,6 +913,16 @@ const handleToUserHome = () => {};
 			</view>
 		</template>
 	</app-page>
+
+	<!-- 律师评价弹窗 -->
+	<lawyer-rating-popup
+		v-model="showRatingPopup"
+		:lawyer-user-id="fromUserInfo.userId"
+		:lawyer-name="fromUserInfo.lawyerName || fromUserInfo.username"
+		:lawyer-avatar-url="fromUserInfo.avatarUrl"
+		@submit="handleRatingSubmit"
+		@skip="handleRatingSkip"
+	/>
 </template>
 
 <style lang="scss" scoped>

@@ -43,3 +43,11 @@ export const createModelSessionId = (module: ChatModuleKey): string => {
 
 	return `${prefix}${generateRandomString(8)}`;
 };
+
+//#region 律师打分
+// 评分映射
+export const scoreLabels = ["请选择评分", "很不满", "不满", "一般", "满意", "很满意"];
+// 无操作超时时间
+export const INACTIVITY_TIMEOUT = 3 * 60 * 1000; // 3 分钟
+
+//#endregion
