@@ -42,7 +42,17 @@ const handleConsult = () => {
 			<view class="lawyer-card__header">
 				<!-- 左侧头像 -->
 				<view class="lawyer-card__avatar">
-					<cl-text :size="32" color="white" bold>{{ firstName }}</cl-text>
+					<cl-image mode="scaleToFill" :src="item?.avatar_url || ''" preview>
+						<template #loading>
+							<cl-loading :loading="true"></cl-loading>
+						</template>
+						<template #placeholder>
+							<cl-text :size="32" color="white" bold>{{ firstName }}</cl-text>
+						</template>
+						<template #error>
+							<cl-icon name="user-line" :size="60"></cl-icon>
+						</template>
+					</cl-image>
 				</view>
 				<!-- 中间姓名和级别 -->
 				<view class="lawyer-card__info">

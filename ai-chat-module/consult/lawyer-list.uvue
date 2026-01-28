@@ -112,18 +112,26 @@ onLoad((options: any) => {
 							class="lawyer-card"
 							@click="handleLawyerClick(lawyer)"
 						>
-							<!-- 头像 -->
-							<image
-								class="avatar"
-								:src="lawyer.license_no || '/static/images/default-avatar.png'"
-								mode="aspectFill"
-							/>
+							<!-- 头像 -->1
+							<cl-image mode="scaleToFill" :src="lawyer?.avatar_url || ''" preview>
+								<template #loading>
+									<cl-loading :loading="true"></cl-loading>
+								</template>
+								<template #placeholder>
+									<cl-text :size="32" color="white" bold>{{
+										lawyer.name
+									}}</cl-text>
+								</template>
+								<template #error>
+									<cl-icon name="user-line" :size="60"></cl-icon>
+								</template>
+							</cl-image>
 
 							<!-- 信息区 -->
 							<view class="info-section">
 								<view class="top-row">
 									<view class="name-area">
-										<text class="name">{{ lawyer.name }}</text>
+										<text class="name">{{ lawyer.name }}11111</text>
 										<view class="grade-badge">
 											<text class="grade-text">{{ lawyer.grade_name }}</text>
 										</view>

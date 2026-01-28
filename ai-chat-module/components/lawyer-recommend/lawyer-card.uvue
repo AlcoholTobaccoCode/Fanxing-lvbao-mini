@@ -47,8 +47,19 @@ const handleClick = () => {
 	<view class="lawyer-card" @click="handleClick">
 		<!-- 头像区域 -->
 		<view class="avatar-section">
-			<view class="avatar" :style="{ backgroundColor: avatarBgColor }">
-				<text class="avatar-text">{{ avatarText }}</text>
+			<view class="avatar">
+				<!-- <text class="avatar-text">{{ avatarText }}</text> -->
+				<cl-image mode="scaleToFill" :src="lawyer?.avatar_url || ''" preview>
+					<template #loading>
+						<cl-loading :loading="true"></cl-loading>
+					</template>
+					<template #placeholder>
+						<cl-text :size="32" color="white" bold>{{ avatarText }}</cl-text>
+					</template>
+					<template #error>
+						<cl-icon name="user-line" :size="60"></cl-icon>
+					</template>
+				</cl-image>
 			</view>
 			<!-- <view v-if="lawyer.online" class="online-badge"></view> -->
 		</view>

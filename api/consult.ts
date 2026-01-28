@@ -20,6 +20,7 @@ export interface RecommendLawyerItem {
 	case_count: number;
 	rating: number;
 	online?: boolean;
+	avatar_url: string;
 }
 
 export interface RecommendLawyerParams {
