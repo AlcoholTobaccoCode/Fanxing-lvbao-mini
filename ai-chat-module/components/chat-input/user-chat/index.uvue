@@ -158,6 +158,7 @@ const showMoreAction = ref(false);
 
 // 切换输入模式
 const handleRecording = () => {
+	emit("keyboard-height-change", 0);
 	inputModeModal.value = inputModeModal.value === "text" ? "voice" : "text";
 	emit("input-mode-change", inputModeModal.value);
 	// 切换到语音模式时，预请求一次录音权限，减少长按时等待
@@ -262,8 +263,8 @@ const handleSend = () => {
 						:placeholder="placeholder"
 						placeholder-class="input-placeholder"
 						adjustKeyboardTo="bottom"
-						@confirm="handleSend"
 						@blur="handleInputBlur"
+						@confirm="handleSend"
 						@linechange="handleLineChange"
 						@keyboardheightchange="handleKeyboardHeightChange"
 					></cl-textarea>

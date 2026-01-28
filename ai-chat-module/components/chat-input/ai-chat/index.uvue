@@ -228,6 +228,11 @@ const handleToolTap = (item: ToolItem) => {
 
 // 切换输入模式
 const handleRecording = () => {
+	// 立即重置键盘高度，避免切换时组件位置错乱
+	keyboardHeight.value = 0;
+	chatInputStore.keyboardHeight.value = 0;
+	emit("keyboard-height-change", 0);
+
 	inputModeModal.value = inputModeModal.value === "text" ? "voice" : "text";
 	emit("input-mode-change", inputModeModal.value);
 	// 切换到语音模式时，预请求一次录音权限，减少长按时等待
@@ -510,13 +515,6 @@ watch(
 		></voice-record>
 	</view>
 </template>
-
-<style>
-.input-placeholder {
-	color: red;
-	font-size: 12px;
-}
-</style>
 
 <style scoped lang="scss">
 .chat-input-wrapper {
