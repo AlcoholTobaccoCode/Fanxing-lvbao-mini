@@ -71,15 +71,15 @@ export default {
 			// 根据 scale 计算字体大小
 			const fs = (base) => `font-size: ${Math.round(base * scale)}px;`;
 			return {
-				p: fs(16),
-				h1: `margin:18px 0 10px 0; ${fs(24)} color: ${c};`,
-				h2: `margin:14px 0 10px 0; ${fs(20)} color: ${c};`,
-				h3: `margin:12px 0 8px 0; ${fs(18)} color: ${c};`,
-				h4: `margin:12px 0 8px 0; ${fs(16)} color: ${c};`,
+				p: `${fs(14)} line-height: 1.8;`,
+				h1: `margin:18px 0 10px 0; ${fs(24)} color: #333; font-weight: bold; line-height: 1.8;`,
+				h2: `margin:14px 0 10px 0; ${fs(20)} color: #333; font-weight: bold; line-height: 1.8;`,
+				h3: `margin:12px 0 8px 0; ${fs(18)} color: #333; font-weight: bold; line-height: 1.8;`,
+				h4: `margin:12px 0 8px 0; ${fs(16)} color: #333; font-weight: bold; line-height: 1.8;`,
+				ul: `margin: 10px 0; ${fs(14)} color: #555; line-height: 1.8;`,
+				li: `margin: 5px 0; ${fs(14)} color: #555; line-height: 1.8;`,
+				strong: `font-weight: bold; color: #333;`,
 				blockquote: `margin:15px 0; ${fs(15)} color: #777; border-left: 4px solid #ddd; padding: 0 10px;`,
-				ul: `margin: 10px 0; ${fs(16)} color: #555;`,
-				li: `margin: 5px 0; ${fs(16)} color: #555;`,
-				strong: `font-weight: bold; color: ${c};`,
 				pre: `border-radius: 5px; background: ${bg}; border: 1px solid #e5e7eb; color: #060912; padding: 12px; ${fs(14)}`
 			};
 		}
