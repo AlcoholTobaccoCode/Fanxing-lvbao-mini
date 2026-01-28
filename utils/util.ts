@@ -196,3 +196,25 @@ export const compressImage = (options: CompressOptions): Promise<string | null> 
 export const sleepWait = (ms: number = 100) => {
 	return new Promise((r) => setTimeout(r, ms));
 };
+
+/**
+ * @description 接收一个 Promise，返回一个元组 [error, data]
+ * @param {Promise<T>} promise - 需要处理的 Promise
+ * @returns {Promise<[Error | null, T | undefined]>}
+ * 使用示例：
+ * ```
+ * const [error, data] = await to(somePromise);
+ *
+ * if (error || !data) {
+ *   // 处理错误
+ *  return;
+ * }
+ *
+ * // ...
+ * ```
+ */
+export const to = <T>(promise: Promise<T>): Promise<[Error | null, T | undefined]> => {
+	return promise
+		.then<[null, T]>((data: T) => [null, data])
+		.catch<[Error, undefined]>((err: Error) => [err, undefined]);
+};
