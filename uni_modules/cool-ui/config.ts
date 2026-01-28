@@ -9,7 +9,7 @@ type Config = {
 };
 
 export const config = reactive<Config>({
-	fontSize: 1.2,
+	fontSize: 1.1,
 	zIndex: 600,
 	startDate: "2000-01-01 00:00:00",
 	endDate: "2050-12-31 23:59:59"
