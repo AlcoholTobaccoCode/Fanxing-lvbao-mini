@@ -550,7 +550,7 @@ export class ConsultSessionStore {
 				}
 
 				try {
-					const evt = JSON.parse(jsonStr) as {
+					let evt: {
 						contents?: {
 							id?: string;
 							contentType?: string;
@@ -561,6 +561,23 @@ export class ConsultSessionStore {
 							caseList?: any[];
 						}[];
 					};
+
+					try {
+						const level1 = JSON.parse(jsonStr);
+
+						const level2Str =
+							typeof level1 === "string"
+								? level1.replace(/^data:/, "")
+								: JSON.stringify(level1);
+						evt = JSON.parse(level2Str);
+
+						if (typeof evt.contents === "string") {
+							evt.contents = JSON.parse(evt.contents);
+						}
+					} catch {
+						evt = JSON.parse(jsonStr);
+					}
+
 					const contents = evt.contents || [];
 
 					// 原始正文片段
@@ -672,6 +689,7 @@ export class ConsultSessionStore {
 						"Content-Type": "application/json",
 						Authorization: user.token || ""
 					},
+					timeout: 5 * 60 * 1000, // 5 分钟超时
 					enableChunked: true,
 					responseType: "arraybuffer",
 					success: (res: any) => {
