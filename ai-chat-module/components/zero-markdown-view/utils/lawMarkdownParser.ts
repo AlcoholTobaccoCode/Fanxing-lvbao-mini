@@ -74,15 +74,15 @@ function getTimelinessStyle(timeliness: string, scale: number = 1): string {
 }
 
 /**
- * 预处理 Markdown，将 [[文本]](json) 转换为带 data 属性的链接
+ * 预处理 Markdown，将 [[文本]](json) 或 [文本](json) 转换为带 data 属性的链接
  * @param markdown Markdown 内容
  * @param scale 字体缩放比例（默认 1）
  */
 export function preprocessLawMarkdown(markdown: string, scale: number = 1): string {
 	if (!markdown) return "";
 
-	// 匹配 [[文本内容]](JSON数据)
-	const refPattern = /\[\[([^\]]+)\]\]\((\{[^)]+\})\)/g;
+	// 匹配 [[文本]](JSON) 或 [文本](JSON)，使用 [\s\S]*? 非贪婪匹配支持 JSON 中的任意字符
+	const refPattern = /\[?\[([^\]]+)\]\]?\(\s*(\{[\s\S]*?\})\s*\)/g;
 
 	return markdown.replace(refPattern, (match, text, jsonStr) => {
 		try {

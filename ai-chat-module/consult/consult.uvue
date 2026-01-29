@@ -12,6 +12,15 @@ const emit = defineEmits<{
 const { user } = useStore();
 const userName = computed(() => user.info.value?.nickName || "用户");
 
+const greeting = computed(() => {
+	const hour = new Date().getHours();
+	if (hour >= 5 && hour < 11) return "早上好";
+	if (hour >= 11 && hour < 14) return "中午好";
+	if (hour >= 14 && hour < 18) return "下午好";
+	if (hour >= 18 && hour < 24) return "晚上好";
+	return "该休息啦";
+});
+
 const quickQuestions = [
 	{ emoji: "🚗", text: "交通事故赔偿怎么处理" },
 	{ emoji: "⚖️", text: "劳动合同不公平怎么办" },
@@ -27,11 +36,11 @@ const handleClick = (text: string) => {
 	<view class="consult-starter">
 		<!-- 欢迎语 -->
 		<view class="welcome-section">
-			<view class="fade-up delay-1">
+			<view class="fade-up delay-1 flex flex-row">
 				<cl-text v-if="user.token" :pt="{ className: 'text-base text-surface-600' }"
 					>{{ userName }}，</cl-text
 				>
-				<cl-text :pt="{ className: 'text-base text-surface-600' }">您好</cl-text>
+				<cl-text :pt="{ className: 'text-base text-surface-600' }">{{ greeting }}</cl-text>
 			</view>
 			<view class="fade-up delay-2">
 				<cl-text size="24px" :pt="{ className: 'main-title' }">我能帮您什么？</cl-text>
