@@ -1,17 +1,48 @@
 <template>
 	<cl-page>
-		<scroll-view scroll-y class="h-full">
-			<view class="p-6 pb-20">
-				<rich-text :nodes="nodes"></rich-text>
-				<cl-button @click="router.back()">返回</cl-button>
+		<template v-if="loading">
+			<view class="w-full h-full flex items-center justify-center gap-4">
+				<cl-loading :size="36"></cl-loading>
+				<cl-text>加载中...</cl-text>
 			</view>
-		</scroll-view>
+		</template>
+		<template v-else>
+			<scroll-view scroll-y class="h-full">
+				<view class="p-6 pb-20" v-if="nodes">
+					<rich-text :nodes="nodes"></rich-text>
+					<cl-button @click="router.back()" class="mt-4">返回</cl-button>
+				</view>
+				<UserAgreementStatic v-else></UserAgreementStatic>
+			</scroll-view>
+		</template>
 	</cl-page>
 </template>
 
 <script setup lang="ts">
 import { router } from "@/cool";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import { GetDictByKey } from "@/api/dict";
+import { to, sleepWait } from "@/utils";
+
+import UserAgreementStatic from "./user-agreement-static.uvue";
 
 const nodes = ref("");
+const loading = ref(true);
+
+const getUserAgreement = async () => {
+	loading.value = true;
+	const [error, res] = await to(GetDictByKey("dict:user_agreement"));
+	await sleepWait(500);
+	loading.value = false;
+	if (error || !res) {
+		return;
+	}
+	if (res) {
+		nodes.value = res.name;
+	}
+};
+
+onMounted(() => {
+	getUserAgreement();
+});
 </script>

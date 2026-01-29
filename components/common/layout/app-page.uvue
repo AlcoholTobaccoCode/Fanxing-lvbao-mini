@@ -294,7 +294,7 @@ const beforePageContainerLeave = () => {
 				:icon-name="'phone-line'"
 				:icon-size="40"
 				:show-badge="true"
-				:shake="true"
+				:shake="false"
 				:shakeShadow="false"
 				shakeShadowColor="#504e4d"
 				:y="floatMenuY"
