@@ -26,6 +26,8 @@ const isUserScrolledUp = ref(false);
 const scrollViewHeight = ref(0);
 // 是否已完成初始化（保护期内不判断位置）
 const isInitialized = ref(false);
+// 用户是否正在触摸滚动区域
+const isTouching = ref(false);
 
 // 获取 scroll-view 高度
 const instance = getCurrentInstance();
@@ -62,7 +64,8 @@ const isNearBottom = (scrollTop: number, scrollHeight: number): boolean => {
 
 // 滚动到底部
 const scrollToBottom = () => {
-	if (isUserScrolledUp.value) return;
+	// 用户上滑或正在触摸时，不自动滚动
+	if (isUserScrolledUp.value || isTouching.value) return;
 	nextTick(() => {
 		scrollTop.value = scrollTop.value === 99999 ? 99998 : 99999;
 	});
@@ -77,13 +80,19 @@ const handleScroll = (e: any) => {
 
 	const currentScrollTop = e.detail?.scrollTop ?? 0;
 	const scrollHeight = e.detail?.scrollHeight ?? 0;
-
 	const atBottom = isNearBottom(currentScrollTop, scrollHeight);
 
+	// 只在用户触摸时才判断是否上滑
+	// 程序触发的滚动不改变状态
+	if (isTouching.value) {
+		if (!atBottom) {
+			isUserScrolledUp.value = true;
+		}
+	}
+
+	// 无论如何，滚到底部都重置状态
 	if (atBottom) {
 		isUserScrolledUp.value = false;
-	} else {
-		isUserScrolledUp.value = true;
 	}
 };
 
@@ -93,6 +102,16 @@ const resetAutoScroll = () => {
 	nextTick(() => {
 		scrollTop.value = scrollTop.value === 99999 ? 99998 : 99999;
 	});
+};
+
+// 触摸开始
+const handleTouchStart = () => {
+	isTouching.value = true;
+};
+
+// 触摸结束
+const handleTouchEnd = () => {
+	isTouching.value = false;
 };
 
 // 暴露方法给父组件
@@ -106,7 +125,9 @@ watch(
 	() => props.loading,
 	(val) => {
 		if (val) {
-			scrollToBottom();
+			nextTick(() => {
+				scrollToBottom();
+			});
 		}
 	}
 );
@@ -128,6 +149,8 @@ watch(
 				:scroll-top="scrollTop"
 				:scroll-with-animation="true"
 				@scroll="handleScroll"
+				@touchstart="handleTouchStart"
+				@touchend="handleTouchEnd"
 			>
 				<!-- 消息列表插槽 -->
 				<slot name="messages"></slot>
