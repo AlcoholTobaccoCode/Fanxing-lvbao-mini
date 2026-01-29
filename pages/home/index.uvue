@@ -152,7 +152,7 @@ const handlePresetSelect = (question: string) => {
 		chatInputStore.inputMode.value = "text";
 		const timer2 = setTimeout(() => {
 			inputValue.value = question;
-		}, 300);
+		}, 100);
 		//@ts-ignore
 		presetTimers.push(timer2);
 	}, 200);
