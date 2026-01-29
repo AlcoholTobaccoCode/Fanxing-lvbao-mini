@@ -109,7 +109,7 @@ const handleSkip = () => {
 
 			<!-- 评分 -->
 			<view class="rating-popup__rating">
-				<cl-rate v-model="score" :count="5" :allow-half="false" :size="32" />
+				<cl-rate v-model="score" :count="5" allow-half :size="32" />
 				<text class="rating-popup__score-label">{{ scoreLabel }}</text>
 			</view>
 

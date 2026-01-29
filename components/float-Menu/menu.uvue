@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { onShow } from "@dcloudio/uni-app";
 import { type BtnListItem } from "@/components/float-Menu/types";
 import { requestMultiplePermissions, PermissionScope } from "@/utils/permission";
 import { router, useStore, unReadCount as imUnReadCount } from "@/cool";
 import { isDev } from "@/config";
 
-import FloatPopupMenu from "./index.vue";
+import FloatPopupMenu from "./index.uvue";
 import RemixIcon from "@/test/icon-all/remixicon.uvue";
 
 const { user } = useStore();

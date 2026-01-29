@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { type BtnListItem } from "@/components/float-Menu/types";
-import FloatPopupMenu from "@/components/float-Menu/index.vue";
-import { router } from "@/cool";
+import FloatPopupMenu from "@/components/float-Menu/index.uvue";
 
 const emits = defineEmits(["create"]);
 

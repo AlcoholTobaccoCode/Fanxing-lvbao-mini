@@ -5,7 +5,6 @@
 import { chunkArray, type chunkArrayType } from "@/utils/index";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { LEGAL_QUICK_QUESTIONS } from "../utils";
-import { config } from "@/config";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;

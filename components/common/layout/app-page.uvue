@@ -10,7 +10,7 @@ import AppHeader from "@/components/common/layout/app-header.uvue";
 import AppSetting from "@/components/common/layout/app-setting/index.uvue";
 import LoginContent from "@/components/login/login-content.uvue";
 import FloatMenu from "@/components/float-Menu/menu.uvue";
-import FloatMenuSingle from "@/components/float-Menu/index-single.vue";
+import FloatMenuSingle from "@/components/float-Menu/index-single.uvue";
 import { PermissionScope, requestMultiplePermissions } from "@/utils/permission";
 
 const props = withDefaults(
