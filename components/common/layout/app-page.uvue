@@ -289,11 +289,14 @@ const beforePageContainerLeave = () => {
 		</view>
 
 		<!-- ai 通话 -->
-		<template v-if="showAiCall">
+		<template v-if="showAiCall && !isHistoryOpen">
 			<float-menu-single
 				:icon-name="'phone-line'"
 				:icon-size="40"
 				:show-badge="true"
+				:shake="true"
+				:shakeShadow="false"
+				shakeShadowColor="#504e4d"
 				:y="floatMenuY"
 				@click="handleAiCall"
 			></float-menu-single>

@@ -45,6 +45,21 @@ const props = defineProps({
 		// 是否显示角标
 		type: Boolean,
 		default: true
+	},
+	shake: {
+		// 是否启用来电震动动效
+		type: Boolean,
+		default: false
+	},
+	shakeShadow: {
+		// 是否启用来电震动波纹效果
+		type: Boolean,
+		default: false
+	},
+	shakeShadowColor: {
+		// 是否启用来电震动波纹效果
+		type: String,
+		default: "rgba(76, 175, 80, 0.6)"
 	}
 });
 
@@ -84,6 +99,7 @@ const handleClick = () => {
 				<!-- 悬浮按钮 -->
 				<view
 					class="floating-button"
+					:class="{ 'floating-button--shake': shake }"
 					@click="handleClick"
 					:style="{
 						background: buttonBgColor,
@@ -91,6 +107,17 @@ const handleClick = () => {
 						height: floatingButtonHeight
 					}"
 				>
+					<!-- 来电震动波纹效果 -->
+					<view
+						v-if="shakeShadow"
+						class="shake-ripple shake-ripple--1"
+						:style="{ borderColor: shakeShadowColor }"
+					></view>
+					<view
+						v-if="shakeShadow"
+						class="shake-ripple shake-ripple--2"
+						:style="{ borderColor: shakeShadowColor }"
+					></view>
 					<cl-icon :name="iconName" :size="iconSize"></cl-icon>
 				</view>
 			</movable-view>
@@ -129,5 +156,61 @@ const handleClick = () => {
 
 .floating-button:active {
 	transform: scale(0.95);
+}
+
+/* 来电震动动效 */
+.floating-button--shake {
+	animation: phone-shake 0.8s ease-in-out infinite;
+}
+
+@keyframes phone-shake {
+	0%,
+	100% {
+		transform: rotate(0deg);
+	}
+	10% {
+		transform: rotate(-8deg);
+	}
+	20% {
+		transform: rotate(8deg);
+	}
+	30% {
+		transform: rotate(-8deg);
+	}
+	40% {
+		transform: rotate(8deg);
+	}
+	50% {
+		transform: rotate(0deg);
+	}
+}
+
+/* 波纹扩散效果 */
+.shake-ripple {
+	position: absolute;
+	width: 100%;
+	height: 100%;
+	border-radius: 56rpx;
+	border: 2px solid rgba(76, 175, 80, 0.6);
+	animation: ripple-expand 1.5s ease-out infinite;
+}
+
+.shake-ripple--1 {
+	animation-delay: 0s;
+}
+
+.shake-ripple--2 {
+	animation-delay: 1s;
+}
+
+@keyframes ripple-expand {
+	0% {
+		transform: scale(1);
+		opacity: 0.8;
+	}
+	100% {
+		transform: scale(1.8);
+		opacity: 0;
+	}
 }
 </style>
