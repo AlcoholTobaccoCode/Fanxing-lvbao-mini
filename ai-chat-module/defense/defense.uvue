@@ -2,7 +2,8 @@
 @description: 答辩状生成起始页
 -->
 <script lang="ts" setup>
-import { DEFENSE_TYPES, DEFENSE_TIPS, DEFENSE_SCENARIOS } from "../utils";
+import { DEFENSE_SCENARIOS } from "../utils";
+import { calcFontSize } from "@/utils/util";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
@@ -79,9 +80,11 @@ const handleScenarioClick = (scenario: string) => {
 					@click="handleScenarioClick(item)"
 				>
 					<cl-icon name="question-line" size="16px" color="#8b5cf6" />
-					<cl-text size="14px" :pt="{ className: 'scenario-text text-surface-700' }">{{
-						item
-					}}</cl-text>
+					<cl-text
+						:pt="{ className: 'scenario-text text-surface-700' }"
+						:size="calcFontSize(16).num * 2"
+						>{{ item }}</cl-text
+					>
 				</view>
 			</view>
 		</view>
@@ -147,7 +150,8 @@ const handleScenarioClick = (scenario: string) => {
 }
 
 .scenario-item {
-	@apply flex flex-row items-center gap-2 p-3 rounded-lg;
+	@apply flex flex-row items-center gap-2 rounded-full;
+	padding: 12px 16px;
 	background-color: #faf5ff;
 
 	&:active {

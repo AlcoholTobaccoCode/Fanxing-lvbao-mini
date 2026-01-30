@@ -1062,7 +1062,7 @@ const handlePageBack = () => {
 }
 
 .ai-summary-card__tag {
-	@apply self-end px-2 py-0.5 rounded;
+	@apply self-end px-2 py-1 rounded;
 	background-color: rgba(255, 255, 255, 0.2);
 }
 

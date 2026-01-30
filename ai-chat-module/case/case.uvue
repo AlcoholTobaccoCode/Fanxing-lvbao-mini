@@ -3,7 +3,8 @@
 -->
 <script lang="ts" setup>
 import { ref } from "vue";
-import { CASE_TYPES, CASE_HOT_ITEMS } from "../utils";
+import { CASE_HOT_ITEMS } from "../utils";
+import { calcFontSize } from "@/utils/util";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
@@ -94,9 +95,13 @@ const handleHotCaseClick = (caseName: string) => {
 					hover-class="hover-darker"
 					@click="handleHotCaseClick(item)"
 				>
-					<view class="case-index bg-warning-500">{{ i + 1 }}</view>
-					<cl-text :pt="{ className: 'case-title text-warning-600' }">{{ item }}</cl-text>
-					<cl-icon name="arrow-right-s-line" size="16px" color="info" />
+					<!-- <view class="case-index bg-warning-500">{{ i + 1 }}</view> -->
+					<cl-icon name="arrow-right-s-line" size="16px" color="#f59e0b" />
+					<cl-text
+						:pt="{ className: 'case-title text-warning-600' }"
+						:size="calcFontSize(16).num * 2"
+						>{{ item }}</cl-text
+					>
 				</view>
 			</view>
 		</view>
@@ -128,7 +133,8 @@ const handleHotCaseClick = (caseName: string) => {
 }
 
 .hot-case-card {
-	@apply flex flex-row items-center gap-3 p-3 rounded-lg;
+	@apply flex flex-row items-center gap-3 rounded-full;
+	padding: 12px 16px;
 }
 
 .case-index {

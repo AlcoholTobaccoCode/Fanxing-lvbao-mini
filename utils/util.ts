@@ -1,3 +1,5 @@
+import { config } from "@/uni_modules/cool-ui/config";
+
 /**
  * 将字符串数组按指定大小切分为多个子数组
  * @param arr 原数组
@@ -217,4 +219,18 @@ export const to = <T>(promise: Promise<T>): Promise<[Error | null, T | undefined
 	return promise
 		.then<[null, T]>((data: T) => [null, data])
 		.catch<[Error, undefined]>((err: Error) => [err, undefined]);
+};
+
+/**
+ * 根据 scale 计算字体大小
+ * @param base 基础字体大小
+ */
+export const calcFontSize = (base: number) => {
+	const scale = config.fontSize ?? 1;
+	const fs = (b: number) => ({
+		class: `font-size: ${Math.round(b * scale)}px;`,
+		num: Math.round(b * scale)
+	});
+
+	return fs(base);
 };

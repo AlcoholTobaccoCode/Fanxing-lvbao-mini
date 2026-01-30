@@ -4,6 +4,7 @@
 <script lang="ts" setup>
 import { computed } from "vue";
 import { useStore } from "@/cool";
+import { calcFontSize } from "@/utils/util";
 
 const emit = defineEmits<{
 	(e: "preset-select", value: string): void;
@@ -57,7 +58,11 @@ const handleClick = (text: string) => {
 					@click="handleClick(item.text)"
 				>
 					<text class="emoji">{{ item.emoji }}</text>
-					<cl-text :pt="{ className: 'text-surface-700' }">{{ item.text }}</cl-text>
+					<cl-text
+						:pt="{ className: 'text-surface-700' }"
+						:size="calcFontSize(16).num * 2"
+						>{{ item.text }}</cl-text
+					>
 				</view>
 			</view>
 		</view>
