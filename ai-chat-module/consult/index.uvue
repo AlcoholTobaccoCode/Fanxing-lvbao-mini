@@ -265,6 +265,22 @@ const handleRefTap = (
 			preloadData
 		};
 		lawPopupVisible.value = true;
+	} else if (e.type === "law") {
+		// 法规引用（整部法规）：复用法条弹窗，lawItemId 为空
+		let preloadData: LawDetailResponse | undefined = consultSessionStore.getLawDetailFromCache(
+			e.json.lawId
+		);
+		if (!preloadData && item?.references?.lawDetails?.length) {
+			preloadData = item.references.lawDetails.find(
+				(law: LawDetailResponse) => law.lawId === e.json!.lawId
+			);
+		}
+		currentLawRef.value = {
+			lawId: e?.json?.lawId,
+			lawItemId: "", // 法规类型无具体条款
+			preloadData
+		};
+		lawPopupVisible.value = true;
 	} else if (e.type === "case") {
 		// 优先从全局缓存获取，其次从消息引用数据
 		let preloadData: CaseDetailResponse | undefined =

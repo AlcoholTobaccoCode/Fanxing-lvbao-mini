@@ -17,6 +17,14 @@ export interface LawItemReference {
 	timeliness: string;
 }
 
+/** 法规引用数据（整部法规，无具体条款） */
+export interface LawReference {
+	type: "law";
+	lawId: string;
+	timeliness: string;
+	lawItemId?: string; // 为空或不存在
+}
+
 /** 联网搜索引用数据 */
 export interface SearchReference {
 	type: "search";
@@ -30,12 +38,12 @@ export interface SearchReference {
 }
 
 /** 引用类型 */
-export type ReferenceData = CaseReference | LawItemReference | SearchReference;
+export type ReferenceData = CaseReference | LawItemReference | LawReference | SearchReference;
 
 /** 点击事件数据 */
 export interface LawRefTapEvent {
 	/** 引用类型 */
-	type: "case" | "lawItem" | "search" | "unknown";
+	type: "case" | "lawItem" | "law" | "search" | "unknown";
 	/** 显示文本 */
 	text: string;
 	/** 完整 JSON 数据（原始解析结果） */
@@ -100,6 +108,12 @@ export function preprocessLawMarkdown(markdown: string, scale: number = 1): stri
 				const timelinessHtml = timeliness ? `(${timeliness})` : "";
 				const inlineStyle = getTimelinessStyle(timeliness, scale);
 				return `<a href="#law-ref-item" class="law-item-ref" style="${inlineStyle}" data-ref="${escapedJson}">${text}${timelinessHtml}</a>`;
+			} else if (data.type === "law") {
+				// 法规引用（整部法规）：样式与法条相同
+				const timeliness = (data as LawReference).timeliness || "";
+				const timelinessHtml = timeliness ? `(${timeliness})` : "";
+				const inlineStyle = getTimelinessStyle(timeliness, scale);
+				return `<a href="#law-ref-law" class="law-ref" style="${inlineStyle}" data-ref="${escapedJson}">${text}${timelinessHtml}</a>`;
 			} else if (data.type === "search") {
 				// 联网搜索引用 - 绿色样式
 				const searchStyle = `${baseStyle}color:#059669;background-color:#ecfdf5;`;
@@ -133,6 +147,7 @@ export function parseLawLinkTap(attrs: {
 
 	if (href === "#law-ref-case") type = "case";
 	else if (href === "#law-ref-item") type = "lawItem";
+	else if (href === "#law-ref-law") type = "law";
 	else if (href === "#law-ref-search") type = "search";
 
 	if (dataRef) {
