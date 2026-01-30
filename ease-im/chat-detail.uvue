@@ -142,6 +142,7 @@ const resetInactivityTimer = () => {
 	}
 	if (shouldShowRating.value) {
 		inactivityTimer = setTimeout(() => {
+			log.info("律师评价");
 			showRatingPopup.value = true;
 			hasShownRating.value = true;
 		}, INACTIVITY_TIMEOUT);
@@ -563,6 +564,7 @@ const handlePageLoad = async (options) => {
 
 const isShowRateModal = () => {
 	if (shouldShowRating.value) {
+		log.info("律师评价");
 		showRatingPopup.value = true;
 		hasShownRating.value = true;
 		pendingBack.value = true;
@@ -712,6 +714,13 @@ const handlePageBack = () => {
 		}
 	}
 };
+
+// 弹出过评分框时重置定时器
+watch(showRatingPopup, (val) => {
+	if (val) {
+		resetInactivityTimer();
+	}
+});
 </script>
 
 <template>
@@ -910,19 +919,21 @@ const handlePageBack = () => {
 					class="w-full bg-white border-t"
 					style="height: 220rpx"
 				></view> -->
+
+				<view>
+					<!-- 律师评价弹窗 -->
+					<lawyer-rating-popup
+						v-model="showRatingPopup"
+						:lawyer-user-id="fromUserInfo.userId"
+						:lawyer-name="fromUserInfo.lawyerName || fromUserInfo.username"
+						:lawyer-avatar-url="fromUserInfo.avatarUrl"
+						@submit="handleRatingSubmit"
+						@skip="handleRatingSkip"
+					/>
+				</view>
 			</view>
 		</template>
 	</app-page>
-
-	<!-- 律师评价弹窗 -->
-	<lawyer-rating-popup
-		v-model="showRatingPopup"
-		:lawyer-user-id="fromUserInfo.userId"
-		:lawyer-name="fromUserInfo.lawyerName || fromUserInfo.username"
-		:lawyer-avatar-url="fromUserInfo.avatarUrl"
-		@submit="handleRatingSubmit"
-		@skip="handleRatingSkip"
-	/>
 </template>
 
 <style lang="scss" scoped>

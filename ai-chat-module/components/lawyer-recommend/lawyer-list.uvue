@@ -154,7 +154,7 @@ const hasMore = computed(() => {
 
 .lawyer-scroll {
 	@apply inline-flex px-3 flex-row whitespace-nowrap box-border;
-	height: 100px;
+	height: 120px;
 }
 
 .lawyer-item {

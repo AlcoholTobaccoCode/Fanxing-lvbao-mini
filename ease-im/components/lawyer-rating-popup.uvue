@@ -30,8 +30,8 @@ const emit = defineEmits<{
 
 const ui = useUi();
 
-// 评分值
-const score = ref(0);
+// 评分值 (最小1分，最大5分)
+const score = ref(5);
 // 备注
 const comment = ref("");
 // 提交中
@@ -45,7 +45,7 @@ const scoreLabel = computed(() => {
 
 // 重置状态
 const resetState = () => {
-	score.value = 0;
+	score.value = 5;
 	comment.value = "";
 	submitting.value = false;
 };
@@ -67,10 +67,6 @@ const handleClose = () => {
 
 // 提交评价
 const handleSubmit = () => {
-	if (score.value <= 0) {
-		ui.showToast({ message: "请选择评分" });
-		return;
-	}
 	submitting.value = true;
 	emit("submit", {
 		score: score.value,
@@ -80,12 +76,24 @@ const handleSubmit = () => {
 
 // 跳过评价
 const handleSkip = () => {
-	emit("skip");
+	emit("submit", {
+		score: 5,
+		comment: ""
+	});
 };
+
+watch(
+	() => score.value,
+	(val) => {
+		if (val <= 1) {
+			score.value = 1;
+		}
+	}
+);
 </script>
 
 <template>
-	<cl-popup v-model="props.modelValue" direction="center" @close="handleClose">
+	<cl-popup v-model="props.modelValue" direction="bottom" @close="handleClose">
 		<view class="rating-popup">
 			<!-- 标题 -->
 			<view class="rating-popup__header">
@@ -118,10 +126,14 @@ const handleSkip = () => {
 				<cl-textarea
 					v-model="comment"
 					placeholder="请输入您的评价（选填）"
-					:maxlength="200"
 					:rows="3"
+					clearable
+					:maxlength="200"
+					:show-word-limit="false"
+					:show-confirm-bar="false"
+					adjustKeyboardTo="bottom"
 				/>
-				<view class="flex items-center justify-end">
+				<view class="flex flex-row items-center justify-end">
 					<cl-text color="gray" size="12px"> {{ comment.length }} / 200 </cl-text>
 				</view>
 			</view>
@@ -146,8 +158,7 @@ const handleSkip = () => {
 
 <style lang="scss" scoped>
 .rating-popup {
-	@apply flex flex-col items-center p-6 pt-2 bg-white rounded-2xl;
-	width: 300px;
+	@apply flex flex-col items-center p-6 pt-2 bg-white rounded-t-2xl w-full;
 
 	&__header {
 		@apply w-full flex justify-center mb-4;

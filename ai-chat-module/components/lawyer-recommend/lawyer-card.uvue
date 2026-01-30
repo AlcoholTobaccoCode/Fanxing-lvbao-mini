@@ -47,9 +47,9 @@ const handleClick = () => {
 	<view class="lawyer-card" @click="handleClick">
 		<!-- 头像区域 -->
 		<view class="avatar-section">
-			<view class="avatar" @click.stop>
+			<view class="avatar">
 				<!-- <text class="avatar-text">{{ avatarText }}</text> -->
-				<cl-image mode="scaleToFill" :src="lawyer?.avatar_url || ''" preview @click.stop>
+				<cl-image mode="scaleToFill" :src="lawyer?.avatar_url || ''">
 					<template #placeholder>
 						<cl-text :size="32" color="white" bold>{{ avatarText }}</cl-text>
 					</template>
@@ -104,7 +104,6 @@ const handleClick = () => {
 .lawyer-card {
 	@apply h-full flex flex-row p-3 bg-white rounded-xl;
 	width: 220px;
-	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 	border: 1px solid #f3f4f6;
 }
 
