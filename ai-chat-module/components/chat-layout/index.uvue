@@ -56,10 +56,13 @@ onMounted(() => {
 	}, 100);
 });
 
-// 判断是否在底部附近（5% 容差）
+// 判断是否在底部附近
 const isNearBottom = (scrollTop: number, scrollHeight: number): boolean => {
 	const distanceToBottom = scrollHeight - scrollTop - scrollViewHeight.value;
-	return distanceToBottom < scrollViewHeight.value * 0.05;
+	// 使用固定像素(50px)和百分比(5%)的较大值作为容差
+	// const tolerance = Math.max(50, scrollViewHeight.value * 0.05);
+	// return distanceToBottom < tolerance;
+	return distanceToBottom < scrollViewHeight.value * 0.03;
 };
 
 // 滚动到底部
@@ -71,26 +74,16 @@ const scrollToBottom = () => {
 	});
 };
 
-// 处理滚动事件 - 基于位置判断
+// 处理滚动事件
 const handleScroll = (e: any) => {
-	// 初始化完成前不判断位置
 	if (!isInitialized.value) return;
-	// 高度未获取到时不判断
 	if (scrollViewHeight.value <= 0) return;
 
 	const currentScrollTop = e.detail?.scrollTop ?? 0;
 	const scrollHeight = e.detail?.scrollHeight ?? 0;
 	const atBottom = isNearBottom(currentScrollTop, scrollHeight);
 
-	// 只在用户触摸时才判断是否上滑
-	// 程序触发的滚动不改变状态
-	if (isTouching.value) {
-		if (!atBottom) {
-			isUserScrolledUp.value = true;
-		}
-	}
-
-	// 无论如何，滚到底部都重置状态
+	// 滚到底部时重置状态，恢复自动滚动
 	if (atBottom) {
 		isUserScrolledUp.value = false;
 	}
@@ -104,14 +97,18 @@ const resetAutoScroll = () => {
 	});
 };
 
-// 触摸开始
+// 触摸开始 - 立即中断自动滚动
 const handleTouchStart = () => {
 	isTouching.value = true;
+	isUserScrolledUp.value = true; // 立即设置，确保第一次滑动就能响应
 };
 
 // 触摸结束
 const handleTouchEnd = () => {
-	isTouching.value = false;
+	// 延迟重置，给惯性滚动留出时间
+	setTimeout(() => {
+		isTouching.value = false;
+	}, 300);
 };
 
 // 暴露方法给父组件
@@ -135,6 +132,22 @@ watch(
 
 <template>
 	<view class="chat-layout">
+		<view
+			style="
+				position: fixed;
+				top: 200px;
+				left: 0;
+				z-index: 200;
+				background-color: rgba(0, 0, 0, 1);
+			"
+			class="flex flex-col gap-2 p-4"
+		>
+			<cl-text color="#2da042"> scrollTop:{{ scrollTop }} </cl-text>
+			<cl-text color="#2da042"> isUserScrolledUp:{{ isUserScrolledUp }} </cl-text>
+			<cl-text color="#2da042"> scrollViewHeight:{{ scrollViewHeight }} </cl-text>
+			<cl-text color="#2da042"> isTouching:{{ isTouching }} </cl-text>
+		</view>
+
 		<!-- 空状态 -->
 		<view v-if="showEmpty" class="chat-layout__empty">
 			<text class="empty-text">{{ emptyText || "暂无内容" }}</text>
