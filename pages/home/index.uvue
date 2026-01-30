@@ -25,6 +25,8 @@ import ComplaintStarter from "@/ai-chat-module/complaint/complaint.uvue";
 import DefenseStarter from "@/ai-chat-module/defense/defense.uvue";
 import ContractReviewStarter from "@/ai-chat-module/contract-review/contract-review.uvue";
 import ContractGenStarter from "@/ai-chat-module/contract-gen/contract-gen.uvue";
+import LawFilterPopup from "@/ai-chat-module/components/law-filter/index.uvue";
+import LawFilterChips from "@/ai-chat-module/components/law-filter/filter-chips.uvue";
 
 // 法规模块模型选择器
 import ModelSelector from "@/ai-chat-module/components/model-selector/index.uvue";
@@ -44,6 +46,9 @@ const lawModelType = ref<LawModelType>("fabao");
 
 // 案例模块模型选择（仅 case 模块使用）
 const caseModelType = ref<CaseModelType>("fabao");
+
+// 筛选弹窗显示状态（仅 law 模块 + lzx 模式使用）
+const showFilterPopup = ref(false);
 
 // 当前模块
 const currentModule = computed(() => moduleSwitchStore.currentModule.value);
@@ -248,10 +253,19 @@ const handleKeyboardHeightChange = (height: number) => {
 							:show-default-network="currentConfig?.enableNetwork ?? false"
 							:show-intent-chips="currentModule !== 'law'"
 							:placeholder="currentConfig?.placeholder"
+							:showFilter="currentModule === 'law' && lawModelType === 'lzx'"
 							@send="handleSend"
 							@input-mode-change="handleInputModeChange"
 							@keyboard-height-change="handleKeyboardHeightChange"
+							@filter-click="showFilterPopup = true"
 						>
+							<!-- 筛选标签显示 -->
+							<template #filter-chips>
+								<law-filter-chips
+									v-if="currentModule === 'law' && lawModelType === 'lzx'"
+									@click="showFilterPopup = true"
+								/>
+							</template>
 							<!-- 法规模块：模型选择器 -->
 							<template v-if="currentModule === 'law'" #tools-prepend>
 								<view class="px-2">
@@ -273,6 +287,9 @@ const handleKeyboardHeightChange = (height: number) => {
 								</view>
 							</template>
 						</chat-input>
+
+						<!-- 法条筛选弹窗 -->
+						<law-filter-popup v-model="showFilterPopup" />
 					</view>
 				</simple-card>
 			</view>

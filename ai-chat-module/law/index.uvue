@@ -25,6 +25,8 @@ import AiMessage from "../components/chat-layout/ai-message.uvue";
 import ModelSelector from "../components/model-selector/index.uvue";
 import LzxLawList from "../components/lzx-law-card/list.uvue";
 import FabaoStages from "../components/fabao-stages/index.uvue";
+import LawFilterPopup from "../components/law-filter/index.uvue";
+import LawFilterChips from "../components/law-filter/filter-chips.uvue";
 
 const log = new Logger("LawChatPage");
 const ui = useUi();
@@ -61,6 +63,9 @@ const getFabaoStages = (refs: LawMessageReferences | undefined): FabaoStageItem[
 const inputValue = ref("");
 const chatLayoutRef = ref<InstanceType<typeof ChatLayout> | null>(null);
 const keyboardHeight = ref(0);
+
+// 筛选弹窗显示状态
+const showFilterPopup = ref(false);
 
 const sessionId = computed(() => lawSessionStore.sessionId.value || "");
 const messages = lawSessionStore.messages;
@@ -291,17 +296,29 @@ const handleSend = async (data: SendData) => {
 						:show-default-knowledge="chatInputStore.showDefaultKnowledge.value"
 						:show-default-network="chatInputStore.showDefaultNetwork.value"
 						:show-intent-chips="false"
+						:show-filter="modelType === 'lzx'"
 						@send="handleSend"
 						@stop="handleStop"
 						@tool-change="handleToolsChange"
 						@input-mode-change="handleInputModeChange"
 						@keyboard-height-change="handleKeyboardHeightChange"
+						@filter-click="showFilterPopup = true"
 					>
+						<!-- 筛选标签 -->
+						<template #filter-chips>
+							<law-filter-chips
+								v-if="modelType === 'lzx'"
+								@click="showFilterPopup = true"
+							/>
+						</template>
+
 						<!-- 模型信息（锁定状态） -->
 						<template #tools-prepend>
 							<model-selector v-model="modelType" :locked="modelLocked" />
 						</template>
 					</chat-input>
+					<!-- 筛选弹窗 -->
+					<law-filter-popup v-model="showFilterPopup" />
 				</template>
 			</chat-layout>
 		</template>

@@ -14,6 +14,7 @@ import type {
 	InputLine
 } from "@/cool/types/chat-input";
 import { chatInputStore } from "@/cool/store";
+import { lawFilterStore } from "@/cool/store/chatInput-store/lawFilterStore";
 
 import VoiceRecord from "../voice-record.uvue";
 import ActionsPopup from "../actions-popup.uvue";
@@ -59,8 +60,21 @@ const props = defineProps({
 	showIntentChips: {
 		type: Boolean,
 		default: () => true
+	},
+	// 是否显示筛选按钮
+	showFilter: {
+		type: Boolean,
+		default: () => false
 	}
 });
+
+// 法条 - 专业版 - 筛选条件
+const hasLZXFilters = computed(
+	() =>
+		lawFilterStore.filters.value?.area_facet?.length > 0 ||
+		lawFilterStore.filters.value?.xls?.length > 0 ||
+		lawFilterStore.filters.value?.lawstatexls_facet !== null
+);
 
 /**
  * inputModeModal
@@ -87,6 +101,8 @@ const emit = defineEmits<{
 	(e: "tool-toggle", value: ToolItem): void;
 	// 键盘高度变化
 	(e: "keyboard-height-change", height: number): void;
+	// 筛选按钮点击
+	(e: "filter-click"): void;
 }>();
 
 // 键盘高度
@@ -290,6 +306,11 @@ const handleActionSelect = (type: ActionItems) => {
 	console.log("工具栏选择:", type);
 };
 
+// 筛选按钮点击
+const handleFilterClick = () => {
+	emit("filter-click");
+};
+
 //#endregion
 
 // 当外部传入的默认展示配置变化时，同步内部列表
@@ -370,6 +391,9 @@ watch(
 
 <template>
 	<view class="chat-input-wrapper" :class="{ 'is-dark': isDark }">
+		<!-- 筛选标签插槽（最上方） -->
+		<slot name="filter-chips"></slot>
+
 		<!-- 顶部工具区域 -->
 		<view class="chat-tools-area">
 			<!-- 前置插槽：模型选择等自定义工具 -->
@@ -479,8 +503,20 @@ watch(
 					</view>
 				</view>
 
-				<!-- 右侧：加号 + 发送/停止按钮 -->
+				<!-- 右侧：筛选 + 加号 + 发送/停止按钮 -->
 				<view class="chat-main__actions">
+					<!-- 筛选按钮 -->
+					<view
+						v-if="showFilter"
+						class="chat-main__icon-btn"
+						@tap.stop="handleFilterClick"
+					>
+						<cl-icon
+							name="filter-line"
+							:size="44"
+							:color="hasLZXFilters ? 'primary' : ''"
+						></cl-icon>
+					</view>
 					<!-- 正在生成时显示停止按钮 -->
 					<view v-if="loading" class="chat-main__icon-btn" @tap.stop="emit('stop')">
 						<cl-icon name="stop-circle-line" :size="48" color="error"></cl-icon>
@@ -568,7 +604,7 @@ watch(
 }
 
 .chat-main__actions {
-	@apply h-full flex flex-col items-end justify-end;
+	@apply h-full flex flex-row items-end justify-end;
 	gap: 4px;
 }
 

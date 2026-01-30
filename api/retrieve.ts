@@ -52,6 +52,12 @@ export interface LzxLawSearchRequest {
 	rows?: number;
 	/** 语义描述，用于检索法规 */
 	vector: string;
+	/** 地区筛选 (多选，空格分隔) */
+	area_facet?: string;
+	/** 效力级别筛选 (多选，空格分隔) */
+	xls?: string;
+	/** 时效性筛选 (单选) */
+	lawstatexls_facet?: string;
 }
 
 /**
@@ -90,6 +96,16 @@ export const QueryLzxLaw = (data: LzxLawSearchRequest): Promise<ApiResponse<{ re
 	const params: string[] = [`rows=${rows}`];
 	if (vector) {
 		params.push(`vector=${encodeURIComponent(vector)}`);
+	}
+	// 筛选参数
+	if (data.area_facet) {
+		params.push(`area_facet=${encodeURIComponent(data.area_facet)}`);
+	}
+	if (data.xls) {
+		params.push(`xls=${encodeURIComponent(data.xls)}`);
+	}
+	if (data.lawstatexls_facet) {
+		params.push(`lawstatexls_facet=${encodeURIComponent(data.lawstatexls_facet)}`);
 	}
 
 	return request({

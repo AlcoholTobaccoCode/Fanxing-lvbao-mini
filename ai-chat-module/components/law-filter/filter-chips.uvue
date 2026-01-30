@@ -1,0 +1,179 @@
+<script setup lang="ts">
+import { computed } from "vue";
+import { isDark } from "@/cool";
+import { lawFilterStore } from "@/cool/store/chatInput-store/lawFilterStore";
+import { LEGAL_LEVEL_MAP, LAW_TIMELINESS_MAP } from "./constants";
+
+const emit = defineEmits<{
+	(e: "click"): void;
+}>();
+
+// 筛选条件
+const filters = computed(() => lawFilterStore.filters.value);
+
+// 是否有筛选条件
+const hasFilters = computed(() => {
+	const f = filters.value;
+	return f.area_facet.length > 0 || f.xls.length > 0 || f.lawstatexls_facet !== null;
+});
+
+// 截断文字，超过2个字显示 xx..
+const truncateText = (text: string, maxLen: number = 2): string => {
+	if (text.length <= maxLen) return text;
+	return text.slice(0, maxLen) + "..";
+};
+
+// 地区标签 (最多显示2个，超出显示 +N)
+const areaChips = computed(() => {
+	const areas = filters.value.area_facet;
+	if (areas.length === 0) return [];
+	const display = areas.slice(0, 2).map((a) => ({
+		label: truncateText(a),
+		value: a,
+		type: "area_facet" as const
+	}));
+	if (areas.length > 2) {
+		display.push({
+			label: `+${areas.length - 2}`,
+			value: "__more__",
+			type: "area_facet" as const
+		});
+	}
+	return display;
+});
+
+// 效力级别标签
+// 已选择时效性时 - 最多显示 1个，超出显示 +N
+// 未选择时效性时 - 最多显示 2个，超出显示 +N
+
+const xlsChips = computed(() => {
+	const xls = filters.value.xls;
+	const t = filters.value.lawstatexls_facet;
+	if (xls.length === 0) return [];
+	const display = xls.slice(0, t ? 1 : 2).map((x) => ({
+		label: truncateText(LEGAL_LEVEL_MAP[x] || x),
+		value: x,
+		type: "xls" as const
+	}));
+	if (xls.length > (t ? 1 : 2)) {
+		display.push({
+			label: `+${xls.length - (t ? 1 : 2)}`,
+			value: "__more__",
+			type: "xls" as const
+		});
+	}
+	return display;
+});
+
+// 时效性标签
+const timelinessChip = computed(() => {
+	const t = filters.value.lawstatexls_facet;
+	if (!t) return null;
+	return {
+		label: LAW_TIMELINESS_MAP[t] || t,
+		value: t,
+		type: "lawstatexls_facet" as const
+	};
+});
+
+// 移除筛选项
+const handleRemove = (type: string, value: string) => {
+	if (value === "__more__") {
+		// 点击 +N 打开筛选弹窗
+		emit("click");
+		return;
+	}
+	lawFilterStore.removeFilter(type as any, value);
+};
+
+// 点击标签区域
+const handleClick = () => {
+	emit("click");
+};
+</script>
+
+<template>
+	<view v-if="hasFilters" class="filter-chips-wrapper" :class="{ 'is-dark': isDark }">
+		<scroll-view scroll-x class="w-full" show-scrollbar="false">
+			<view class="filter-chips-inner" @tap="handleClick">
+				<!-- 地区标签 -->
+				<view
+					v-for="chip in areaChips"
+					:key="'area-' + chip.value"
+					class="filter-chip-item"
+				>
+					<cl-text size="12px" class="filter-chip-text">{{ chip.label }}</cl-text>
+					<view
+						v-if="chip.value !== '__more__'"
+						class="filter-chip-close"
+						@tap.stop="handleRemove(chip.type, chip.value)"
+					>
+						<cl-icon name="close-line" :size="24"></cl-icon>
+					</view>
+				</view>
+
+				<!-- 效力级别标签 -->
+				<view v-for="chip in xlsChips" :key="'xls-' + chip.value" class="filter-chip-item">
+					<cl-text size="12px" class="filter-chip-text">{{ chip.label }}</cl-text>
+					<view
+						v-if="chip.value !== '__more__'"
+						class="filter-chip-close"
+						@tap.stop="handleRemove(chip.type, chip.value)"
+					>
+						<cl-icon name="close-line" :size="24"></cl-icon>
+					</view>
+				</view>
+
+				<!-- 时效性标签 -->
+				<view v-if="timelinessChip" class="filter-chip-item">
+					<cl-text size="12px" class="filter-chip-text">{{
+						timelinessChip.label
+					}}</cl-text>
+					<view
+						class="filter-chip-close"
+						@tap.stop="handleRemove(timelinessChip.type, timelinessChip.value)"
+					>
+						<cl-icon name="close-line" :size="24"></cl-icon>
+					</view>
+				</view>
+			</view>
+		</scroll-view>
+	</view>
+</template>
+
+<style scoped lang="scss">
+.filter-chips-wrapper {
+	@apply px-2 py-2;
+}
+
+.filter-chips-inner {
+	@apply flex flex-row items-center;
+	gap: 6px;
+}
+
+.filter-chip-item {
+	@apply flex flex-row items-center px-2 py-1 rounded-full bg-primary-50 border border-primary-200;
+	gap: 2px;
+}
+
+.filter-chip-text {
+	@apply text-primary-700;
+}
+
+.filter-chip-close {
+	@apply flex items-center justify-center;
+	width: 16px;
+	height: 16px;
+}
+
+// 深色模式
+.is-dark {
+	.filter-chip-item {
+		@apply bg-primary-900 border-primary-700;
+	}
+
+	.filter-chip-text {
+		@apply text-primary-300;
+	}
+}
+</style>

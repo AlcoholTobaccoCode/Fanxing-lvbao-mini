@@ -12,7 +12,7 @@ export interface ModuleTabItem {
 // Tab 列表配置
 export const MODULE_TAB_LIST: ModuleTabItem[] = [
 	{ label: "咨询", value: "consult" },
-	{ label: "法规", value: "law" },
+	{ label: "法条", value: "law" },
 	{ label: "案例", value: "case" },
 	{ label: "起诉状", value: "complaint" },
 	{ label: "答辩状", value: "defense" },

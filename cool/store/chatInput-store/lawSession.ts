@@ -13,6 +13,7 @@ import {
 import type { ChatLaunchPayload } from "./flow";
 import type { Tools } from "@/cool/types/chat-input";
 import { createModelSessionId } from "@/utils/assetsConfig";
+import { lawFilterStore } from "./lawFilterStore";
 
 //#region 类型定义
 
@@ -246,8 +247,26 @@ export class LawSessionStore {
 	private async sendLzxQuery(text: string, aiMsg: LawMessage, hooks?: LawStreamHooks) {
 		this.streamStatus.value = "正在检索法规...";
 
+		// 读取筛选条件
+		const filters = lawFilterStore.filters.value;
+		const requestParams: any = {
+			vector: text,
+			rows: 100
+		};
+
+		// 添加筛选参数
+		if (filters.area_facet.length > 0) {
+			requestParams.area_facet = filters.area_facet.join(" ");
+		}
+		if (filters.xls.length > 0) {
+			requestParams.xls = filters.xls.join(" ");
+		}
+		if (filters.lawstatexls_facet) {
+			requestParams.lawstatexls_facet = filters.lawstatexls_facet;
+		}
+
 		// 一次性查询100条（律之星最大支持数量）
-		const res = await QueryLzxLaw({ vector: text, rows: 100 });
+		const res = await QueryLzxLaw(requestParams);
 		// request 函数在 code=200 时直接返回 data 字段，所以用 res?.result
 		const result = ((res as any)?.result || []) as LzxLawResultItem[];
 

@@ -122,4 +122,9 @@ page {
 	justify-content: center;
 	align-items: center;
 }
+
+.divider-line {
+	height: 2rpx;
+	background: #e8e8e8;
+}
 </style>

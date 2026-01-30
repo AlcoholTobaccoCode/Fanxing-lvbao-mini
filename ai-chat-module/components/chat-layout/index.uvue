@@ -132,7 +132,7 @@ watch(
 
 <template>
 	<view class="chat-layout">
-		<view
+		<!-- <view
 			style="
 				position: fixed;
 				top: 200px;
@@ -146,7 +146,7 @@ watch(
 			<cl-text color="#2da042"> isUserScrolledUp:{{ isUserScrolledUp }} </cl-text>
 			<cl-text color="#2da042"> scrollViewHeight:{{ scrollViewHeight }} </cl-text>
 			<cl-text color="#2da042"> isTouching:{{ isTouching }} </cl-text>
-		</view>
+		</view> -->
 
 		<!-- 空状态 -->
 		<view v-if="showEmpty" class="chat-layout__empty">

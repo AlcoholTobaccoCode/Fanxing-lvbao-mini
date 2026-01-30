@@ -1,0 +1,387 @@
+<script setup lang="ts">
+import { ref, computed, watch } from "vue";
+import { isDark } from "@/cool";
+import { type LawFilters, createEmptyFilters } from "@/cool/types/law-filter";
+import { lawFilterStore } from "@/cool/store/chatInput-store/lawFilterStore";
+import { CHINA_PROVINCES, LEGAL_LEVEL_OPTIONS, LAW_TIMELINESS_OPTIONS } from "./constants";
+
+const props = defineProps({
+	modelValue: {
+		type: Boolean,
+		default: false
+	}
+});
+
+const emit = defineEmits<{
+	(e: "update:modelValue", value: boolean): void;
+	(e: "confirm", filters: LawFilters): void;
+}>();
+
+// 弹窗显示状态 - 使用 ref 而非 computed，避免小程序中 v-model 传递问题
+const visible = ref(false);
+
+// 同步 props.modelValue 到 visible
+watch(
+	() => props.modelValue,
+	(val) => {
+		visible.value = val;
+	},
+	{ immediate: true }
+);
+
+// 同步 visible 到父组件
+watch(visible, (val) => {
+	if (val !== props.modelValue) {
+		emit("update:modelValue", val);
+	}
+});
+
+// 本地编辑状态
+const localFilters = ref<LawFilters>(createEmptyFilters());
+
+// 地区搜索关键词
+const areaSearchKey = ref("");
+
+// 最近选择的地区
+const recentAreas = computed(() => lawFilterStore.recentAreas.value);
+
+// 过滤后的省份列表
+const filteredProvinces = computed(() => {
+	const key = areaSearchKey.value.trim();
+	if (!key) return CHINA_PROVINCES;
+	return CHINA_PROVINCES.filter((p) => p.includes(key));
+});
+
+// 弹窗打开时，从 store 复制筛选条件到本地
+watch(visible, (val) => {
+	if (val) {
+		localFilters.value = {
+			area_facet: [...lawFilterStore.filters.value.area_facet],
+			xls: [...lawFilterStore.filters.value.xls],
+			lawstatexls_facet: lawFilterStore.filters.value.lawstatexls_facet
+		};
+		areaSearchKey.value = "";
+	}
+});
+
+// 切换地区选择
+const toggleArea = (area: string) => {
+	const idx = localFilters.value.area_facet.indexOf(area);
+	if (idx >= 0) {
+		localFilters.value.area_facet.splice(idx, 1);
+	} else {
+		localFilters.value.area_facet.push(area);
+	}
+};
+
+// 切换效力级别选择
+const toggleXls = (value: string) => {
+	const idx = localFilters.value.xls.indexOf(value);
+	if (idx >= 0) {
+		localFilters.value.xls.splice(idx, 1);
+	} else {
+		localFilters.value.xls.push(value);
+	}
+};
+
+// 切换时效性选择 (单选，再次点击取消)
+const toggleTimeliness = (value: string) => {
+	if (localFilters.value.lawstatexls_facet === value) {
+		localFilters.value.lawstatexls_facet = null;
+	} else {
+		localFilters.value.lawstatexls_facet = value;
+	}
+};
+
+// 重置筛选
+const handleReset = () => {
+	localFilters.value = createEmptyFilters();
+};
+
+// 确认筛选
+const handleConfirm = () => {
+	lawFilterStore.setFilters(localFilters.value);
+	emit("confirm", localFilters.value);
+	visible.value = false;
+};
+
+// 关闭弹窗
+const handleClose = () => {
+	visible.value = false;
+};
+
+// 重置地区筛选
+const resetArea = () => {
+	localFilters.value.area_facet = [];
+};
+
+// 重置效力级别筛选
+const resetXls = () => {
+	localFilters.value.xls = [];
+};
+
+// 检查地区是否选中
+const isAreaSelected = (area: string) => localFilters.value.area_facet.includes(area);
+
+// 检查效力级别是否选中
+const isXlsSelected = (value: string) => localFilters.value.xls.includes(value);
+
+// 检查时效性是否选中
+const isTimelinessSelected = (value: string) => localFilters.value.lawstatexls_facet === value;
+
+// 获取已选数量
+const selectedAreaCount = computed(() => localFilters.value.area_facet.length);
+const selectedXlsCount = computed(() => localFilters.value.xls.length);
+</script>
+
+<template>
+	<cl-popup v-model="visible" direction="bottom" :border-radius="[16, 16, 0, 0]">
+		<view class="filter-popup" :class="{ 'is-dark': isDark }">
+			<!-- 头部 -->
+			<view class="filter-header">
+				<cl-text size="17px" bold>筛选条件</cl-text>
+			</view>
+
+			<!-- 内容区域 -->
+			<scroll-view scroll-y class="filter-content">
+				<!-- 地区筛选 -->
+				<view class="filter-section">
+					<view class="filter-section__header">
+						<view class="filter-section__title">
+							<cl-text size="15px" bold>地区</cl-text>
+							<cl-text
+								v-if="selectedAreaCount > 0"
+								size="13px"
+								color="primary"
+								class="ml-2"
+							>
+								已选 {{ selectedAreaCount }}
+							</cl-text>
+						</view>
+						<cl-text
+							v-if="selectedAreaCount > 0"
+							size="13px"
+							color="secondary"
+							@tap="resetArea"
+							>重置</cl-text
+						>
+					</view>
+
+					<view class="filter-section__body">
+						<!-- 搜索框 -->
+						<view class="filter-search">
+							<cl-input
+								v-model="areaSearchKey"
+								placeholder="搜索地区"
+								clearable
+								:pt="{ className: '!rounded-full !bg-surface-100' }"
+							>
+								<template #prefix>
+									<cl-icon name="search-line" :size="32" class="ml-2"></cl-icon>
+								</template>
+							</cl-input>
+						</view>
+
+						<!-- 最近选择 -->
+						<view v-if="recentAreas.length > 0 && !areaSearchKey" class="filter-recent">
+							<cl-text size="13px" color="secondary" class="mb-2">最近选择</cl-text>
+							<view class="filter-chips">
+								<view
+									v-for="area in recentAreas"
+									:key="'recent-' + area"
+									class="filter-chip"
+									:class="{ 'filter-chip--active': isAreaSelected(area) }"
+									@tap="toggleArea(area)"
+								>
+									<cl-text size="13px">{{ area }}</cl-text>
+								</view>
+							</view>
+						</view>
+
+						<view class="divider-line"></view>
+
+						<!-- 全部地区 -->
+						<view class="filter-area-grid">
+							<view
+								v-for="province in filteredProvinces"
+								:key="province"
+								class="filter-chip"
+								:class="{ 'filter-chip--active': isAreaSelected(province) }"
+								@tap="toggleArea(province)"
+							>
+								<cl-text size="13px">{{ province }}</cl-text>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<!-- 效力级别筛选 -->
+				<view class="filter-section">
+					<view class="filter-section__header">
+						<view class="filter-section__title">
+							<cl-text size="15px" bold>效力级别</cl-text>
+							<cl-text
+								v-if="selectedXlsCount > 0"
+								size="13px"
+								color="primary"
+								class="ml-2"
+							>
+								已选 {{ selectedXlsCount }}
+							</cl-text>
+						</view>
+						<cl-text
+							v-if="selectedXlsCount > 0"
+							size="13px"
+							color="secondary"
+							@tap="resetXls"
+							>重置</cl-text
+						>
+					</view>
+
+					<view class="filter-section__body">
+						<view class="filter-chips">
+							<view
+								v-for="item in LEGAL_LEVEL_OPTIONS"
+								:key="item.value"
+								class="filter-chip"
+								:class="{ 'filter-chip--active': isXlsSelected(item.value) }"
+								@tap="toggleXls(item.value)"
+							>
+								<cl-text size="13px">{{ item.label }}</cl-text>
+							</view>
+						</view>
+					</view>
+				</view>
+
+				<!-- 时效性筛选 -->
+				<view class="filter-section">
+					<view class="filter-section__header">
+						<view class="filter-section__title">
+							<cl-text size="15px" bold>时效性</cl-text>
+						</view>
+					</view>
+
+					<view class="filter-section__body">
+						<view class="filter-chips">
+							<view
+								v-for="item in LAW_TIMELINESS_OPTIONS"
+								:key="item.value"
+								class="filter-chip"
+								:class="{ 'filter-chip--active': isTimelinessSelected(item.value) }"
+								@tap="toggleTimeliness(item.value)"
+							>
+								<cl-text size="13px">{{ item.label }}</cl-text>
+							</view>
+						</view>
+					</view>
+				</view>
+			</scroll-view>
+
+			<!-- 底部按钮 -->
+			<view class="filter-footer">
+				<cl-button type="info" size="large" class="flex-1" @tap="handleReset"
+					>重置</cl-button
+				>
+				<cl-button type="primary" size="large" class="flex-1 ml-3" @tap="handleConfirm"
+					>确定</cl-button
+				>
+			</view>
+		</view>
+	</cl-popup>
+</template>
+
+<style scoped lang="scss">
+.filter-popup {
+	@apply bg-white;
+	max-height: 70vh;
+	display: flex;
+	flex-direction: column;
+}
+
+.filter-header {
+	@apply flex flex-row items-center justify-between px-4 py-3 border-b border-surface-100;
+}
+
+.filter-header__close {
+	@apply p-1;
+}
+
+.filter-content {
+	@apply flex-1 px-4;
+	max-height: 50vh;
+}
+
+.filter-section {
+	@apply py-3 border-b border-surface-50;
+}
+
+.filter-section__header {
+	@apply flex flex-row items-center justify-between;
+}
+
+.filter-section__title {
+	@apply flex flex-row items-center;
+}
+
+.filter-section__body {
+	@apply mt-3;
+}
+
+.filter-search {
+	@apply mb-3;
+}
+
+.filter-recent {
+	@apply mb-2;
+}
+
+.filter-chips {
+	@apply flex flex-row flex-wrap;
+	gap: 8px;
+}
+
+.filter-area-grid {
+	@apply flex flex-row flex-wrap mt-2;
+	gap: 8px;
+}
+
+.filter-chip {
+	@apply px-3 py-2 rounded-full bg-surface-50 border border-surface-100;
+	transition: all 0.2s;
+}
+
+.filter-chip--active {
+	@apply bg-primary-50 border-primary-300;
+}
+
+.filter-footer {
+	@apply flex flex-row px-4 py-3 border-t border-surface-100;
+}
+
+// 深色模式
+.is-dark {
+	.filter-popup {
+		@apply bg-surface-900;
+	}
+
+	.filter-header {
+		@apply border-surface-700;
+	}
+
+	.filter-section {
+		@apply border-surface-700;
+	}
+
+	.filter-chip {
+		@apply bg-surface-800 border-surface-600;
+	}
+
+	.filter-chip--active {
+		@apply bg-primary-900 border-primary-600;
+	}
+
+	.filter-footer {
+		@apply border-surface-700;
+	}
+}
+</style>

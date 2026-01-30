@@ -7,3 +7,4 @@ export * from "./consultSession";
 export * from "./lawSession";
 export * from "./caseSession";
 export * from "./docGenSession";
+export * from "./lawFilterStore";
