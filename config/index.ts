@@ -52,7 +52,7 @@ export const config = {
 	name: "律先峰",
 	version: "1.0.0",
 	locale: "zh",
-	website: "https://lvbao.fanxingzhihui.com",
+	website: "https://lvbao-test.fanxingzhihui.com",
 	logo: "https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/logo.png",
 	ico: "https://fxzh01.oss-cn-hangzhou.aliyuncs.com/public/wxmini/icon.ico",
 	showDarkButton: isMp() ? false : true,

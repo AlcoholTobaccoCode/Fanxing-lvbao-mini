@@ -24,7 +24,11 @@ export default {
 			editorCtx: null,
 			exportImagePath: "", // 导出的图片路径
 			isExporting: false, // 导出中状态
-			canvasId: "export-canvas" // Canvas ID
+			canvasId: "export-canvas", // Canvas ID
+			isSaving: false, // 保存中状态
+			saveStatus: "", // '' | 'saved'
+			saveTimer: null, // 自动保存定时器
+			hasContentChanged: false // 内容是否变化
 		};
 	},
 	onLoad() {
@@ -35,8 +39,6 @@ export default {
 			this.content = data.content || "";
 			this.mode = data.mode || "preview";
 			this.messageIndex = data.messageIndex ?? -1;
-
-			console.info("this.content ===> ", this.content);
 
 			uni.setNavigationBarTitle({
 				title: this.title
@@ -49,24 +51,14 @@ export default {
 	},
 	mounted() {},
 	async onUnload() {
-		// 编辑模式下，返回时保存内容到 store
-		if (this.mode === "edit" && this.messageIndex >= 0 && this.editorCtx) {
-			try {
-				const latestContent = await this.editorCtx.getLastContent();
-				const markdownContent = htmlToMarkdown(latestContent?.html || "");
-
-				if (markdownContent && markdownContent !== this.content) {
-					// 更新 store 中的消息内容
-					const messages = docGenSessionStore.messages.value;
-					if (messages[this.messageIndex]) {
-						messages[this.messageIndex].content = markdownContent;
-						// 触发保存
-						docGenSessionStore.saveCurrentSessionSnapshot();
-					}
-				}
-			} catch (err) {
-				console.error("保存编辑内容失败", err);
-			}
+		// 清除自动保存定时器
+		if (this.saveTimer) {
+			clearTimeout(this.saveTimer);
+			this.saveTimer = null;
+		}
+		// 如果有未保存的内容变化，执行保存
+		if (this.hasContentChanged && this.mode === "edit" && this.messageIndex >= 0) {
+			await this.doSave();
 		}
 	},
 	methods: {
@@ -89,8 +81,52 @@ export default {
 			this.mode = this.mode === "preview" ? "edit" : "preview";
 			this.updateReadOnlyState();
 		},
+		// 手动保存入口
+		async handleSave() {
+			if (this.isSaving || this.mode !== "edit" || this.messageIndex < 0) return;
+			await this.doSave();
+		},
+		// 执行保存
+		async doSave() {
+			if (!this.editorCtx) return;
+
+			this.isSaving = true;
+			try {
+				const latestContent = await this.editorCtx.getLastContent();
+				const markdownContent = htmlToMarkdown(latestContent?.html || "");
+
+				if (markdownContent) {
+					const messages = docGenSessionStore.messages.value;
+					if (messages[this.messageIndex]) {
+						messages[this.messageIndex].content = markdownContent;
+						await docGenSessionStore.saveCurrentSessionSnapshot();
+						this.content = markdownContent;
+						this.hasContentChanged = false;
+					}
+				}
+
+				this.saveStatus = "saved";
+				setTimeout(() => {
+					this.saveStatus = "";
+				}, 1000);
+			} catch (err) {
+				console.error("保存编辑内容失败", err);
+				uni.showToast({ title: "保存失败", icon: "none" });
+			} finally {
+				await sleepWait(800);
+				this.isSaving = false;
+			}
+		},
+		// 触发自动保存
+		triggerAutoSave() {
+			if (this.mode !== "edit") return;
+			this.hasContentChanged = true;
+			if (this.saveTimer) clearTimeout(this.saveTimer);
+			this.saveTimer = setTimeout(() => this.doSave(), 3 * 1000);
+		},
 		input(e) {
-			console.log("input ==>", e);
+			// console.log("input ==>", e);
+			this.triggerAutoSave();
 		},
 		epaste(e) {
 			console.log("epaste ==>", e);
@@ -204,9 +240,7 @@ export default {
 		// 显示图片操作选项
 		showImageActions(imagePaths) {
 			const isMultiple = imagePaths.length > 1;
-			const itemList = isMultiple
-				? ["保存全部", "预览全部"]
-				: ["保存", "分享", "预览"];
+			const itemList = isMultiple ? ["保存全部", "预览全部"] : ["保存", "分享", "预览"];
 
 			uni.showActionSheet({
 				itemList: itemList,
@@ -367,6 +401,9 @@ export default {
 			<view class="flex flex-row gap-2">
 				<cl-button @click="toggleMode">
 					{{ mode === "preview" ? "编辑" : "预览" }}
+				</cl-button>
+				<cl-button v-if="mode === 'edit'" :loading="isSaving" @click="handleSave">
+					{{ saveStatus === "saved" ? "已保存" : "保存" }}
 				</cl-button>
 				<cl-button text @click="onExport"> 导出 </cl-button>
 			</view>

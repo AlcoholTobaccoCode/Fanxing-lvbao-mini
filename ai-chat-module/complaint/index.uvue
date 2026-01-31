@@ -2,7 +2,7 @@
 @description: 起诉状生成对话页面
 -->
 <script lang="ts" setup>
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, nextTick } from "vue";
 import { useUi } from "@/uni_modules/cool-ui";
 import { Logger } from "@/cool/utils/log";
 import { useStore } from "@/cool";
@@ -57,7 +57,11 @@ const handleInputModeChange = (mode: string) => {
 watch(
 	messages,
 	() => {
-		chatLayoutRef.value?.scrollToBottom();
+		nextTick(() => {
+			setTimeout(() => {
+				chatLayoutRef.value?.scrollToBottom();
+			}, 200);
+		});
 	},
 	{ deep: true }
 );
@@ -164,7 +168,7 @@ const handleSend = async (data: SendData) => {
 			chatInputStore.tools.value,
 			{
 				onTextChunk: async (chunk: string) => {
-					console.debug("chunk ===> ", chunk);
+					// console.debug("chunk ===> ", chunk);
 				}
 			},
 			{
@@ -219,6 +223,7 @@ const handleSend = async (data: SendData) => {
 									v-if="item.stages?.length"
 									:stages="item.stages"
 									:loading="isGenerating && index === messages.length - 1"
+									:response-type="item.responseType"
 									doc-type="complaint"
 								/>
 							</template>

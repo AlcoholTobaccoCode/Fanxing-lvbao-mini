@@ -17,6 +17,8 @@ const props = defineProps<{
 	loading?: boolean;
 	/** 文书类型 */
 	docType?: DocGenKey;
+	/** 响应类型：'QUESTION' | 'DOC' */
+	responseType?: string;
 }>();
 
 /** 主题类型 - 统一使用主题色 */
@@ -71,12 +73,24 @@ const DISPLAY_STAGES: DocGenStageType[] = ["analyzing", "generating", "completed
 
 /** 计算展示的阶段列表 */
 const displayStages = computed(() => {
-	return DISPLAY_STAGES.map((stageType) => {
+	// 非 DOC 类型时，只显示第一步为 active/completed
+	const isQuestionType =
+		props.responseType === "QUESTION" ||
+		(!props.responseType &&
+			!props.stages.some((s) => s.stage === "generating" || s.stage === "completed"));
+
+	return DISPLAY_STAGES.map((stageType, index) => {
 		const stageData = props.stages.find((s) => s.stage === stageType);
 		const config = STAGE_CONFIG.value[stageType];
 
 		let status: "pending" | "active" | "completed" = "pending";
-		if (stageData) {
+
+		if (isQuestionType) {
+			// QUESTION 类型：只有第一步高亮
+			if (index === 0) {
+				status = stageData?.status === "completed" ? "completed" : "active";
+			}
+		} else if (stageData) {
 			status = stageData.status;
 		}
 
@@ -94,6 +108,8 @@ const displayStages = computed(() => {
 
 /** 是否全部完成 */
 const isAllCompleted = computed(() => {
+	// QUESTION 类型不算完成
+	if (props.responseType === "QUESTION") return false;
 	const completedStage = props.stages.find((s) => s.stage === "completed");
 	return completedStage?.status === "completed";
 });
