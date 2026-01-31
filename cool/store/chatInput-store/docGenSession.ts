@@ -86,7 +86,9 @@ export interface DocGenMessage {
 }
 
 export interface DocGenStreamHooks {
+	onMessageSend?: () => void;
 	onTextChunk?: (chunk: string) => void;
+	onMessageEnd?: () => void;
 }
 
 export class DocGenSessionStore {
@@ -301,6 +303,7 @@ export class DocGenSessionStore {
 			let buffer = "";
 			let fullContent = "";
 			const decoder = createSseDecoder();
+			let hasCalledOnMessageSend = false;
 
 			const processSseLine = (rawLine: string) => {
 				// 检查是否已中断或请求ID不匹配（说明是旧请求）
@@ -368,6 +371,12 @@ export class DocGenSessionStore {
 					// 记录 response_type（用于判断是否生成文书）
 					if (evt.response_type) {
 						aiMsg.responseType = evt.response_type as DocResponseType;
+
+						// 收到第一个响应时调用 onMessageSend
+						if (!hasCalledOnMessageSend) {
+							hasCalledOnMessageSend = true;
+							hooks?.onMessageSend?.();
+						}
 
 						// 更新阶段状态（但不设置 hasDocument，等流式结束后再设置）
 						if (evt.response_type === "DOC") {
@@ -471,6 +480,9 @@ export class DocGenSessionStore {
 						console.error("[DocGenSession] 请求失败:", err);
 					}
 					reject(err);
+				},
+				complete: () => {
+					hooks?.onMessageEnd?.();
 				}
 			} as any);
 

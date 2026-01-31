@@ -53,19 +53,6 @@ const handleInputModeChange = (mode: string) => {
 	chatInputStore.inputMode.value = mode as any;
 };
 
-// 监听消息变化，自动滚动
-watch(
-	messages,
-	() => {
-		nextTick(() => {
-			setTimeout(() => {
-				chatLayoutRef.value?.scrollToBottom();
-			}, 200);
-		});
-	},
-	{ deep: true }
-);
-
 onLoad((options) => {
 	const fromHistory = options?.fromHistory === "true";
 	isFromHistory.value = fromHistory;
@@ -167,8 +154,24 @@ const handleSend = async (data: SendData) => {
 			questionText,
 			chatInputStore.tools.value,
 			{
+				onMessageSend: async () => {
+					console.debug("onMessageSend ===> ");
+					nextTick(() => {
+						setTimeout(() => {
+							chatLayoutRef.value?.scrollToBottom();
+						}, 200);
+					});
+				},
 				onTextChunk: async (chunk: string) => {
 					// console.debug("chunk ===> ", chunk);
+				},
+				onMessageEnd: () => {
+					console.debug("onMessageEnd ===> ");
+					nextTick(() => {
+						setTimeout(() => {
+							chatLayoutRef.value?.scrollToBottom();
+						}, 200);
+					});
 				}
 			},
 			{
