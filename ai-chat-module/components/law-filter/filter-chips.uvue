@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { isDark } from "@/cool";
 import { lawFilterStore } from "@/cool/store/chatInput-store/lawFilterStore";
-import { LEGAL_LEVEL_MAP, LAW_TIMELINESS_OPTIONS } from "./constants";
+import { LAW_TIMELINESS_OPTIONS } from "./constants";
 
 const emit = defineEmits<{
 	(e: "click"): void;
@@ -51,7 +51,7 @@ const xlsChips = computed(() => {
 	const t = filters.value.lawstatexls_facet;
 	if (xls.length === 0) return [];
 	const display = xls.slice(0, t ? 1 : 2).map((x) => ({
-		label: truncateText(LEGAL_LEVEL_MAP[x] || x),
+		label: truncateText(lawFilterStore.getXlsLabel(x)),
 		value: x,
 		type: "xls" as const
 	}));

@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { isDark } from "@/cool";
 import { type LawFilters, createEmptyFilters } from "@/cool/types/law-filter";
 import { lawFilterStore } from "@/cool/store/chatInput-store/lawFilterStore";
-import { CHINA_PROVINCES, LEGAL_LEVEL_OPTIONS, LAW_TIMELINESS_OPTIONS } from "./constants";
+import { CHINA_PROVINCES, LAW_TIMELINESS_OPTIONS } from "./constants";
 
 const props = defineProps({
 	modelValue: {
@@ -132,6 +132,14 @@ const isTimelinessSelected = (value: string) => localFilters.value.lawstatexls_f
 // 获取已选数量
 const selectedAreaCount = computed(() => localFilters.value.area_facet.length);
 const selectedXlsCount = computed(() => localFilters.value.xls.length);
+
+// 效力级别选项（从 store 获取）
+const xlsOptions = computed(() => lawFilterStore.xlsOptions.value);
+
+// 组件挂载时加载效力级别选项
+onMounted(() => {
+	lawFilterStore.loadXlsOptions();
+});
 </script>
 
 <template>
@@ -241,11 +249,11 @@ const selectedXlsCount = computed(() => localFilters.value.xls.length);
 					<view class="filter-section__body">
 						<view class="filter-chips">
 							<view
-								v-for="item in LEGAL_LEVEL_OPTIONS"
-								:key="item.value"
+								v-for="item in xlsOptions"
+								:key="item.code"
 								class="filter-chip"
-								:class="{ 'filter-chip--active': isXlsSelected(item.value) }"
-								@tap="toggleXls(item.value)"
+								:class="{ 'filter-chip--active': isXlsSelected(item.code) }"
+								@tap="toggleXls(item.code)"
 							>
 								<cl-text size="13px">{{ item.label }}</cl-text>
 							</view>
