@@ -112,6 +112,12 @@ async function toLogin() {
 
 	loading.value = false;
 }
+
+const handleUsernameBlur = () => {
+	if (username.value === "null") {
+		username.value = "";
+	}
+};
 </script>
 
 <template>
@@ -191,6 +197,7 @@ async function toLogin() {
 						])
 					}"
 					placeholderClass="!text-ms"
+					@blur="handleUsernameBlur"
 				></cl-input>
 			</view>
 		</view>

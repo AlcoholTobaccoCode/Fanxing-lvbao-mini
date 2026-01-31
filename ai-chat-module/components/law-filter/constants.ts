@@ -77,24 +77,14 @@ export const LEGAL_LEVEL_MAP: Record<string, string> = LEGAL_LEVEL_OPTIONS.reduc
 
 /**
  * 4种时效性选项
+ * 0：尚未实施；1：现行有效；2：已失效；4：已修改
  */
 export const LAW_TIMELINESS_OPTIONS: LawTimelinessOption[] = [
-	{ label: "现行有效", value: "现行有效" },
-	{ label: "尚未生效", value: "尚未生效" },
-	{ label: "已被修改", value: "已被修改" },
-	{ label: "已失效", value: "已失效" }
+	{ label: "现行有效", value: "1" },
+	{ label: "尚未实施", value: "0" },
+	{ label: "已修改", value: "4" },
+	{ label: "已失效", value: "2" }
 ];
-
-/**
- * 时效性 value -> label 映射
- */
-export const LAW_TIMELINESS_MAP: Record<string, string> = LAW_TIMELINESS_OPTIONS.reduce(
-	(acc, item) => {
-		acc[item.value] = item.label;
-		return acc;
-	},
-	{} as Record<string, string>
-);
 
 /**
  * 最近选择地区最大数量

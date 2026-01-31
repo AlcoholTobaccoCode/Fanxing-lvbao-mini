@@ -15,7 +15,6 @@ import type {
 } from "@/cool/types/chat-input";
 
 import VoiceRecord from "../voice-record.uvue";
-import ActionsPopup from "../actions-popup.uvue";
 
 const ui = useUi();
 

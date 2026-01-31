@@ -2,7 +2,7 @@
 import { computed } from "vue";
 import { isDark } from "@/cool";
 import { lawFilterStore } from "@/cool/store/chatInput-store/lawFilterStore";
-import { LEGAL_LEVEL_MAP, LAW_TIMELINESS_MAP } from "./constants";
+import { LEGAL_LEVEL_MAP, LAW_TIMELINESS_OPTIONS } from "./constants";
 
 const emit = defineEmits<{
 	(e: "click"): void;
@@ -69,8 +69,9 @@ const xlsChips = computed(() => {
 const timelinessChip = computed(() => {
 	const t = filters.value.lawstatexls_facet;
 	if (!t) return null;
+	const option = LAW_TIMELINESS_OPTIONS.find((o) => o.value === t);
 	return {
-		label: LAW_TIMELINESS_MAP[t] || t,
+		label: option ? option.label : t,
 		value: t,
 		type: "lawstatexls_facet" as const
 	};
